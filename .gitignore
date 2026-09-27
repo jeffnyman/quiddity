@@ -1,0 +1,36 @@
+_refs/*
+
+#
+# Interactive fiction binary formats.
+#
+# Z-Machine, Glulx and Å-machine story files.
+# Infocom-era data files are excluded as well.
+#
+
+*.z[1-8]
+*.[zbg]lb
+*.*blorb
+*.ulx
+*.aastory
+*.dat
+
+#
+# Interactive fiction save formats.
+#
+# Saved games (Quetzal) and other Infocom-era data files.
+#
+
+*.qzl
+*.sav
+
+#
+# Editor helpers
+#
+# Ignore the contents of .vscode rather than the directory itself.
+# Git does not descend into an ignored directory, so `.vscode/`
+# would make the negations below unreachable.
+#
+
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json

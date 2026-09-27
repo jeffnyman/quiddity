@@ -1,0 +1,38 @@
+#
+# Establish project-wide standard of LF line endings.
+#
+# `text=auto` detects text vs. binary by content, so the rules below cover
+# only two cases: where that detection must not be trusted, and where the
+# line ending must not be LF.
+#
+
+* text=auto eol=lf
+
+#
+# Files whose line endings must not be LF.
+#
+
+*.bat      text eol=crlf
+*.cmd      text eol=crlf
+*.ps1      text eol=crlf
+*.psm1     text eol=crlf
+
+#
+# Diff drivers, so hunk headers name the enclosing type or member.
+#
+
+*.py       text diff=python
+*.md       text diff=markdown
+
+#
+# Exclude from `git archive`, which is what produces GitHub's "Download ZIP"
+# and release source tarballs. Someone taking the project that way is not
+# cloning it, so repository plumbing is noise to them.
+#
+
+.editorconfig  export-ignore
+.gitattributes export-ignore
+.gitignore     export-ignore
+.gitkeep       export-ignore
+.githooks/     export-ignore
+.github/       export-ignore

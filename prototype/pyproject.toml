@@ -1,0 +1,33 @@
+[project]
+name = "quiddity"
+version = "0.0.0"
+description = "Prototype IF language compiling to Dialog"
+license = "GPL-3.0-or-later"
+readme = "README.md"
+authors = [
+    { name = "Jeff Nyman", email = "jeffnyman@gmail.com" },
+]
+requires-python = ">=3.12"
+dependencies = []
+
+[project.scripts]
+quiddity = "quiddity:main"
+
+[build-system]
+requires = ["uv_build>=0.12.19,<0.13.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "assertpy>=1.1",
+    "pytest>=9.1.1",
+    "ruff>=0.16.9",
+    "ty>=0.0.84",
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["quiddity"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-rs"
