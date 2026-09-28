@@ -1,0 +1,4 @@
+%% Replaces the standard library's (banner) so transcripts don't include
+%% version strings that change whenever Dialog is updated.
+
+(banner)

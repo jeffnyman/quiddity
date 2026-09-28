@@ -1,0 +1,50 @@
+A tiny world to prove the Dialog toolchain works.
+
+Living room
+A cozy room. A hallway leads north.
+
+> look
+Living room
+A cozy room. A hallway leads north.
+
+> open chest
+The treasure chest is locked.
+
+> n
+You walk north.
+
+Hallway
+A bare hallway. The living room is south.
+
+> take key
+You take the silver key.
+
+> open cursed chest
+(first attempting to unlock the cursed chest with the silver key)
+You unlock the cursed chest with the silver key.
+
+The chest radiates malice and will not budge.
+
+> unlock cursed chest with silver key
+The cursed chest is already unlocked.
+
+> open cursed chest
+The chest radiates malice and will not budge.
+
+> s
+You walk south.
+
+Living room
+A cozy room. A hallway leads north.
+
+> open chest
+(first attempting to unlock the treasure chest with the silver key)
+You unlock the treasure chest with the silver key.
+
+You open the treasure chest, revealing a gold coin.
+
+> take coin
+You take the gold coin out of the treasure chest.
+
+> inventory
+You have a gold coin and a silver key.

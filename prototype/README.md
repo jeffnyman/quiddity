@@ -145,6 +145,18 @@ frotz tests/fixtures/chest.z8
 uv run pytest
 ```
 
+The smoke tests in `tests/test_smoke.py` exercise the whole Dialog pipeline. They compile `tests/fixtures/chest.dg` to `.aastory` and `.z8`, then play `walkthrough.in` in `dgdebug` and compare the transcript against the saved gold file, `tests/fixtures/chest.gold`. If the story's output changes, the test fails with a diff showing what changed. These tests need Dialog's tools in `bin/`, and they're skipped with a reminder to run `quiddity build` if those aren't there.
+
+The walkthrough also loads `tests/fixtures/no-banner.dg`, which replaces the standard library's banner so the transcript doesn't include version strings that change whenever Dialog is updated.
+
+When the output changes on purpose, regenerate the gold file from the current output:
+
+```
+uv run pytest --update-gold
+```
+
+A gold file that doesn't exist yet is written the same way on the first run. Either way, that test is skipped for the run that writes it. Look over the diff of `chest.gold` before committing it, since the new file becomes what later runs are compared against.
+
 ### Linting and formatting
 
 Check for lint issues:
@@ -180,6 +192,7 @@ uv run --directory prototype quiddity check
 uv run --directory prototype quiddity compile tests/fixtures/chest.dg -t aa
 uv run --directory prototype quiddity run tests/fixtures/chest.dg -i tests/fixtures/walkthrough.in
 uv run --directory prototype pytest
+uv run --directory prototype pytest --update-gold
 uv run --directory prototype ruff check
 uv run --directory prototype ty check
 ```
