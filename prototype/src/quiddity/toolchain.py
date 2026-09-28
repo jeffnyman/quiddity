@@ -4,10 +4,11 @@
 Each repo is built in its own src/ directory, and the resulting tools are copied
 into prototype/bin/, which is where they're checked for and run from.
 
-On Windows the binaries are built and run inside WSL. Commands go through wsl.exe
-from the directory they need (a repo's src/, or bin/), which WSL maps to its
-/mnt/<drive>/... path, so no Windows paths are passed to them. Elsewhere the
-binaries are run directly. Cloning uses the host's own git on every platform.
+On Windows the build runs inside WSL, which cross-compiles native .exe tools with
+MinGW. Build commands go through wsl.exe from the repo's src/ directory, which WSL
+maps to its /mnt/<drive>/... path, so no Windows paths are passed to them. The
+.exe tools in bin/ then run directly on Windows, without WSL. Cloning uses the
+host's own git on every platform.
 """
 
 import os
@@ -21,6 +22,10 @@ REPO_ROOT = Path(__file__).resolve().parents[2]  # prototype/
 PRIOR_ART = REPO_ROOT.parent / "_references"
 BIN = REPO_ROOT / "bin"
 USE_WSL = sys.platform == "win32"
+EXE = ".exe" if USE_WSL else ""
+
+# The MinGW cross-compiler both repos' Makefiles use for their .exe targets.
+MINGW = "i686-w64-mingw32-gcc"
 
 
 @dataclass(frozen=True)
@@ -31,9 +36,12 @@ class Repo:
     url: str
     env: str  # environment variable that overrides the checkout location
     tools: tuple[str, ...]  # executables the build leaves in src/, copied to bin/
-    targets: tuple[str, ...] = ()  # make targets; empty means the default target
     files: dict[str, str] = field(default_factory=dict)  # name -> path in checkout
     prereqs: tuple[str, ...] = ()  # programs the build needs beyond make and cc
+
+    # Each inner tuple is one make run, in order; () means the default target.
+    builds: tuple[tuple[str, ...], ...] = ((),)
+    windows_builds: tuple[tuple[str, ...], ...] = ((),)
 
     @property
     def dir(self) -> Path:
@@ -49,8 +57,9 @@ DIALOG = Repo(
     url="https://github.com/Dialog-IF/dialog.git",
     env="QUIDDITY_DIALOG_DIR",
     tools=("dialogc", "dgdebug"),
-    targets=("dialogc", "dgdebug"),
     files={"stdlib": "stdlib.dg"},
+    builds=(("dialogc", "dgdebug"),),
+    windows_builds=(("dialogc.exe", "dgdebug.exe"),),
 )
 
 AAMACHINE = Repo(
@@ -60,17 +69,24 @@ AAMACHINE = Repo(
     tools=("aambundle", "aamshow"),
     # aambundle embeds 6502 code, which needs these cross-assemblers.
     prereqs=("xa", "acme"),
+    # The Makefile's own "windows" target also builds aamrun.exe, which needs
+    # Node's pkg, so build the 6502 side first and then just the two tools.
+    windows_builds=(("6502",), ("aambundle.exe", "aamshow.exe")),
 )
 
 REPOS = (DIALOG, AAMACHINE)
 STDLIB = DIALOG.dir / DIALOG.files["stdlib"]
 
 
+def _exe(tool: str) -> str:
+    return tool + EXE
+
+
 def _runnable(p: Path) -> bool:
     return p.is_file() and os.access(p, os.X_OK)
 
 
-def _run(
+def _run_build(
     cmd: list[str], cwd: Path | None = None, capture: bool = False
 ) -> subprocess.CompletedProcess[str]:
     if USE_WSL:
@@ -81,7 +97,7 @@ def _run(
 
 def _has_program(name: str) -> bool:
     try:
-        return _run(["which", name], capture=True).returncode == 0
+        return _run_build(["which", name], capture=True).returncode == 0
     except OSError:
         return False
 
@@ -119,12 +135,15 @@ class BuildError(Exception):
 
 
 def _status(repo: Repo) -> RepoStatus:
-    tools = {t: _runnable(BIN / t) for t in repo.tools}
+    tools = {t: _runnable(BIN / _exe(t)) for t in repo.tools}
 
     # Prerequisites only matter if make still has to produce the tools. When
     # they're already built in src/, "quiddity build" just copies them.
-    built = all(tools.values()) or all(_runnable(repo.src / t) for t in repo.tools)
-    missing = [] if built else [p for p in repo.prereqs if not _has_program(p)]
+    built = all(tools.values()) or all(
+        _runnable(repo.src / _exe(t)) for t in repo.tools
+    )
+    needed = (*repo.prereqs, MINGW) if USE_WSL else repo.prereqs
+    missing = [] if built else [p for p in needed if not _has_program(p)]
 
     return RepoStatus(
         repo=repo,
@@ -162,42 +181,52 @@ def make(repo: Repo) -> int:
     if missing:
         where = " inside WSL" if USE_WSL else ""
         raise BuildError(
-            f"Building {repo.name} needs {' and '.join(missing)} installed{where}."
+            f"Building {repo.name} needs {', '.join(missing)} installed{where}."
         )
 
-    cmd = ["make", *repo.targets]
+    for targets in repo.windows_builds if USE_WSL else repo.builds:
+        try:
+            rc = _run_build(["make", *targets], cwd=repo.src).returncode
+        except FileNotFoundError:
+            missing_cmd = "wsl" if USE_WSL else "make"
+            raise BuildError(
+                f"{missing_cmd} not found. Install it and try again."
+            ) from None
 
-    try:
-        rc = _run(cmd, cwd=repo.src).returncode
-    except FileNotFoundError:
-        missing_cmd = "wsl" if USE_WSL else "make"
-        raise BuildError(
-            f"{missing_cmd} not found. Install it and try again."
-        ) from None
+        # Inside WSL, a missing make comes back as the shell's "command not found".
+        if USE_WSL and rc == 127:
+            raise BuildError(
+                "make not found inside WSL. Install build-essential there."
+            )
 
-    # Inside WSL, a missing make comes back as the shell's "command not found".
-    if USE_WSL and rc == 127:
-        raise BuildError("make not found inside WSL. Install build-essential there.")
+        if rc != 0:
+            return rc
 
-    return rc
+    return 0
 
 
 def install(repo: Repo) -> None:
     BIN.mkdir(exist_ok=True)
 
     for t in repo.tools:
-        built = repo.src / t
+        built = repo.src / _exe(t)
 
         if not built.is_file():
-            raise BuildError(f"The {repo.name} build didn't produce {t}.")
+            raise BuildError(f"The {repo.name} build didn't produce {built.name}.")
 
         # copy2 keeps the executable bit.
-        shutil.copy2(built, BIN / t)
+        shutil.copy2(built, BIN / built.name)
+
+        # Earlier Windows builds copied Linux binaries with no extension.
+        if USE_WSL:
+            (BIN / t).unlink(missing_ok=True)
 
 
 def version() -> str | None:
+    cmd = [str(BIN / _exe("dialogc")), "--version"]
+
     try:
-        r = _run(["./dialogc", "--version"], cwd=BIN, capture=True)
+        r = subprocess.run(cmd, capture_output=True, text=True, check=False)
     except OSError:
         return None
 
@@ -209,6 +238,6 @@ def version() -> str | None:
 
 def check() -> ToolStatus:
     repos = [_status(r) for r in REPOS]
-    dialogc = _runnable(BIN / "dialogc")
+    dialogc = _runnable(BIN / _exe("dialogc"))
 
     return ToolStatus(repos=repos, version=version() if dialogc else None)

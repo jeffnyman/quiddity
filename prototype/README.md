@@ -16,37 +16,63 @@ uv sync
 
 `uv run` also syncs automatically, so this step is optional, but it's a quick way to confirm everything installs.
 
-### Dialog toolchain
+### Toolchain
 
-Quiddity compiles to [Dialog](https://github.com/Dialog-IF/dialog), so it needs a Dialog checkout. By default it looks in `_references/dialog` at the repository root:
+Quiddity compiles to [Dialog](https://github.com/Dialog-IF/dialog), and uses the [Å-machine](https://github.com/Dialog-IF/aamachine) tools to package stories. Both are built from source, and the resulting tools end up in `bin/` (which is gitignored):
+
+| Tool | From | What it does |
+|---|---|---|
+| `dialogc` | Dialog | The Dialog compiler |
+| `dgdebug` | Dialog | The Dialog interactive debugger |
+| `aambundle` | aamachine | Bundles an `.aastory` into a web player or disk images |
+| `aamshow` | aamachine | Inspects `.aastory` files |
+
+You don't need to clone anything by hand. `quiddity build` clones whichever repo is missing into `_references/` at the repository root. To use an existing checkout somewhere else, set `QUIDDITY_DIALOG_DIR` or `QUIDDITY_AAMACHINE_DIR` to its path.
+
+#### Build prerequisites
+
+Building needs `git`, `make`, and a C compiler, plus the `xa` and `acme` 6502 assemblers that aamachine uses.
+
+On macOS (`make` and the compiler come with the Xcode Command Line Tools):
 
 ```
-git clone https://github.com/Dialog-IF/dialog.git ../_references/dialog
+xcode-select --install
+brew install xa acme
 ```
 
-To use a checkout somewhere else, set `QUIDDITY_DIALOG_DIR` to its path.
+On Linux (Debian/Ubuntu):
 
-Building the Dialog tools needs `make` and a C compiler. On Windows, the tools are built and run inside WSL, so those need to be installed there.
+```
+sudo apt install build-essential xa65 acme
+```
+
+On Windows, the build runs inside [WSL](https://learn.microsoft.com/windows/wsl/install), which cross-compiles native `.exe` tools with MinGW. Inside WSL, install:
+
+```
+sudo apt install build-essential xa65 acme gcc-mingw-w64-i686
+```
+
+Cloning uses the Windows `git`, so that needs to be installed on the Windows side. The finished `.exe` tools in `bin\` run directly on Windows, without WSL.
 
 ### Running
 
 Quiddity is run as `uv run quiddity <command>`. Use `uv run quiddity --help` to list the commands.
 
-Check that the Dialog toolchain is in place:
-
-```
-uv run quiddity check
-```
-
-This reports whether `dialogc`, `dgdebug`, and the standard library (`stdlib.dg`) were found, along with the compiler's version. It exits with a nonzero status if anything is missing, and tells you what to do about it.
-
-Build the Dialog tools from source:
+Set up the toolchain:
 
 ```
 uv run quiddity build
 ```
 
-This runs `make` in the checkout's `src/` directory, then runs `check` to confirm the result.
+This clones Dialog and aamachine if they aren't there yet, builds their tools, copies them into `bin/`, and then runs `check` to confirm the result. It's safe to run again: repos that are already cloned aren't cloned over, and the tools are just rebuilt and copied again.
+
+Check that the toolchain is in place:
+
+```
+uv run quiddity check
+```
+
+This reports, for each repo, whether its tools are in `bin/` and whether required files such as Dialog's standard library (`stdlib.dg`) are present, along with the compiler's version. It exits with a nonzero status if anything is missing, and tells you what to do about it, including any build prerequisites that aren't installed yet.
 
 ### Testing
 

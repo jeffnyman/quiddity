@@ -34,9 +34,9 @@ def cmd_check(_: argparse.Namespace) -> int:
             hints.append(f"{name} checkout looks incomplete (missing files).")
 
         if r.missing_prereqs:
-            hints.append(f"Building {name} needs {' and '.join(r.missing_prereqs)}.")
+            hints.append(f"Building {name} needs {', '.join(r.missing_prereqs)}.")
 
-    print(f"{'via WSL':<12}: {toolchain.USE_WSL}")
+    print(f"{'build in WSL':<12}: {toolchain.USE_WSL}")
 
     if hints:
         print()
