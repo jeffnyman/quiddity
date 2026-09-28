@@ -1,6 +1,7 @@
 # Interactive Fiction Language Design Spec
 
-Sep 22, 2026 · @Jeff Nyman
+- Sep 22, 2026 - Initial · @Jeff Nyman
+- Sep 26, 2026 - Addendum · @Jeff Nyman
 
 ## Overview and Motivation
 
@@ -201,3 +202,77 @@ The broader pattern worth naming: this design converges, from an IF-authoring pr
 - **Domain warnings in exception blocks.** Whether domain-crossing warnings apply only when composing traits, or also when an `exception` block's condition reaches into a distant domain (a `Breakable` exception triggered by a `Grammatical` condition).
 - **Shared-condition-across-exceptions detection.** Static analysis that flags when several unrelated `exception` blocks share the same condition (e.g. three different traits all special-casing "unless magically protected") as a signal that a shared trait is missing; genuinely novel among IF languages if built.
 - **Domain distance in the presence of future lattice extensions.** Single-parent domains are a provisional decision, made by analogy to `kind` rather than confirmed on their own terms; something like "magic affecting physical objects" arguably belongs under both `Magic` and `Physicality`. If `domain` or `kind` ever need multiple parents for some unanticipated reason, tree-distance math would need to become proper lattice-based subsumption (as in full description-logic reasoners) rather than simple tree distance.
+
+## ADDENDUM
+
+With the first part of the project, the basic design is still solid:
+
+- rules quantify over kinds
+- single-inheritance kinds with flat traits
+- structural specificity with disclosed source-order fallback
+- pipeline with a swappable backend
+
+There are some problems I found in my initial ideas, however.
+
+### Specificity is defined two incompatible ways
+
+The original draft of this spec, and the "One Parent, Many Traits" section of the inception document, say traits never enter the specificity computation and kind-only rules beat trait rules. The Exceptions section says specificity generalizes to "match-set is a strict subset," which would make a has-trait condition strictly more specific. This spec has since been brought in line with the subset view, but the inception document still carries both, and I need to pick one.
+
+On this topic, subset over arbitrary predicates is logical entailment and undecidable in general, so it would be necessary to define it syntactically. A workable partial order: rule A beats rule B when every typed variable in A is the same or a subkind of B's, and A's where-conditions are a superset of B's after normalization, with at least one strictly narrower. Incomparable means tie, resolved by source order. I also need to say what happens with two variables narrowed in opposite directions, since that's a tie as well. This partial order is effectively my pick: it keeps the subset view, but defines it so a compiler can actually check it.
+
+### Refusal messages do not belong in a separate layer
+
+My initial spec says a locked chest "simply never satisfies the precondition" and the message lives in Layer 3. That's a PDDL habit that, the more I thought about it, IF can't afford. Planners never explain why an operator is inapplicable. IF must, every time, or the player gets silence.
+
+I think the idea here would be to put the message next to the condition, which is what Dialog's prevent rules and Inform's Check rules both do:
+
+```
+action open (C: Container, A: Actor):
+  requires:
+    A can-reach C     else "You can't reach that."
+    not C.locked      else "It seems to be locked."
+  effect:
+    C.open := true
+    report "You open {C}."
+```
+
+Layer 3 rules then override only the interesting cases, like the cursed chest. The precondition/effect split from PDDL survives this: `requires` still answers "can this happen?" and `effect` still answers "what changes?" Only the explanation moves. It also absorbs the example this whole design started from. The locked-chest refusal is no longer a rule at all, just a `requires` line with its message.
+
+### The action lifecycle is undefined
+
+When do rules run relative to preconditions? Before, after, both? Inform 7's six stages (Before, Instead, Check, Carry out, After, Report) are each precisely defined, but the boundaries between them are largely convention: nothing stops an Instead rule from doing a Check rule's job, or a Carry out rule from doing Report's. That's the leakage my inception document complained about. I need to commit to something like before-rules, requires, effects, after-rules, and say which stages can cancel.
+
+This also has to line up with how rules get lowered to Dialog (see Language Choice, Revisited). This spec chose the DOM model: a general rule still runs unless a more specific one cancels it. Dialog's default for most predicates is the opposite: the first clause that succeeds handles the query, and more general clauses only run if it fails or the predicate is called as a multi-query. So each lifecycle stage will need to map onto the matching Dialog calling convention, and deciding which stages continue by default and which stop is part of defining the lifecycle.
+
+### "Exactly one consistent write" will not survive a real game
+
+Opening the chest springs the trap that kills the player. Effects must be able to raise events that dispatch further actions. I think I should keep the atomic-write guarantee per action and add a bounded event queue.
+
+### Three surface syntaxes appear
+
+`player tries to open (C: Container)`, `try-action(open, C, A)`, and `(O: Breakable) receives-impact` are all in the spec, and the `exception` block's bare `when: has-trait Enchanted` is arguably a fourth. Also, near-English world declarations reintroduce the Inform 7 parsing ambiguity that I was complaining about. I think I should use a small fixed set of sentence templates for Layer 1, not a natural-language parser.
+
+### The domain taxonomy is the most novel idea and the one I should defer
+
+It forces a domain tag on every trait, and the pre-registered exceptions list will grow until the warning is noise. I likely should ship this as an optional lint pass later, once real games exist to calibrate against.
+
+### Missing entirely
+
+The player-input parser, text generation, scope and visibility, and the standard action library. That is most of the work in any IF system and it runs inside the VM, not in the compiler.
+
+### Language Choice, Revisited
+
+My Rust argument rests on memory safety for the backtracking unification engine. That engine does not live in the compiler. Unification happens at runtime, inside the story file, when the player types "open chest." The compiler itself is a conventional parse, check, sort-by-specificity, lower pipeline. Specificity is a tree walk and a topological sort over the partial order above, plus detecting incomparable pairs so the compiler can warn about ties. So the strongest argument for Rust is aimed at the wrong component.
+
+The hard part is the runtime library in the target VM. When I realized this, I saw I had two paths:
+
+- Write a Prolog-in-Z-Machine myself. Åkesson did this for Dialog and it took years, and the Z-Machine's 16-bit words and small dynamic memory were among the reasons he went on to build his own Å-machine (which was also designed to run well on 8-bit machines and on the web). If I went this way, I would likely want to target Glulx first and treat Z-Machine as a constrained second backend.
+- Emit Dialog source as my IR. This is the Inform 7 over Inform 6 move that my inception document was praising. Dialog already has the unifier, two backends, the parser, and a standard library. My specificity ordering becomes a compile-time sort that emits rules in Dialog's source order, which is a beautiful fit.
+
+Taking the second path changes three things the rest of this spec assumes:
+
+- **The targets change.** Dialog's backends are the Z-Machine and its own Å-machine, not Glulx. Emitting Dialog means dropping Glulx and gaining the Å-machine, so the Overview's "Z-Machine or Glulx" no longer holds.
+- **The tiebreak direction gets decided.** Dialog tries rules in source order, first to last. If the compiler emits the most specific rules first and keeps the author's order among ties, then the first-declared rule wins a tie. That settles the open question on tiebreak direction in Dialog's favor rather than CSS's.
+- **Distribution gets harder.** Ruling out Python in the inception document was all about "download one file." Now an author needs Quiddity plus Dialog's `dialogc`, and the prototype currently builds Dialog from source, which needs `make`, a C compiler, and the `xa` and `acme` assemblers. That's fine for a prototype, but it's the constraint that drove the whole language-choice discussion, so the eventual port will have to answer it, perhaps by shipping `dialogc` alongside the Quiddity binary.
+
+That changed the implementation focus a bit. My idea became: prototype in Python, emit Dialog text. This means I get playable games and can churn the syntax cheaply while the design is still moving. Once the language stabilizes, I can port the compiler to a single-binary language. And, at that point, Go deserves a look alongside Rust. It cross-compiles to all three platforms from one machine, has a garbage collector, and a C programmer is productive in days. I would argue that Rust wins on algebraic data types and pattern matching, which matter for an AST, and on WASM if I ever want a browser IDE like Borogove. Go can compile to WASM too, but Rust's WASM tooling is more mature and its output much smaller. Either is fine. My main realization was that committing to Rust before the design is validated is a potentially expensive mistake.
