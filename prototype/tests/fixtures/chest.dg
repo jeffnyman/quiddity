@@ -1,0 +1,67 @@
+%% Smoke test: locked chest + specificity-via-source-order in Dialog.
+%% Run:  dgdebug -u chest.dg stdlib.dg < walkthrough.in
+
+(story title)   Chest Smoke Test
+(story author)  Jeff Nyman
+
+(intro)
+        A tiny world to prove the Dialog toolchain works.
+        (banner)
+        (enter #living-room)
+
+#player
+(current player *)
+
+#living-room
+(room *)
+(name *)        living room
+(look *)        A cozy room. A hallway leads (#north).
+(from * go #north to #hallway)
+
+#hallway
+(room *)
+(name *)        hallway
+(look *)        A bare hallway. The living room is (#south).
+(from * go #south to #living-room)
+
+%% A plain locked container.
+#chest
+(name *)        treasure chest
+(dict *)        treasure chest
+(container *)
+(openable *)
+(lockable *)
+(* is locked)
+(* is closed)
+(* is #in #living-room)
+(descr *)       An oak chest with a heavy lock.
+
+#coin
+(name *)        gold coin
+(item *)
+(* is #in #chest)
+
+%% A cursed chest: same kind of thing, but a more specific refusal.
+#cursed-chest
+(name *)        cursed chest
+(dict *)        cursed chest
+(container *)
+(openable *)
+(lockable *)
+(* is locked)
+(* is closed)
+(* is #in #hallway)
+(descr *)       A black chest that seems to drink the light.
+
+#silver-key
+(name *)        silver key
+(item *)
+(* is #in #hallway)
+(* unlocks #chest)
+(* unlocks #cursed-chest)
+
+%% "Specific beats general": this prevent rule is more specific than the
+%% stdlib's generic "(prevent [open $Obj]) ($Obj is locked)" and is listed
+%% before the stdlib on the command line, so Dialog tries it first.
+(prevent [open #cursed-chest])
+        The chest radiates malice and will not budge.

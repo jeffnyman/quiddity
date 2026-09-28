@@ -12,6 +12,7 @@ host's own git on every platform.
 """
 
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -102,6 +103,24 @@ def _has_program(name: str) -> bool:
         return False
 
 
+def _normalize_transcript(raw: str) -> str:
+    """Collapse dgdebug's tagged-line output into a plain, diffable transcript."""
+
+    out: list[str] = []
+
+    for line in raw.replace("\0", "").splitlines():
+        line = line.removeprefix("  ")
+
+        if line.strip() == ">":  # bare prompt echo before each input line
+            continue
+
+        out.append(line.rstrip())
+
+    text = "\n".join(out).strip("\n") + "\n"
+
+    return re.sub(r"\n{3,}", "\n\n", text)
+
+
 @dataclass
 class RepoStatus:
     """Status of one toolchain repo."""
@@ -131,6 +150,14 @@ class ToolStatus:
 
 
 class BuildError(Exception):
+    pass
+
+
+class ToolMissing(Exception):
+    pass
+
+
+class ToolFailed(Exception):
     pass
 
 
@@ -241,3 +268,42 @@ def check() -> ToolStatus:
     dialogc = _runnable(BIN / _exe("dialogc"))
 
     return ToolStatus(repos=repos, version=version() if dialogc else None)
+
+
+def compile(
+    sources: list[Path], out: Path, fmt: str = "aa", stdlib: bool = True
+) -> int:
+    """Compile Dialog sources into a story file. fmt is one of z5, z8, zblorb, aa.
+
+    dialogc's own messages go straight to the terminal. Returns its exit code.
+    """
+
+    dialogc = BIN / _exe("dialogc")
+
+    if not _runnable(dialogc):
+        raise ToolMissing(f'{dialogc} not found. Run "quiddity build" first.')
+
+    # The standard library goes last, after the story's own sources.
+    files = [*sources, STDLIB] if stdlib else sources
+    cmd = [str(dialogc), "-t", fmt, "-o", str(out), *map(str, files)]
+
+    return subprocess.run(cmd, check=False).returncode
+
+
+def run_transcript(sources: list[Path], commands: str, stdlib: bool = True) -> str:
+    """Run Dialog sources in dgdebug, feeding player commands on stdin. Returns the transcript."""
+
+    dgdebug = BIN / _exe("dgdebug")
+
+    if not _runnable(dgdebug):
+        raise ToolMissing(f'{dgdebug} not found. Run "quiddity build" first.')
+
+    files = [*sources, STDLIB] if stdlib else sources
+    cmd = [str(dgdebug), "-u", "-T", "--no-links", *map(str, files)]
+    r = subprocess.run(cmd, input=commands, capture_output=True, text=True, check=False)
+
+    # dgdebug reports source errors on stdout, so a failure can still have output.
+    if r.returncode != 0:
+        raise ToolFailed((_normalize_transcript(r.stdout) + r.stderr).rstrip())
+
+    return _normalize_transcript(r.stdout)

@@ -1,0 +1,11 @@
+look
+open chest
+n
+take key
+open cursed chest
+unlock cursed chest with silver key
+open cursed chest
+s
+open chest
+take coin
+inventory

@@ -1,6 +1,6 @@
 # Quiddity Prototype
 
-A prototype compiler for a new interactive fiction language.
+A prototype compiler for a new interactive fiction language. It emits Dialog source and lets Dialog's toolchain do the rest (Z-Machine and Å-machine backends, parser, standard library).
 
 ## Development
 
@@ -74,6 +74,71 @@ uv run quiddity check
 
 This reports, for each repo, whether its tools are in `bin/` and whether required files such as Dialog's standard library (`stdlib.dg`) are present, along with the compiler's version. It exits with a nonzero status if anything is missing, and tells you what to do about it, including any build prerequisites that aren't installed yet.
 
+Compile Dialog sources to a story file:
+
+```
+uv run quiddity compile tests/fixtures/chest.dg -t aa
+```
+
+This runs `bin/dialogc` on the given sources, with Dialog's standard library added after them, and writes `tests/fixtures/chest.aastory`. You can pass several source files; the output is named after the first one unless you give `-o`.
+
+| Option | Meaning |
+|---|---|
+| `-t`, `--format` | Output format: `aa` (default), `z8`, `z5`, or `zblorb` |
+| `-o`, `--output` | Output file path. Defaults to the first source with the format's extension (`.aastory`, `.z8`, `.z5`, `.zblorb`) |
+
+`dialogc`'s own messages, including compile errors with file and line numbers, are printed as-is, and the command exits with `dialogc`'s status. The `zblorb` format needs the story to declare an IFID with `(story ifid)`; `dialogc` says so and suggests one if it's missing. Story files are gitignored, so compiled output next to a source file won't show up in `git status`.
+
+Run Dialog sources with a scripted set of player commands and print the transcript:
+
+```
+uv run quiddity run tests/fixtures/chest.dg -i tests/fixtures/walkthrough.in
+```
+
+This plays the story in `bin/dgdebug` (with the standard library added after your sources, and no compile step), feeding it one command per line from the `-i` file. Without `-i`, the commands are read from standard input, so this does the same thing:
+
+```
+uv run quiddity run tests/fixtures/chest.dg < tests/fixtures/walkthrough.in
+```
+
+The transcript is cleaned up so it's easy to read and to compare between runs: `dgdebug`'s line markers and empty prompt lines are removed, and runs of blank lines are collapsed into one. To keep a transcript, redirect it to a file:
+
+```
+uv run quiddity run tests/fixtures/chest.dg -i tests/fixtures/walkthrough.in > chest.txt
+```
+
+If the sources have an error, `dgdebug`'s message (with file and line number) is printed instead and the command exits with a nonzero status.
+
+### Playing
+
+There are a few ways to play a story, depending on what you have and where you want to play it. On Windows the tools are `bin\dgdebug.exe` and `bin\aambundle.exe`.
+
+**From source, with the debugger.** `dgdebug` runs Dialog sources directly, with no compile step, so it's the quickest loop while you're working on a story. Pass the standard library last:
+
+```
+bin/dgdebug tests/fixtures/chest.dg ../_references/dialog/stdlib.dg
+```
+
+**In the terminal, with Node.** An `.aastory` file plays with the Node.js frontend that ships in the aamachine checkout. It needs [Node.js](https://nodejs.org/) but nothing else:
+
+```
+node ../_references/aamachine/src/js/nodefrontend.js tests/fixtures/chest.aastory
+```
+
+**In a browser.** `aambundle` packages an `.aastory` into a folder with a web interpreter. Open `play.html` from that folder in a browser; the same folder is what you'd put on a website to publish the story. `aambundle` creates the output folder but not its parents, and `build/` is gitignored, so:
+
+```
+mkdir build
+bin/aambundle -o build/chest-web tests/fixtures/chest.aastory
+```
+
+**In a Z-machine interpreter.** A story compiled with `-t z8` or `-t z5` plays in any Z-machine interpreter, such as [Frotz](https://davidgriffith.gitlab.io/frotz/) or my own [Rezrov](https://github.com/jeffnyman/rezrov) or [Voxam](https://github.com/jeffnyman/voxam). An example of execution, assuming frotz is installed:
+
+```
+uv run quiddity compile tests/fixtures/chest.dg -t z8
+frotz tests/fixtures/chest.z8
+```
+
 ### Testing
 
 ```
@@ -112,6 +177,8 @@ uv looks for `pyproject.toml` in the current directory and its parents, never in
 
 ```
 uv run --directory prototype quiddity check
+uv run --directory prototype quiddity compile tests/fixtures/chest.dg -t aa
+uv run --directory prototype quiddity run tests/fixtures/chest.dg -i tests/fixtures/walkthrough.in
 uv run --directory prototype pytest
 uv run --directory prototype ruff check
 uv run --directory prototype ty check
