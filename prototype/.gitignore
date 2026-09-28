@@ -12,3 +12,6 @@ wheels/
 # Tool-generated files
 .ruff_cache/
 .pytest_cache/
+
+# Dialog and Å-machine binaries, copied in by "quiddity build"
+bin/
