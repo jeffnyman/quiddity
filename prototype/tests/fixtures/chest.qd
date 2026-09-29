@@ -1,0 +1,61 @@
+# chest.qd — the locked-chest example from the spec, written in Quiddity.
+#
+# This is the first compiler test input. Compiling it must produce Dialog that
+# plays walkthrough.in exactly as chest.gold records. The standard library is
+# assumed to provide the kinds Room, Thing, Container, Key and Actor, the traits
+# Openable and Lockable, the player, and the stock actions (open, unlock, take,
+# go, look, inventory).
+
+story "Chest Smoke Test":
+  author: "Jeff Nyman"
+  intro: "A tiny world to prove the Dialog toolchain works."
+  start: the living room
+
+
+# ---- Kinds -----------------------------------------------------------------
+# Single inheritance. A cursed chest is a container and something more, so a
+# rule written for CursedChest is structurally more specific than one written
+# for Container.
+
+kind CursedChest extends Container
+
+
+# ---- World -----------------------------------------------------------------
+# Each block opens with one fixed template sentence:
+#     The <name> is a <Kind> [in <place>].
+# The name doubles as the identifier and the display name. Everything else is
+# an indented "property: value" line.
+
+The living room is a Room.
+  description: "A cozy room. A hallway leads north."
+  north: the hallway
+
+The hallway is a Room.
+  description: "A bare hallway. The living room is south."
+  south: the living room
+
+The treasure chest is a Container in the living room.
+  traits: Lockable
+  locked: yes
+  description: "An oak chest with a heavy lock."
+
+The gold coin is a Thing in the treasure chest.
+
+The cursed chest is a CursedChest in the hallway.
+  traits: Lockable
+  locked: yes
+  description: "A black chest that seems to drink the light."
+
+The silver key is a Key in the hallway.
+  unlocks: the treasure chest, the cursed chest
+
+
+# ---- Rules -----------------------------------------------------------------
+# Logic variables bind to any object of the named kind. This rule matches a
+# strict subset of what the library's generic "locked container" refusal
+# matches, so it wins dispatch and the generic message never appears.
+
+rule cursed-chest-resists:
+  when: the player tries to open (C: CursedChest)
+  then: tell "The chest radiates malice and will not budge."
+        stop
