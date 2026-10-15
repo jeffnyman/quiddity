@@ -1,0 +1,32 @@
+MIT License
+
+Copyright (c) 2026 Jeff Nyman
+
+SCOPE. This licence covers only the original work in this repository: the
+generator in tools/, the stylesheet and scripts in assets/, the editor's notes
+in content/, the workflow in .github/, the three title letters
+(images/zlogo.svg, images/qlogo.svg, images/blogo.svg), and README.md.
+
+It does NOT cover the specification texts this repository publishes -- the
+Z-Machine Standards Document, Quetzal and Blorb -- nor the other images in
+images/, nor the files in source/. Those are the work of their respective authors and
+are reproduced verbatim without any claim of licence or ownership. See NOTICE
+for authorship and canonical sources.
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.

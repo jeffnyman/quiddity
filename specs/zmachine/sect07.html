@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>7. Output streams and file handling — The Z-Machine Standards Document 1.1</title>
+<meta name="description" content="7. Output streams and file handling — section of the Z-Machine Standards Document, version 1.1.">
+<link rel="canonical" href="https://jeffnyman.github.io/z-machine-standard/sect07.html">
+<meta name="theme-color" content="#0d63c9">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="The Z-Machine Standards Document 1.1">
+<meta property="og:title" content="7. Output streams and file handling — The Z-Machine Standards Document 1.1">
+<meta property="og:description" content="7. Output streams and file handling — section of the Z-Machine Standards Document, version 1.1.">
+<meta property="og:url" content="https://jeffnyman.github.io/z-machine-standard/sect07.html">
+<link rel="stylesheet" href="assets/zspec.css">
+<script>/* Set the theme before first paint to avoid a flash. */
+(function(){try{var t=localStorage.getItem('zspec-theme');if(t==='dark'||t==='light')document.documentElement.dataset.theme=t;}catch(e){}})();
+</script>
+</head>
+<body>
+<a class="skip-link" href="#content">Skip to content</a>
+<header class="topbar">
+  <button class="icon-button nav-toggle" type="button" aria-expanded="false" aria-controls="sidebar" aria-label="Show contents">
+    <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 5h14M3 10h14M3 15h14"/></svg>
+  </button>
+  <a class="brand" href="index.html"><span class="brand-name">Z-Machine Standard</span><span class="brand-version">1.1</span></a>
+  <div class="topbar-actions">
+    <button class="search-trigger" type="button" data-search-open>
+      <svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="9" cy="9" r="6"/><path d="M13.5 13.5 18 18"/></svg>
+      <span>Search</span><kbd>/</kbd>
+    </button>
+    <button class="icon-button theme-toggle" type="button" aria-label="Switch colour theme">
+      <svg class="icon-sun" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="4"/><path d="M10 1v2M10 17v2M1 10h2M17 10h2M3.9 3.9l1.4 1.4M14.7 14.7l1.4 1.4M16.1 3.9l-1.4 1.4M5.3 14.7l-1.4 1.4"/></svg>
+      <svg class="icon-moon" viewBox="0 0 20 20" aria-hidden="true"><path d="M17 12.3A7.5 7.5 0 0 1 7.7 3a7.5 7.5 0 1 0 9.3 9.3z"/></svg>
+    </button>
+  </div>
+</header>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Specification contents">
+<!--nav:start-->
+<div class="nav-inner">
+<a class="nav-home" href="index.html">Contents</a>
+<ul class="nav-list">
+<li><a href="preface.html"><span class="nav-label">Preface</span></a></li>
+<li><a href="overview.html"><span class="nav-label">Overview</span></a></li>
+</ul>
+<h2 class="nav-group">Fundamentals</h2>
+<ul class="nav-list">
+<li><a href="sect01.html"><span class="nav-num">1</span><span class="nav-label">The memory map</span></a></li>
+<li><a href="sect02.html"><span class="nav-num">2</span><span class="nav-label">Numbers and arithmetic</span></a></li>
+<li><a href="sect03.html"><span class="nav-num">3</span><span class="nav-label">Text and characters</span></a></li>
+<li><a href="sect04.html"><span class="nav-num">4</span><span class="nav-label">Instruction encoding</span></a></li>
+<li><a href="sect05.html"><span class="nav-num">5</span><span class="nav-label">Routine encoding</span></a></li>
+<li><a href="sect06.html"><span class="nav-num">6</span><span class="nav-label">The game state</span></a></li>
+</ul>
+<h2 class="nav-group">Input/Output</h2>
+<ul class="nav-list">
+<li class="is-current"><a href="sect07.html" aria-current="page"><span class="nav-num">7</span><span class="nav-label">Output streams</span></a></li>
+<li><a href="sect08.html"><span class="nav-num">8</span><span class="nav-label">The screen model</span></a></li>
+<li><a href="sect09.html"><span class="nav-num">9</span><span class="nav-label">Sound effects</span></a></li>
+<li><a href="sect10.html"><span class="nav-num">10</span><span class="nav-label">Input streams</span></a></li>
+</ul>
+<h2 class="nav-group">Tables</h2>
+<ul class="nav-list">
+<li><a href="sect11.html"><span class="nav-num">11</span><span class="nav-label">The header</span></a></li>
+<li><a href="sect12.html"><span class="nav-num">12</span><span class="nav-label">The object table</span></a></li>
+<li><a href="sect13.html"><span class="nav-num">13</span><span class="nav-label">Dictionary and lexing</span></a></li>
+</ul>
+<h2 class="nav-group">Instruction Set</h2>
+<ul class="nav-list">
+<li><a href="sect14.html"><span class="nav-num">14</span><span class="nav-label">Table of opcodes</span></a></li>
+<li><a href="sect15.html"><span class="nav-num">15</span><span class="nav-label">Dictionary of opcodes</span></a></li>
+</ul>
+<h2 class="nav-group">An Unusual Font</h2>
+<ul class="nav-list">
+<li><a href="sect16.html"><span class="nav-num">16</span><span class="nav-label">Font 3</span></a></li>
+</ul>
+<h2 class="nav-group">Appendices</h2>
+<ul class="nav-list">
+<li><a href="appa.html"><span class="nav-num">A</span><span class="nav-label">Error messages and debugging</span></a></li>
+<li><a href="appb.html"><span class="nav-num">B</span><span class="nav-label">Header conventions</span></a></li>
+<li><a href="appc.html"><span class="nav-num">C</span><span class="nav-label">Resources available</span></a></li>
+<li><a href="appd.html"><span class="nav-num">D</span><span class="nav-label">History</span></a></li>
+<li><a href="appe.html"><span class="nav-num">E</span><span class="nav-label">Statistics</span></a></li>
+<li><a href="appf.html"><span class="nav-num">F</span><span class="nav-label">Canonical story files</span></a></li>
+</ul>
+<h2 class="nav-group">Related standards</h2>
+<p class="nav-note">Mirrored in this repository</p>
+<ul class="nav-list">
+<li><a href="quetzal.html"><span class="nav-label">Quetzal</span></a></li>
+<li><a href="blorb.html"><span class="nav-label">Blorb</span></a></li>
+</ul>
+</div>
+<!--nav:end-->
+</nav>
+<div class="main-column">
+<main class="content" id="content">
+<div class="page-head">
+<img class="page-icon" src="images/icon07.gif" alt="" width="82" height="86" loading="lazy" decoding="async">
+<h1>7. Output streams and file handling</h1>
+</div>
+<section class="clause-section is-clause" id="7.1">
+<p><a class="clause-num" href="#7.1">7.1</a><button class="copy-link" type="button" data-anchor="7.1" aria-label="Copy link to 7.1" title="Copy link"></button> At any given time text is being output through a selection of
+   "output streams" (possibly none, possibly several at once).
+</p>
+</section>
+
+<section class="clause-section is-clause" id="7.1.1">
+<p><a class="clause-num" href="#7.1.1">7.1.1</a><button class="copy-link" type="button" data-anchor="7.1.1" aria-label="Copy link to 7.1.1" title="Copy link"></button> Two output streams are common to all Versions:
+   number 1 (the screen) and 2 (the game transcript, usually printed
+   to a printer or a file).
+</p>
+</section>
+
+<section class="clause-section is-clause" id="7.1.1.1">
+<p><a class="clause-num" href="#7.1.1.1">7.1.1.1</a><button class="copy-link" type="button" data-anchor="7.1.1.1" aria-label="Copy link to 7.1.1.1" title="Copy link"></button> In Versions 1 to 5, the player's input to the 
+   <a href="sect15.html#read"><strong>read</strong></a>
+   opcode should be echoed to output streams 1 and 2 (if stream 2
+   is active), so that text typed in appears in any transcript.
+   In Version 6 input should be sent only to stream 1 and it is
+   the game's responsibility to write to the transcript.
+</p>
+</section>
+
+<section class="clause-section is-clause" id="7.1.1.2">
+<p><a class="clause-num" href="#7.1.1.2">7.1.1.2</a><button class="copy-link" type="button" data-anchor="7.1.1.2" aria-label="Copy link to 7.1.1.2" title="Copy link"></button> In Infocom's Version 4 game 'A Mind Forever Voyaging',
+   which anticipated a printer rather than a file to receive the
+   transcript, stream 2 is turned off and on again several times in
+   quick succession.  Thus if an interpreter decides where to send
+   the transcript by asking the player for a filename, this question
+   should only be asked once per game session, not every time stream
+   2 is selected.
+</p>
+</section>
+
+<section class="clause-section is-clause" id="7.1.2">
+<p><a class="clause-num" href="#7.1.2">7.1.2</a><button class="copy-link" type="button" data-anchor="7.1.2" aria-label="Copy link to 7.1.2" title="Copy link"></button> Versions 3 and later supply these and two other output streams,
+   numbered 3 (Z-machine memory) and 4 (a script file of the player's whole
+   commands and of individual keypresses as read by 
+   <a href="sect15.html#read_char"><strong>read_char</strong></a>).
+</p>
+</section>
+
+<section class="clause-section is-clause" id="7.1.2.1">
+<p><a class="clause-num" href="#7.1.2.1">7.1.2.1</a><button class="copy-link" type="button" data-anchor="7.1.2.1" aria-label="Copy link to 7.1.2.1" title="Copy link"></button> Output stream 3 writes to a table in dynamic memory.  When the
+   stream is selected, the table may have any contents (even the initial 'size'
+   word will be ignored by the interpreter).  While the stream is selected, the
+   table's contents are unspecified (and a game cannot safely read or write
+   to it).  When the stream is deselected, the initial word of the table holds
+   the number of characters printed and subsequent bytes hold those characters.
+   (It is the programmer's responsibility to make the table large enough: the 
+   interpreter performs no overflow checking.) 
+</p>
+<p>In Version 6, the total width of printing (in units) will then be stored in 
+   the word at <strong>$30</strong> in the header. The game should not attempt any
+   operation that will change the width of the font (such as changing from a 
+   proportional to a fixed width font) while output stream 3 is active, and the
+   interpreter need not store an accurate width of the resulting string if a game does
+   do this.
+</p>
+</section>
+
+<section class="clause-section is-clause has-marker is-v1-0" id="7.1.2.1.1">
+<p><a class="clause-num" href="#7.1.2.1.1">7.1.2.1.1</a><button class="copy-link" type="button" data-anchor="7.1.2.1.1" aria-label="Copy link to 7.1.2.1.1" title="Copy link"></button> <strong class="spec-marker spec-marker--v1-0">***[1.0]</strong>
+   It is possible for stream 3 to be selected while
+   it is already on.  If this happens, the previous table address is
+   remembered and the previous table is resumed when the new one is
+   finished.  This nesting can reach a depth of up to 16: if stream 3
+   is opened for a seventeenth time, the interpreter should halt with
+   an error message.
+</p>
+</section>
+
+<section class="clause-section is-clause" id="7.1.2.2">
+<p><a class="clause-num" href="#7.1.2.2">7.1.2.2</a><button class="copy-link" type="button" data-anchor="7.1.2.2" aria-label="Copy link to 7.1.2.2" title="Copy link"></button> Output stream 3 is unusual in that, while it is selected, no
+   text is sent to any other output streams which are selected.  (However,
+   they remain selected.)
+</p>
+</section>
+
+<section class="clause-section is-clause" id="7.1.2.2.1">
+<p><a class="clause-num" href="#7.1.2.2.1">7.1.2.2.1</a><button class="copy-link" type="button" data-anchor="7.1.2.2.1" aria-label="Copy link to 7.1.2.2.1" title="Copy link"></button> Newlines are written to output stream 3 as ZSCII 13.  (A game
+   should never <a href="sect15.html#print_char"><strong>print_char</strong></a>
+   the value 10, or any other value which is undefined as a ZSCII output code.)
+</p>
+</section>
+
+<section class="clause-section is-clause" id="7.1.2.3">
+<span class="anchor-alias" id="7.1.1.2.3"></span>
+<p><a class="clause-num" href="#7.1.2.3">7.1.2.3</a><button class="copy-link" type="button" data-anchor="7.1.2.3" aria-label="Copy link to 7.1.2.3" title="Copy link"></button> Output stream 4 is unusual in that, when it is selected,
+   the only text printed to it is that of the player's commands and
+   keypresses (as read by <a href="sect15.html#read_char"><strong>read_char</strong></a>).
+   (Each command is written, in one go, when it has been finished. Time delays and mouse-clicks 
+   should ideally be recorded. For suggestions on how this might be achieved, see the 
+   <a href="sect07.html#remarks">remarks</a> section below. Mistypes and uses of 'delete' are 
+   not written.)
+</p>
+</section>
+
+<section class="clause-section is-clause" id="7.2">
+<p><a class="clause-num" href="#7.2">7.2</a><button class="copy-link" type="button" data-anchor="7.2" aria-label="Copy link to 7.2" title="Copy link"></button> On output streams 1 and 2 (only), text printing may be "buffered"
+   in that new-lines are automatically printed to ensure that no word
+   (of length less than the width of the screen) spreads across two lines
+    (if the interpreter is able to control this).
+   (This process is sometimes called "word-wrapping".)
+</p>
+</section>
+
+<section class="clause-section is-clause" id="7.2.1">
+<p><a class="clause-num" href="#7.2.1">7.2.1</a><button class="copy-link" type="button" data-anchor="7.2.1" aria-label="Copy link to 7.2.1" title="Copy link"></button> In Versions 1 to 3, buffering is always on.  In Versions 4
+   and later it is on by default (at the start of a game) and a game can
+   switch it on or off using the <a href="sect15.html#buffer_mode"><strong>buffer_mode</strong></a>
+   opcode.
+</p>
+</section>
+
+<section class="clause-section is-clause" id="7.2.2">
+<p><a class="clause-num" href="#7.2.2">7.2.2</a><button class="copy-link" type="button" data-anchor="7.2.2" aria-label="Copy link to 7.2.2" title="Copy link"></button> In Version 6, each of the eight windows has its own "buffering
+   flag".  In Versions 3 to 5, the <a href="sect15.html#buffer_mode"><strong>buffer_mode</strong></a> 
+   applies only to the lower window, and buffering never happens in the upper window.
+</p>
+</section>
+
+<section class="clause-section is-clause" id="7.3">
+<p><a class="clause-num" href="#7.3">7.3</a><button class="copy-link" type="button" data-anchor="7.3" aria-label="Copy link to 7.3" title="Copy link"></button> In Versions 1 and 2, output stream 1 is always selected and
+   stream 2 can be selected or deselected by the game, by setting or clearing
+   bit 0 of 'Flags 2'.
+</p>
+</section>
+
+<section class="clause-section is-clause" id="7.4">
+<p><a class="clause-num" href="#7.4">7.4</a><button class="copy-link" type="button" data-anchor="7.4" aria-label="Copy link to 7.4" title="Copy link"></button> In Versions 3 and later, all four output streams can be selected
+   or deselected using the <a href="sect15.html#output_stream">
+   <strong>output_stream</strong></a> opcode.  In addition, stream 2
+   can be selected or deselected by setting or clearing bit 0 of 'Flags 2'.
+   Whichever method is used, the interpreter must ensure that this flag
+   holds the current status of stream 2.  ('A Mind Forever Voyaging'
+   requires this.)
+</p>
+</section>
+
+<section class="clause-section is-clause has-marker is-v1-0" id="7.5">
+<p><a class="clause-num" href="#7.5">7.5</a><button class="copy-link" type="button" data-anchor="7.5" aria-label="Copy link to 7.5" title="Copy link"></button> <strong class="spec-marker spec-marker--v1-0">***[1.0]</strong> 
+   Because of the <strong>print_unicode</strong> opcode, it is possible for
+   arbitrary Unicode characters to be sent to the output streams: that is,
+   for characters which are not in the ZSCII set at all, even in the
+   "extra characters" range.
+</p>
+</section>
+
+<section class="clause-section is-clause" id="7.5.1">
+<p><a class="clause-num" href="#7.5.1">7.5.1</a><button class="copy-link" type="button" data-anchor="7.5.1" aria-label="Copy link to 7.5.1" title="Copy link"></button> See <strong>§</strong> 3.8.5.4 for rules on printing Unicode to stream 1.</p>
+</section>
+
+<section class="clause-section is-clause" id="7.5.2">
+<p><a class="clause-num" href="#7.5.2">7.5.2</a><button class="copy-link" type="button" data-anchor="7.5.2" aria-label="Copy link to 7.5.2" title="Copy link"></button> Interpreters are free to use any representation of non-ASCII
+   Unicode characters in stream 2.  For example, they might print
+   "[1a05]" to signify Unicode character <strong>$1a05</strong>; or they might be
+   configurable to write transcript files which conform to any chosen
+   ISO 8859 set.
+</p>
+</section>
+
+<section class="clause-section is-clause" id="7.5.3">
+<p><a class="clause-num" href="#7.5.3">7.5.3</a><button class="copy-link" type="button" data-anchor="7.5.3" aria-label="Copy link to 7.5.3" title="Copy link"></button> When printed to stream 3, Unicode characters should be
+   converted to ZSCII if possible.  If this is not possible, a question
+   mark should be printed to stream 3.
+</p>
+</section>
+
+<section class="clause-section is-clause" id="7.5.4">
+<p><a class="clause-num" href="#7.5.4">7.5.4</a><button class="copy-link" type="button" data-anchor="7.5.4" aria-label="Copy link to 7.5.4" title="Copy link"></button> Non-ZSCII characters never need to be printed to stream 4.</p>
+</section>
+
+<section class="clause-section is-clause has-marker is-v1-0" id="7.6">
+<p><a class="clause-num" href="#7.6">7.6</a><button class="copy-link" type="button" data-anchor="7.6" aria-label="Copy link to 7.6" title="Copy link"></button> <strong class="spec-marker spec-marker--v1-0">***[1.0]</strong>
+   In Versions 5 and later, the Z-machine has the ability to load
+   and save files (using optional operands with the 
+   <a href="sect15.html#save"><strong>save</strong></a> and 
+   <a href="sect15.html#restore"><strong>restore</strong></a>
+   opcodes: these operands were not used in Infocom's Version 5 games,
+   but I wish to specify them as in Version 5 anyway).
+</p>
+</section>
+
+<section class="clause-section is-clause has-marker is-v1-0" id="7.6.1">
+<p><a class="clause-num" href="#7.6.1">7.6.1</a><button class="copy-link" type="button" data-anchor="7.6.1" aria-label="Copy link to 7.6.1" title="Copy link"></button> <strong class="spec-marker spec-marker--v1-0">***[1.0]</strong>
+   Filenames have the following format (approximately the MS-DOS
+   8.3 rule): one to eight alphanumeric characters, a full stop and zero to
+   three alphanumeric characters (the "file extension").
+</p>
+</section>
+
+<section class="clause-section is-clause has-marker is-v1-1" id="7.6.1-b">
+<p><a class="clause-num" href="#7.6.1-b">7.6.1</a><button class="copy-link" type="button" data-anchor="7.6.1-b" aria-label="Copy link to 7.6.1" title="Copy link"></button> <strong class="spec-marker spec-marker--v1-1">***[1.1]</strong>
+   The game can pass any string to the interpreter to be used as a
+   filename. In all cases the interpreter will convert the string to an appropriate filename.
+</p>
+</section>
+
+<section class="clause-section is-clause" id="7.6.1.1">
+<p><a class="clause-num" href="#7.6.1.1">7.6.1.1</a><button class="copy-link" type="button" data-anchor="7.6.1.1" aria-label="Copy link to 7.6.1.1" title="Copy link"></button> The interpreter must convert all filenames to upper case before
+   use.  If no full stop is given, ".AUX" should be appended.
+</p>
+</section>
+
+<section class="clause-section is-clause" id="7.6.1.2">
+<p><a class="clause-num" href="#7.6.1.2">7.6.1.2</a><button class="copy-link" type="button" data-anchor="7.6.1.2" aria-label="Copy link to 7.6.1.2" title="Copy link"></button> Games should avoid the extensions ".INF", ".H", ".Z"
+   followed by a number or ".SAV": otherwise they may be in danger of erasing
+   their own object code, source code or saved game files.
+</p>
+</section>
+
+<section class="clause-section is-clause has-marker is-v1-1" id="7.6.1.3">
+<p><a class="clause-num" href="#7.6.1.3">7.6.1.3</a><button class="copy-link" type="button" data-anchor="7.6.1.3" aria-label="Copy link to 7.6.1.3" title="Copy link"></button> <strong class="spec-marker spec-marker--v1-1">***[1.1]</strong>
+   The interpreter may add any appropriate file extension (that is, a 
+   full stop followed by a further string that identifies the type of the file) to the filename. 
+   Previous versions of this specification suggested a default file extension of ".AUX", but this
+   is not a requirement.
+</p>
+</section>
+
+<section class="clause-section is-clause has-marker is-v1-1" id="7.6.1.4">
+<p><a class="clause-num" href="#7.6.1.4">7.6.1.4</a><button class="copy-link" type="button" data-anchor="7.6.1.4" aria-label="Copy link to 7.6.1.4" title="Copy link"></button> <strong class="spec-marker spec-marker--v1-1">***[1.1]</strong>
+   The interpreter should delete from the filename any characters illegal
+   for a filename. This will include all of the following characters (and more, if the OS 
+   requires it): slash, backslash, angle brackets (less-than and greater-than), colon, 
+   double-quote, pipe (vertical bar), question-mark, asterisk. The library should also 
+   truncate the argument at the first full stop (delete the first full stop and any following 
+   characters). If the result is the empty string, change it to the string "NULL".
+</p>
+</section>
+
+<section class="clause-section is-clause has-marker is-v1-1" id="7.6.1.5">
+<p><a class="clause-num" href="#7.6.1.5">7.6.1.5</a><button class="copy-link" type="button" data-anchor="7.6.1.5" aria-label="Copy link to 7.6.1.5" title="Copy link"></button> <strong class="spec-marker spec-marker--v1-1">***[1.1]</strong>
+   When reading a file without using a prompt to the user, the interpreter may 
+   choose to search for the file using any algorithm of its choice, starting from the argument the game 
+   passes. For example, if the argument specifies a filename containing a file extension, the interpreter 
+   may choose to look for a filename with that extension and read it if it is found.
+</p>
+</section>
+
+<section class="clause-section is-clause has-marker is-v1-0" id="7.6.2">
+<p><a class="clause-num" href="#7.6.2">7.6.2</a><button class="copy-link" type="button" data-anchor="7.6.2" aria-label="Copy link to 7.6.2" title="Copy link"></button> <strong class="spec-marker spec-marker--v1-0">***[1.0]</strong>
+   Saved files are not associated with any particular session
+   of a game.  They are not part of the "state of play".
+</p>
+</section>
+
+<section class="clause-section is-clause has-marker is-v1-0" id="7.6.3">
+<p><a class="clause-num" href="#7.6.3">7.6.3</a><button class="copy-link" type="button" data-anchor="7.6.3" aria-label="Copy link to 7.6.3" title="Copy link"></button> <strong class="spec-marker spec-marker--v1-0">***[1.0]</strong>
+   A game may depend on having up to 32 auxiliary files (with
+   different names).
+</p>
+</section>
+
+<section class="clause-section is-clause" id="7.6.4">
+<p><a class="clause-num" href="#7.6.4">7.6.4</a><button class="copy-link" type="button" data-anchor="7.6.4" aria-label="Copy link to 7.6.4" title="Copy link"></button> File-handling errors such as "disc corrupt" and "disc full"
+   should be reported directly to the player by the interpreter.  The error
+   "file not found" should only cause a failure return code from 
+   <a href="sect15.html#restore"><strong>restore</strong></a>.
+</p>
+</section>
+
+<section class="clause-section is-clause" id="7.6.5">
+<p><a class="clause-num" href="#7.6.5">7.6.5</a><button class="copy-link" type="button" data-anchor="7.6.5" aria-label="Copy link to 7.6.5" title="Copy link"></button> Interpreters are allowed to not support access to external files (such as with 
+   output_stream 2, or the extra features of save and restore), or to only support 
+   some methods of access. Interpreters should support these features if possible, 
+   as some games may rely on external files, and in any case transcripts are very 
+   useful for testing, but in some environments such access is not feasible.
+</p>
+</section>
+
+<section class="clause-section is-clause" id="7.6.5.1">
+<p><a class="clause-num" href="#7.6.5.1">7.6.5.1</a><button class="copy-link" type="button" data-anchor="7.6.5.1" aria-label="Copy link to 7.6.5.1" title="Copy link"></button> An attempt by the game to use save or restore in a manner not supported by the 
+   interpreter should simply return 0 as with any failure, and the game should 
+   notice and take appropriate actions.
+</p>
+</section>
+
+<section class="clause-section is-clause" id="7.6.5.2">
+<p><a class="clause-num" href="#7.6.5.2">7.6.5.2</a><button class="copy-link" type="button" data-anchor="7.6.5.2" aria-label="Copy link to 7.6.5.2" title="Copy link"></button> An attempt by the game to use streams to access external files which is not 
+   supported by the interpreter should ideally print a warning to the user that 
+   the functionality is not available, and otherwise do nothing.
+</p>
+</section>
+
+<section class="clause-section is-topic" id="remarks">
+<h2 id="h-remarks">Remarks<a class="heading-anchor" href="#remarks" aria-label="Link to Remarks"></a></h2>
+<p>The <strong>ITF</strong> interpreter incorrectly applies buffering when printing to
+   the upper window.
+</p>
+<p>Note that the requirement in <a href="sect07.html#7.1.2.1.1"><strong>§</strong> 
+   7.1.2.1.1</a>, that usages of stream 3 can be
+   'nested', was new in Standard 1.0.  This is potentially important for
+   Inform games, as stream 3 is often used to examine text before printing,
+   for instance to choose between the articles "a" and "an" in front
+   of an object name.  But the process of printing an object name may
+   itself require a usage of stream 3, and so on.
+</p>
+<p>An ambiguous point about output stream 4 is whether it should contain
+   the answers to interpreter questions like "what file name should your
+   saved game have?": it can actually be quite useful to be able to include
+   such answers in test script files.  (When running a long script, I often
+   save the game at several places during it, in order to save time in
+   re-running passages.)
+</p>
+<p>An interpreter should be able to write time delays (for timed input),
+   accented characters or mouse clicks into stream 4 (i.e., to a script file).
+   One possible style to record this information might be:
+</p>
+<pre>
+    take lamp              an ordinary command
+    turn it on.[154]       command, full stop, then keypad 9
+                           (which might abbreviate for NE)
+    look unde[0]           timed out input
+    look under the rock    the same input continuing
+    [254][10][6]           mouse-click at (10,6)
+</pre>
+<p>A typical auxiliary file might be one containing the player's preferred
+   choices.  This would be created when he first changed any of the default
+   settings, and loaded (if present) whenever the game started up.
+</p>
+</section>
+</main>
+<nav class="pager" aria-label="Previous and next section"><a class="pager-link pager-prev" rel="prev" href="sect06.html"><span class="pager-kind">Previous</span><span class="pager-title">6. The game state</span></a><a class="pager-link pager-next" rel="next" href="sect08.html"><span class="pager-kind">Next</span><span class="pager-title">8. The screen model</span></a></nav>
+<footer class="site-footer">
+  <p>The Z-Machine Standards Document, version 1.1 &mdash; 24 February 2014.
+     Canonical copy at <a href="https://www.inform-fiction.org/zmachine/standards/current/">inform-fiction.org</a>.</p>
+</footer>
+</div>
+<aside class="outline" id="outline" aria-label="On this page" data-generated>
+<h2>On this page</h2>
+<ol>
+<li class="depth-2"><a href="#7.1" title="At any given time text is being output through a selection of "output streams" (possibly none, possibly several at once)">7.1</a></li>
+<li class="depth-3"><a href="#7.1.1" title="Two output streams are common to all Versions: number 1 (the screen) and 2 (the game transcript, usually printed to a pr">7.1.1</a></li>
+<li class="depth-4"><a href="#7.1.1.1" title="In Versions 1 to 5, the player's input to the read opcode should be echoed to output streams 1 and 2 (if stream 2 is act">7.1.1.1</a></li>
+<li class="depth-4"><a href="#7.1.1.2" title="In Infocom's Version 4 game 'A Mind Forever Voyaging', which anticipated a printer rather than a file to receive the tra">7.1.1.2</a></li>
+<li class="depth-3"><a href="#7.1.2" title="Versions 3 and later supply these and two other output streams, numbered 3 (Z-machine memory) and 4 (a script file of th">7.1.2</a></li>
+<li class="depth-4"><a href="#7.1.2.1" title="Output stream 3 writes to a table in dynamic memory. When the stream is selected, the table may have any contents (even ">7.1.2.1</a></li>
+<li class="depth-4"><a href="#7.1.2.1.1" title="***[1.0] It is possible for stream 3 to be selected while it is already on. If this happens, the previous table address ">7.1.2.1.1</a></li>
+<li class="depth-4"><a href="#7.1.2.2" title="Output stream 3 is unusual in that, while it is selected, no text is sent to any other output streams which are selected">7.1.2.2</a></li>
+<li class="depth-4"><a href="#7.1.2.2.1" title="Newlines are written to output stream 3 as ZSCII 13. (A game should never print_char the value 10, or any other value wh">7.1.2.2.1</a></li>
+<li class="depth-4"><a href="#7.1.2.3" title="Output stream 4 is unusual in that, when it is selected, the only text printed to it is that of the player's commands an">7.1.2.3</a></li>
+<li class="depth-2"><a href="#7.2" title="On output streams 1 and 2 (only), text printing may be "buffered" in that new-lines are automatically printed to ensure ">7.2</a></li>
+<li class="depth-3"><a href="#7.2.1" title="In Versions 1 to 3, buffering is always on. In Versions 4 and later it is on by default (at the start of a game) and a g">7.2.1</a></li>
+<li class="depth-3"><a href="#7.2.2" title="In Version 6, each of the eight windows has its own "buffering flag". In Versions 3 to 5, the buffer_mode applies only t">7.2.2</a></li>
+<li class="depth-2"><a href="#7.3" title="In Versions 1 and 2, output stream 1 is always selected and stream 2 can be selected or deselected by the game, by setti">7.3</a></li>
+<li class="depth-2"><a href="#7.4" title="In Versions 3 and later, all four output streams can be selected or deselected using the output_stream opcode. In additi">7.4</a></li>
+<li class="depth-2"><a href="#7.5" title="***[1.0] Because of the print_unicode opcode, it is possible for arbitrary Unicode characters to be sent to the output s">7.5</a></li>
+<li class="depth-3"><a href="#7.5.1" title="See § 3.8.5.4 for rules on printing Unicode to stream 1.">7.5.1</a></li>
+<li class="depth-3"><a href="#7.5.2" title="Interpreters are free to use any representation of non-ASCII Unicode characters in stream 2. For example, they might pri">7.5.2</a></li>
+<li class="depth-3"><a href="#7.5.3" title="When printed to stream 3, Unicode characters should be converted to ZSCII if possible. If this is not possible, a questi">7.5.3</a></li>
+<li class="depth-3"><a href="#7.5.4" title="Non-ZSCII characters never need to be printed to stream 4.">7.5.4</a></li>
+<li class="depth-2"><a href="#7.6" title="***[1.0] In Versions 5 and later, the Z-machine has the ability to load and save files (using optional operands with the">7.6</a></li>
+<li class="depth-3"><a href="#7.6.1" title="***[1.0] Filenames have the following format (approximately the MS-DOS 8.3 rule): one to eight alphanumeric characters, ">7.6.1</a></li>
+<li class="depth-3"><a href="#7.6.1-b" title="***[1.1] The game can pass any string to the interpreter to be used as a filename. In all cases the interpreter will con">7.6.1</a></li>
+<li class="depth-4"><a href="#7.6.1.1" title="The interpreter must convert all filenames to upper case before use. If no full stop is given, ".AUX" should be appended">7.6.1.1</a></li>
+<li class="depth-4"><a href="#7.6.1.2" title="Games should avoid the extensions ".INF", ".H", ".Z" followed by a number or ".SAV": otherwise they may be in danger of ">7.6.1.2</a></li>
+<li class="depth-4"><a href="#7.6.1.3" title="***[1.1] The interpreter may add any appropriate file extension (that is, a full stop followed by a further string that ">7.6.1.3</a></li>
+<li class="depth-4"><a href="#7.6.1.4" title="***[1.1] The interpreter should delete from the filename any characters illegal for a filename. This will include all of">7.6.1.4</a></li>
+<li class="depth-4"><a href="#7.6.1.5" title="***[1.1] When reading a file without using a prompt to the user, the interpreter may choose to search for the file using">7.6.1.5</a></li>
+<li class="depth-3"><a href="#7.6.2" title="***[1.0] Saved files are not associated with any particular session of a game. They are not part of the "state of play".">7.6.2</a></li>
+<li class="depth-3"><a href="#7.6.3" title="***[1.0] A game may depend on having up to 32 auxiliary files (with different names).">7.6.3</a></li>
+<li class="depth-3"><a href="#7.6.4" title="File-handling errors such as "disc corrupt" and "disc full" should be reported directly to the player by the interpreter">7.6.4</a></li>
+<li class="depth-3"><a href="#7.6.5" title="Interpreters are allowed to not support access to external files (such as with output_stream 2, or the extra features of">7.6.5</a></li>
+<li class="depth-4"><a href="#7.6.5.1" title="An attempt by the game to use save or restore in a manner not supported by the interpreter should simply return 0 as wit">7.6.5.1</a></li>
+<li class="depth-4"><a href="#7.6.5.2" title="An attempt by the game to use streams to access external files which is not supported by the interpreter should ideally ">7.6.5.2</a></li>
+<li class="depth-1"><a href="#remarks">Remarks</a></li>
+</ol>
+</aside>
+</div>
+<script src="assets/nav.js"></script>
+<script src="assets/zspec.js" defer></script>
+</body>
+</html>

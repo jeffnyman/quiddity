@@ -1,0 +1,860 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>3. How text and characters are encoded — The Z-Machine Standards Document 1.1</title>
+<meta name="description" content="3. How text and characters are encoded — section of the Z-Machine Standards Document, version 1.1.">
+<link rel="canonical" href="https://jeffnyman.github.io/z-machine-standard/sect03.html">
+<meta name="theme-color" content="#0d63c9">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="The Z-Machine Standards Document 1.1">
+<meta property="og:title" content="3. How text and characters are encoded — The Z-Machine Standards Document 1.1">
+<meta property="og:description" content="3. How text and characters are encoded — section of the Z-Machine Standards Document, version 1.1.">
+<meta property="og:url" content="https://jeffnyman.github.io/z-machine-standard/sect03.html">
+<link rel="stylesheet" href="assets/zspec.css">
+<script>/* Set the theme before first paint to avoid a flash. */
+(function(){try{var t=localStorage.getItem('zspec-theme');if(t==='dark'||t==='light')document.documentElement.dataset.theme=t;}catch(e){}})();
+</script>
+</head>
+<body>
+<a class="skip-link" href="#content">Skip to content</a>
+<header class="topbar">
+  <button class="icon-button nav-toggle" type="button" aria-expanded="false" aria-controls="sidebar" aria-label="Show contents">
+    <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 5h14M3 10h14M3 15h14"/></svg>
+  </button>
+  <a class="brand" href="index.html"><span class="brand-name">Z-Machine Standard</span><span class="brand-version">1.1</span></a>
+  <div class="topbar-actions">
+    <button class="search-trigger" type="button" data-search-open>
+      <svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="9" cy="9" r="6"/><path d="M13.5 13.5 18 18"/></svg>
+      <span>Search</span><kbd>/</kbd>
+    </button>
+    <button class="icon-button theme-toggle" type="button" aria-label="Switch colour theme">
+      <svg class="icon-sun" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="4"/><path d="M10 1v2M10 17v2M1 10h2M17 10h2M3.9 3.9l1.4 1.4M14.7 14.7l1.4 1.4M16.1 3.9l-1.4 1.4M5.3 14.7l-1.4 1.4"/></svg>
+      <svg class="icon-moon" viewBox="0 0 20 20" aria-hidden="true"><path d="M17 12.3A7.5 7.5 0 0 1 7.7 3a7.5 7.5 0 1 0 9.3 9.3z"/></svg>
+    </button>
+  </div>
+</header>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Specification contents">
+<!--nav:start-->
+<div class="nav-inner">
+<a class="nav-home" href="index.html">Contents</a>
+<ul class="nav-list">
+<li><a href="preface.html"><span class="nav-label">Preface</span></a></li>
+<li><a href="overview.html"><span class="nav-label">Overview</span></a></li>
+</ul>
+<h2 class="nav-group">Fundamentals</h2>
+<ul class="nav-list">
+<li><a href="sect01.html"><span class="nav-num">1</span><span class="nav-label">The memory map</span></a></li>
+<li><a href="sect02.html"><span class="nav-num">2</span><span class="nav-label">Numbers and arithmetic</span></a></li>
+<li class="is-current"><a href="sect03.html" aria-current="page"><span class="nav-num">3</span><span class="nav-label">Text and characters</span></a></li>
+<li><a href="sect04.html"><span class="nav-num">4</span><span class="nav-label">Instruction encoding</span></a></li>
+<li><a href="sect05.html"><span class="nav-num">5</span><span class="nav-label">Routine encoding</span></a></li>
+<li><a href="sect06.html"><span class="nav-num">6</span><span class="nav-label">The game state</span></a></li>
+</ul>
+<h2 class="nav-group">Input/Output</h2>
+<ul class="nav-list">
+<li><a href="sect07.html"><span class="nav-num">7</span><span class="nav-label">Output streams</span></a></li>
+<li><a href="sect08.html"><span class="nav-num">8</span><span class="nav-label">The screen model</span></a></li>
+<li><a href="sect09.html"><span class="nav-num">9</span><span class="nav-label">Sound effects</span></a></li>
+<li><a href="sect10.html"><span class="nav-num">10</span><span class="nav-label">Input streams</span></a></li>
+</ul>
+<h2 class="nav-group">Tables</h2>
+<ul class="nav-list">
+<li><a href="sect11.html"><span class="nav-num">11</span><span class="nav-label">The header</span></a></li>
+<li><a href="sect12.html"><span class="nav-num">12</span><span class="nav-label">The object table</span></a></li>
+<li><a href="sect13.html"><span class="nav-num">13</span><span class="nav-label">Dictionary and lexing</span></a></li>
+</ul>
+<h2 class="nav-group">Instruction Set</h2>
+<ul class="nav-list">
+<li><a href="sect14.html"><span class="nav-num">14</span><span class="nav-label">Table of opcodes</span></a></li>
+<li><a href="sect15.html"><span class="nav-num">15</span><span class="nav-label">Dictionary of opcodes</span></a></li>
+</ul>
+<h2 class="nav-group">An Unusual Font</h2>
+<ul class="nav-list">
+<li><a href="sect16.html"><span class="nav-num">16</span><span class="nav-label">Font 3</span></a></li>
+</ul>
+<h2 class="nav-group">Appendices</h2>
+<ul class="nav-list">
+<li><a href="appa.html"><span class="nav-num">A</span><span class="nav-label">Error messages and debugging</span></a></li>
+<li><a href="appb.html"><span class="nav-num">B</span><span class="nav-label">Header conventions</span></a></li>
+<li><a href="appc.html"><span class="nav-num">C</span><span class="nav-label">Resources available</span></a></li>
+<li><a href="appd.html"><span class="nav-num">D</span><span class="nav-label">History</span></a></li>
+<li><a href="appe.html"><span class="nav-num">E</span><span class="nav-label">Statistics</span></a></li>
+<li><a href="appf.html"><span class="nav-num">F</span><span class="nav-label">Canonical story files</span></a></li>
+</ul>
+<h2 class="nav-group">Related standards</h2>
+<p class="nav-note">Mirrored in this repository</p>
+<ul class="nav-list">
+<li><a href="quetzal.html"><span class="nav-label">Quetzal</span></a></li>
+<li><a href="blorb.html"><span class="nav-label">Blorb</span></a></li>
+</ul>
+</div>
+<!--nav:end-->
+</nav>
+<div class="main-column">
+<main class="content" id="content">
+<div class="page-head">
+<img class="page-icon" src="images/icon03.gif" alt="" width="82" height="86" loading="lazy" decoding="async">
+<h1>3. How text and characters are encoded</h1>
+</div>
+<div class="intro">
+<blockquote>
+  <p>This technique is similar to the five-bit Baudot code, which
+     was used by early Teletypes before ASCII was invented.
+  </p>
+  <p>Marc S. Blank and S. W. Galley, <strong>How to Fit a Large Program Into
+     a Small Machine</strong>
+  </p>
+</blockquote>
+</div>
+
+<section class="clause-section is-clause" id="3.1">
+<p><a class="clause-num" href="#3.1">3.1</a><button class="copy-link" type="button" data-anchor="3.1" aria-label="Copy link to 3.1" title="Copy link"></button> Z-machine text is a sequence of ZSCII character codes (ZSCII is
+   a system similar to ASCII: see <a href="sect03.html#3.8"><strong>§</strong> 3.8</a> below).  These ZSCII values are
+   encoded into memory using a string of Z-characters.  The process of
+   converting between Z-characters and ZSCII values is given in <a href="sect03.html#3.2"><strong>§</strong> 3.2 to
+   3.7</a> below.
+</p>
+<aside class="editor-note" data-generated>
+<p class="note-head">
+<span class="note-tag">Editor&rsquo;s note</span>
+<span class="note-title">Three character sets, not one</span>
+</p>
+<p>Almost every early misunderstanding of this section comes from merging three
+   separate things.</p>
+<p>A <strong>Z-character</strong> is a 5-bit value, 0 to 31. It is a storage
+   unit, not a character: what it means depends entirely on which alphabet is
+   current when you reach it. <strong>ZSCII</strong> is the character set the
+   machine actually operates on &mdash; effectively 8-bit
+   (<a href="#3.8.1">&#167;3.8.1</a>), and identical to ASCII between 32 and 126.
+   <strong>Unicode</strong> enters only in Version 5 and later, and only to say
+   what the "extra characters" 155&ndash;251 should look like
+   (<a href="#3.8.5">&#167;3.8.5</a>).</p>
+<p>So decoding text is Z-characters &rarr; ZSCII, and that is what this section
+   describes. Getting ZSCII onto a screen is a separate problem.</p>
+<p class="note-by">&mdash; Jeff Nyman</p>
+</aside>
+</section>
+
+<section class="clause-section is-clause" id="3.2">
+<p><a class="clause-num" href="#3.2">3.2</a><button class="copy-link" type="button" data-anchor="3.2" aria-label="Copy link to 3.2" title="Copy link"></button> Text in memory consists of a sequence of 2-byte words.  Each word
+   is divided into three 5-bit 'Z-characters', plus 1 bit left over, arranged
+   as
+</p>
+<pre>
+   --first byte-------   --second byte---
+   7    6 5 4 3 2  1 0   7 6 5  4 3 2 1 0
+   bit  --first--  --second---  --third--
+</pre>
+<p>The bit is set only on the last 2-byte word of the text, and so marks the
+   end.
+</p>
+<aside class="editor-note" data-generated>
+<p class="note-head">
+<span class="note-tag">Editor&rsquo;s note</span>
+<span class="note-title">Packing three Z-characters into a word</span>
+</p>
+<p>The layout is one end-marker bit, then three 5-bit fields, most significant
+   first. To pack <code>abc</code> in Version 3: in A0, <code>a</code> is
+   Z-character 6, <code>b</code> is 7 and <code>c</code> is 8
+   (<a href="#3.5.3">&#167;3.5.3</a>), so the word is</p>
+<pre>(6 &lt;&lt; 10) | (7 &lt;&lt; 5) | 8  =  $18e8</pre>
+<p>or <code>$98e8</code> if this is the last word of the string. Reading back
+   out is <code>(w &gt;&gt; 10) &amp; 31</code>, <code>(w &gt;&gt; 5) &amp; 31</code>,
+   <code>w &amp; 31</code>.</p>
+<p>Note that the end bit marks the last <em>word</em>, not the last character.
+   A string always occupies a whole number of words, which is why the padding in
+   <a href="#3.6">&#167;3.6</a> is needed.</p>
+<p class="note-by">&mdash; Jeff Nyman</p>
+</aside>
+</section>
+
+<section class="clause-section is-clause" id="3.2.1">
+<p><a class="clause-num" href="#3.2.1">3.2.1</a><button class="copy-link" type="button" data-anchor="3.2.1" aria-label="Copy link to 3.2.1" title="Copy link"></button> There are three 'alphabets', A0 (lower case), A1 (upper case) and
+   A2 (punctuation) and during printing one of these is current at any given
+   time.  Initially A0 is current.  The meaning of a Z-character may depend on
+   which alphabet is current.
+</p>
+</section>
+
+<section class="clause-section is-clause" id="3.2.2">
+<p><a class="clause-num" href="#3.2.2">3.2.2</a><button class="copy-link" type="button" data-anchor="3.2.2" aria-label="Copy link to 3.2.2" title="Copy link"></button> In Versions 1 and 2, the current alphabet can be any of the
+   three.  The Z-characters 2 and 3 are called 'shift' characters and change
+   the alphabet for the next character only.  The new alphabet depends on
+   what the current one is:
+</p>
+<pre>
+             from A0  from A1  from A2
+  Z-char 2      A1       A2       A0
+  Z-char 3      A2       A0       A1
+</pre>
+<p>Z-characters 4 and 5 permanently change alphabet, according to the
+   same table, and are called 'shift lock' characters.
+</p>
+<aside class="editor-note" data-generated>
+<p class="note-head">
+<span class="note-tag">Editor&rsquo;s note</span>
+<span class="note-title">Z-characters 2 and 3 change meaning at Version 3</span>
+</p>
+<p>This is the single most common cause of garbled text, because it fails
+   quietly.</p>
+<p>In Versions 1 and 2, Z-characters 2 and 3 are temporary shifts and 4 and 5
+   are shift <em>locks</em>. Both are <strong>relative</strong>: what they select
+   depends on the alphabet you are already in, which is why this clause needs a
+   table rather than a rule.</p>
+<p>From Version 3 onward (<a href="#3.2.3">&#167;3.2.3</a>) none of that holds.
+   Z-characters 2 and 3 are no longer shifts at all &mdash; they introduce
+   abbreviations (<a href="#3.3">&#167;3.3</a>). Only 4 and 5 shift, they are
+   <strong>absolute</strong> (4 selects A1, 5 selects A2), they last exactly one
+   character, and there is no lock.</p>
+<p>The same bytes therefore decode to different text depending on the version
+   byte in the header. An interpreter that ignores the version does not crash;
+   it prints nonsense.</p>
+<p class="note-by">&mdash; Jeff Nyman</p>
+</aside>
+</section>
+
+<section class="clause-section is-clause" id="3.2.3">
+<p><a class="clause-num" href="#3.2.3">3.2.3</a><button class="copy-link" type="button" data-anchor="3.2.3" aria-label="Copy link to 3.2.3" title="Copy link"></button> In Versions 3 and later, the current alphabet is always A0
+   unless changed for 1 character only: Z-characters 4 and 5 are shift
+   characters.  Thus 4 means "the next character is in A1" and 5 means
+   "the next is in A2".  There are no shift lock characters.
+</p>
+</section>
+
+<section class="clause-section is-clause" id="3.2.4">
+<p><a class="clause-num" href="#3.2.4">3.2.4</a><button class="copy-link" type="button" data-anchor="3.2.4" aria-label="Copy link to 3.2.4" title="Copy link"></button> An indefinite sequence of shift or shift lock characters is
+   legal (but prints nothing).
+</p>
+</section>
+
+<section class="clause-section is-clause" id="3.3">
+<p><a class="clause-num" href="#3.3">3.3</a><button class="copy-link" type="button" data-anchor="3.3" aria-label="Copy link to 3.3" title="Copy link"></button> In Versions 3 and later, Z-characters 1, 2 and 3 represent
+   abbreviations, sometimes also called 'synonyms' (for traditional reasons):
+   the next Z-character indicates which abbreviation string to print.  If z
+   is the first Z-character (1, 2 or 3) and x the subsequent one, then the
+   interpreter must look up entry 32(z-1)+x in the abbreviations table and
+   print the string at that word address.  In Version 2, Z-character 1 has this
+   effect (but 2 and 3 do not, so there are only 32 abbreviations).
+</p>
+<aside class="editor-note" data-generated>
+<p class="note-head">
+<span class="note-tag">Editor&rsquo;s note</span>
+<span class="note-title">Working out which abbreviation to print</span>
+</p>
+<p>With <em>z</em> the introducing Z-character (1, 2 or 3) and <em>x</em> the one
+   after it, the entry number is 32(<em>z</em>&minus;1)+<em>x</em>. In other
+   words <em>z</em> chooses one of three banks and <em>x</em> chooses within the
+   bank, giving 96 abbreviations in all. In Version 2 only <em>z</em>&nbsp;=&nbsp;1
+   works, so there are 32.</p>
+<p>The table entry is a <strong>word</strong> address
+   (<a href="sect01.html#1.2.2">&#167;1.2.2</a>) &mdash; this is the only place in
+   the Z-machine where word addresses are used &mdash; so double it to get the
+   byte address to print from.</p>
+<p>Two restrictions in <a href="#3.3.1">&#167;3.3.1</a> are easy to skip past and
+   awkward to debug: an abbreviation may not itself contain an abbreviation, and
+   it may not end in the middle of a multi-Z-character construction.</p>
+<p class="note-by">&mdash; Jeff Nyman</p>
+</aside>
+</section>
+
+<section class="clause-section is-clause" id="3.3.1">
+<p><a class="clause-num" href="#3.3.1">3.3.1</a><button class="copy-link" type="button" data-anchor="3.3.1" aria-label="Copy link to 3.3.1" title="Copy link"></button> Abbreviation string-printing follows all the rules of this section
+   except that an abbreviation string must not itself use abbreviations and
+   must not end with an incomplete multi-Z-character construction (see 
+   <a href="sect03.html#3.6.1"><strong>§</strong> 3.6.1</a> below).
+</p>
+</section>
+
+<section class="clause-section is-clause" id="3.4">
+<p><a class="clause-num" href="#3.4">3.4</a><button class="copy-link" type="button" data-anchor="3.4" aria-label="Copy link to 3.4" title="Copy link"></button> Z-character 6 from A2 is a 'ZSCII escape' character. It means that the two subsequent 
+   Z-characters specify a ten-bit ZSCII character code: the next Z-character gives the top 
+   5 bits and the one after the bottom 5.
+</p>
+<aside class="editor-note" data-generated>
+<p class="note-head">
+<span class="note-tag">Editor&rsquo;s note</span>
+<span class="note-title">Printing a character no alphabet contains</span>
+</p>
+<p>The escape is triggered by Z-character 6 <em>while A2 is current</em>, not by
+   the value 6 on its own &mdash; in A0 the same value is the letter
+   <code>a</code>.</p>
+<p>To print <code>@</code>, which appears in none of the three alphabets: it is
+   ZSCII 64, so shift to A2 with 5, escape with 6, then send the top five bits
+   and the bottom five:</p>
+<pre>64 &gt;&gt; 5 = 2      64 &amp; 31 = 0
+
+  5, 6, 2, 0</pre>
+<p>Four Z-characters for one character, which is worth remembering when working
+   out whether a word will survive dictionary truncation
+   (<a href="#3.6.1">&#167;3.6.1</a>).</p>
+<p class="note-by">&mdash; Jeff Nyman</p>
+</aside>
+</section>
+
+<section class="clause-section is-clause" id="3.5">
+<p><a class="clause-num" href="#3.5">3.5</a><button class="copy-link" type="button" data-anchor="3.5" aria-label="Copy link to 3.5" title="Copy link"></button> The remaining Z-characters are translated into ZSCII character
+   codes using the "alphabet table".
+</p>
+</section>
+
+<section class="clause-section is-clause" id="3.5.1">
+<p><a class="clause-num" href="#3.5.1">3.5.1</a><button class="copy-link" type="button" data-anchor="3.5.1" aria-label="Copy link to 3.5.1" title="Copy link"></button> The Z-character 0 is printed as a space (ZSCII 32).</p>
+</section>
+
+<section class="clause-section is-clause" id="3.5.2">
+<p><a class="clause-num" href="#3.5.2">3.5.2</a><button class="copy-link" type="button" data-anchor="3.5.2" aria-label="Copy link to 3.5.2" title="Copy link"></button> In Version 1, Z-character 1 is printed as a new-line
+   (ZSCII 13).
+</p>
+</section>
+
+<section class="clause-section is-clause" id="3.5.3">
+<p><a class="clause-num" href="#3.5.3">3.5.3</a><button class="copy-link" type="button" data-anchor="3.5.3" aria-label="Copy link to 3.5.3" title="Copy link"></button> In Versions 2 to 4, the alphabet table for converting
+   Z-characters into ZSCII character codes is as follows:
+</p>
+<pre>
+   Z-char 6789abcdef0123456789abcdef
+current   --------------------------
+  A0      abcdefghijklmnopqrstuvwxyz
+  A1      ABCDEFGHIJKLMNOPQRSTUVWXYZ
+  A2       ^0123456789.,!?_#'"/\-:()
+          --------------------------
+</pre>
+<p>For example, in alphabet A1 the Z-character 12 is translated as a capital G
+   (ZSCII character code 71).
+</p>
+<p>Character 6 in A2 is printed as a space here, but it is a 'ZSCII escape' character, and not 
+   translated using the alphabet table: see <a href="sect03.html#3.4"><strong>§</strong> 3.4</a> 
+   above. Character 7 in A2, written here as a circumflex ^, is a new-line (ZSCII 13).
+</p>
+<aside class="editor-note" data-generated>
+<p class="note-head">
+<span class="note-tag">Editor&rsquo;s note</span>
+<span class="note-title">The header row is Z-character numbers, in hexadecimal</span>
+</p>
+<p>The row reading <code>6789abcdef0123456789abcdef</code> is not data. It
+   numbers the columns: Z-characters 6 through 31, in hex, with the leading
+   <code>1</code> dropped from the last sixteen. So the columns run 6, 7, 8, 9,
+   a, b, c, d, e, f, then 10 through 1f shown as 0&ndash;9 and a&ndash;f. That is
+   26 columns, one per letter.</p>
+<p>In the A2 row the first column is blank because Z-character 6 is the ZSCII
+   escape (<a href="#3.4">&#167;3.4</a>) rather than a printable character, and
+   the <code>^</code> in the second column is a newline, not a circumflex. Both
+   are noted under the table, but they are easy to read straight past.</p>
+<p class="note-by">&mdash; Jeff Nyman</p>
+</aside>
+</section>
+
+<section class="clause-section is-clause" id="3.5.4">
+<p><a class="clause-num" href="#3.5.4">3.5.4</a><button class="copy-link" type="button" data-anchor="3.5.4" aria-label="Copy link to 3.5.4" title="Copy link"></button> Version 1 has a slightly different A2 row in its alphabet
+   table (new-line is not needed, making room for the <strong> &lt; </strong> character):
+</p>
+<pre>
+          6789abcdef0123456789abcdef
+          --------------------------
+  A2       0123456789.,!?_#'"/\&lt;-:()
+          --------------------------
+</pre>
+</section>
+
+<section class="clause-section is-clause" id="3.5.5">
+<p><a class="clause-num" href="#3.5.5">3.5.5</a><button class="copy-link" type="button" data-anchor="3.5.5" aria-label="Copy link to 3.5.5" title="Copy link"></button> In Versions 5 and later, the interpreter should look at
+   the word at <strong>$34</strong> in the <a href="sect11.html">header</a>.  If this is zero, then the
+   alphabet table drawn out in <a href="sect03.html#3.5.3"><strong>§</strong> 3.5.3</a> continues in use.  Otherwise
+   it is interpreted as the byte address of an alphabet table
+   specific to this story file.
+</p>
+</section>
+
+<section class="clause-section is-clause" id="3.5.5.1">
+<p><a class="clause-num" href="#3.5.5.1">3.5.5.1</a><button class="copy-link" type="button" data-anchor="3.5.5.1" aria-label="Copy link to 3.5.5.1" title="Copy link"></button> Such an alphabet table consists of 78 bytes arranged as 3 blocks of 26 ZSCII values, 
+   translating Z-characters 6 to 31 for alphabets A0, A1 and A2. Z-characters 6 and 7 of 
+   A2, however, are still translated as ZSCII escape and new-line (ZSCII 13) codes (as above).
+</p>
+</section>
+
+<section class="clause-section is-clause" id="3.6">
+<p><a class="clause-num" href="#3.6">3.6</a><button class="copy-link" type="button" data-anchor="3.6" aria-label="Copy link to 3.6" title="Copy link"></button> Since the end-bit only comes up once every three Z-characters,
+   a string may have to be 'padded out' with null values.  This is
+   conventionally achieved with a sequence of 5's, though a sequence of
+   (for example) 4's would work equally well.
+</p>
+</section>
+
+<section class="clause-section is-clause" id="3.6.1">
+<p><a class="clause-num" href="#3.6.1">3.6.1</a><button class="copy-link" type="button" data-anchor="3.6.1" aria-label="Copy link to 3.6.1" title="Copy link"></button> It is legal for the string to end while a multi-Z-character
+   construction is incomplete: for instance, after only the top half of
+   an ASCII value has been given.  The partial construction is simply
+   ignored.  (This can happen in printing dictionary words which have
+   been guillotined to the dictionary resolution of 6 or 9 Z-characters.)
+</p>
+<aside class="editor-note" data-generated>
+<p class="note-head">
+<span class="note-tag">Editor&rsquo;s note</span>
+<span class="note-title">Why dictionary words truncate sooner than they look</span>
+</p>
+<p>Dictionary words are stored in a fixed width &mdash; 6 Z-characters in
+   Versions 1 to 3, 9 from Version 4 &mdash; and anything past that is cut,
+   including half of a multi-Z-character construction, which is then ignored when
+   printed.</p>
+<p>The limit is Z-characters, not letters, and that distinction bites. A capital
+   letter costs two Z-characters (shift, then letter), and a character reached
+   through the ZSCII escape costs four
+   (<a href="#3.4">&#167;3.4</a>). A nine-letter word fits in Version 5; a
+   five-letter word with two accented characters may not.</p>
+<p>This is also why two different words can encode identically and become
+   indistinguishable to the parser.</p>
+<p class="note-by">&mdash; Jeff Nyman</p>
+</aside>
+</section>
+
+<section class="clause-section is-clause" id="3.7">
+<p><a class="clause-num" href="#3.7">3.7</a><button class="copy-link" type="button" data-anchor="3.7" aria-label="Copy link to 3.7" title="Copy link"></button> When an interpreter is encrypting typed-in text to match against
+   dictionary words, the following restrictions apply.  Text should be
+   converted to lower case (as a result A1 will not be needed unless the
+   game provides its own alphabet table).  Abbreviations may not be used.
+   The pad character, if needed, must be 5.  The total string length must
+   be 6 Z-characters (in Versions 1 to 3) or 9 (Versions 4 and later): any
+   multi-Z-character constructions should be left incomplete (rather than
+   omitted) if there's no room to finish them.  For example, "i" is
+   encrypted as:
+</p>
+<p><strong>14, 5, 5, 5, 5, 5, 5, 5, 5</strong></p>
+<p><strong>$48a5</strong> <strong>$14a5</strong> <strong>$94a5</strong></p>
+<aside class="editor-note" data-generated>
+<p class="note-head">
+<span class="note-tag">Editor&rsquo;s note</span>
+<span class="note-title">The worked example below has an error</span>
+</p>
+<p>The Z-character sequence is right, but the first of the three words is not.
+   Packing (14,&nbsp;5,&nbsp;5) as <a href="#3.2">&#167;3.2</a> describes gives</p>
+<pre>(14 &lt;&lt; 10) | (5 &lt;&lt; 5) | 5  =  $38a5</pre>
+<p>The printed value <code>$48a5</code> decodes to Z-characters 18,&nbsp;5,&nbsp;5,
+   which is <code>m</code>, not <code>i</code>. The remaining two words,
+   <code>$14a5</code> and <code>$94a5</code>, are both correct.</p>
+<p>The error is present in the published edition at inform-fiction.org as well,
+   so it is long-standing rather than introduced here. The text is reproduced as
+   written; only this note flags it.</p>
+<p class="note-by">&mdash; Jeff Nyman</p>
+</aside>
+</section>
+
+<section class="clause-section is-clause" id="3.7.1">
+<p><a class="clause-num" href="#3.7.1">3.7.1</a><button class="copy-link" type="button" data-anchor="3.7.1" aria-label="Copy link to 3.7.1" title="Copy link"></button> In Versions 1 and 2 only, when encoding text for dictionary words,
+   shift-lock Z-characters 4 and 5 are used instead of the single-shift
+   Z-characters 2 and 3 when the next two characters come from the same
+   alphabet.
+</p>
+<aside class="editor-note" data-generated>
+<p class="note-head">
+<span class="note-tag">Editor&rsquo;s note</span>
+<span class="note-title">Encoding for the dictionary is not the same as encoding for print</span>
+</p>
+<p>In Versions 1 and 2 the encoder must use shift <em>locks</em> (4 and 5) rather
+   than single shifts (2 and 3) whenever the next two characters come from the
+   same alphabet.</p>
+<p>This applies only when building dictionary words. Get it wrong and nothing
+   looks broken &mdash; the text still decodes to the right letters &mdash; but
+   the encoded word never matches the one in the game's dictionary, so the parser
+   rejects input the player typed correctly.</p>
+<p class="note-by">&mdash; Jeff Nyman</p>
+</aside>
+</section>
+
+<section class="clause-section is-clause" id="3.8">
+<p><a class="clause-num" href="#3.8">3.8</a><button class="copy-link" type="button" data-anchor="3.8" aria-label="Copy link to 3.8" title="Copy link"></button> The character set of the Z-machine is called ZSCII (Zork
+   Standard Code for Information Interchange; pronounced to rhyme with
+   "xyzzy").  ZSCII codes are 10-bit unsigned values between 0 and
+   1023.  Story files may only legally use the values which are defined
+   below.  Note that some values are defined only for input and some
+   only for output.
+</p>
+<div class="table-scroll" tabindex="0" role="region" aria-label="Table 2: summary of the ZSCII rules"><table><caption><strong>Table 2: summary of the ZSCII rules</strong></caption><thead><tr> <th scope="col">0</th>        <th scope="col">null</th>                    <th scope="col">Output</th>       </tr></thead><tbody><tr> <td>1-7</td>      <td>----</td>                    <td></td>             </tr><tr> <td>8</td>        <td>delete</td>                  <td>Input</td>        </tr><tr> <td>9</td>        <td>tab (V6)</td>                <td>Output</td>       </tr><tr class="is-rule"> <td>10</td>       <td>----</td>                    <td></td>             </tr><tr> <td>11</td>       <td>sentence space (V6)</td>     <td>Output</td>       </tr><tr class="is-rule"> <td>12</td>       <td>----</td>                    <td></td>             </tr><tr> <td>13</td>       <td>newline</td>                 <td>Input/Output</td> </tr><tr> <td>14-26</td>    <td>----</td>                    <td></td>             </tr><tr> <td>27</td>       <td>escape</td>                  <td>Input</td>        </tr><tr> <td>28-31</td>    <td>----</td>                    <td></td>             </tr><tr> <td>32-126</td>   <td>standard ASCII</td>          <td>Input/Output</td> </tr><tr> <td>127-128</td>  <td>----</td>                    <td></td>             </tr><tr> <td>129-132</td>  <td>cursor u/d/l/r</td>          <td>Input</td>        </tr><tr> <td>133-144</td>  <td>function keys f1 to f12</td> <td>Input</td>        </tr><tr> <td>145-154</td>  <td>keypad 0 to 9</td>           <td>Input</td>        </tr><tr> <td>155-251</td>  <td>extra characters</td>        <td>Input/Output</td> </tr><tr> <td>252</td>      <td>menu click (V6)</td>         <td>Input</td>        </tr><tr> <td>253</td>      <td>double-click (V6)</td>       <td>Input</td>        </tr><tr> <td>254</td>      <td>single-click</td>            <td>Input</td>        </tr><tr> <td>255-1023</td> <td>----</td>                    <td></td>             </tr></tbody></table></div>
+</section>
+
+<section class="clause-section is-clause" id="3.8.1">
+<p><a class="clause-num" href="#3.8.1">3.8.1</a><button class="copy-link" type="button" data-anchor="3.8.1" aria-label="Copy link to 3.8.1" title="Copy link"></button> The codes 256 to 1023 are undefined, so that for all
+   practical purposes ZSCII is an 8-bit unsigned code.
+</p>
+</section>
+
+<section class="clause-section is-clause" id="3.8.2">
+<p><a class="clause-num" href="#3.8.2">3.8.2</a><button class="copy-link" type="button" data-anchor="3.8.2" aria-label="Copy link to 3.8.2" title="Copy link"></button> The codes 0 to 31 are undefined except as follows:</p>
+</section>
+
+<section class="clause-section is-clause" id="3.8.2.1">
+<p><a class="clause-num" href="#3.8.2.1">3.8.2.1</a><button class="copy-link" type="button" data-anchor="3.8.2.1" aria-label="Copy link to 3.8.2.1" title="Copy link"></button> ZSCII code 0 ("null") is defined for output
+   but has no effect in any output stream.  (It is also used as
+   a value meaning "no character" when reporting terminating
+   character codes, but is not formally defined for input.)
+</p>
+</section>
+
+<section class="clause-section is-clause" id="3.8.2.2">
+<p><a class="clause-num" href="#3.8.2.2">3.8.2.2</a><button class="copy-link" type="button" data-anchor="3.8.2.2" aria-label="Copy link to 3.8.2.2" title="Copy link"></button> ZSCII code 8 ("delete") is defined for input only.</p>
+</section>
+
+<section class="clause-section is-clause" id="3.8.2.3">
+<p><a class="clause-num" href="#3.8.2.3">3.8.2.3</a><button class="copy-link" type="button" data-anchor="3.8.2.3" aria-label="Copy link to 3.8.2.3" title="Copy link"></button> ZSCII code 9 ("tab") is defined for output in Version 6 only.
+   At the start of a screen line this should print a paragraph indentation
+   suitable for the font being used: if it is printed in the middle of a
+   screen line, it should be converted to a space (Infocom's own
+   interpreters do not do this, however).
+</p>
+</section>
+
+<section class="clause-section is-clause" id="3.8.2.4">
+<p><a class="clause-num" href="#3.8.2.4">3.8.2.4</a><button class="copy-link" type="button" data-anchor="3.8.2.4" aria-label="Copy link to 3.8.2.4" title="Copy link"></button> ZSCII code 11 ("sentence space") is defined for output in
+   Version 6 only.  This should be printed as a suitable gap between two
+   sentences (in the same way that typographers normally place larger spaces
+   after the full stops ending sentences than after words or commas).
+</p>
+</section>
+
+<section class="clause-section is-clause" id="3.8.2.5">
+<p><a class="clause-num" href="#3.8.2.5">3.8.2.5</a><button class="copy-link" type="button" data-anchor="3.8.2.5" aria-label="Copy link to 3.8.2.5" title="Copy link"></button> ZSCII code 13 ("carriage return") is defined for input and
+   output.
+</p>
+</section>
+
+<section class="clause-section is-clause" id="3.8.2.6">
+<p><a class="clause-num" href="#3.8.2.6">3.8.2.6</a><button class="copy-link" type="button" data-anchor="3.8.2.6" aria-label="Copy link to 3.8.2.6" title="Copy link"></button> ZSCII code 27 ("escape" or "break") is defined for input
+   only.
+</p>
+</section>
+
+<section class="clause-section is-clause" id="3.8.3">
+<p><a class="clause-num" href="#3.8.3">3.8.3</a><button class="copy-link" type="button" data-anchor="3.8.3" aria-label="Copy link to 3.8.3" title="Copy link"></button> ZSCII codes between 32 ("space") and 126 ("tilde") are
+   defined for input and output, and agree with standard ASCII (as well as
+   all of the ISO 8859 character sets and Unicode).  Specifically:
+</p>
+<pre>
+      0123456789abcdef0123456789abcdef
+      --------------------------------
+ $20   !"#$%&amp;'()*+,-./0123456789:;&lt;=&gt;?
+ $40  @ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_
+ $60  'abcdefghijklmnopqrstuvwxyz{!}~ 
+      --------------------------------
+</pre>
+<p>Note that code <strong>$23</strong> (35 decimal) is a hash mark, not a pound sign.
+   (Code <strong>$7c</strong> (124 decimal) is a vertical stroke which is shown as <strong>!</strong>
+   here for typesetting reasons.)
+</p>
+</section>
+
+<section class="clause-section is-clause" id="3.8.3.1">
+<p><a class="clause-num" href="#3.8.3.1">3.8.3.1</a><button class="copy-link" type="button" data-anchor="3.8.3.1" aria-label="Copy link to 3.8.3.1" title="Copy link"></button> ZSCII codes 127 ("delete" in some forms of ASCII)
+   and 128 are undefined.
+</p>
+</section>
+
+<section class="clause-section is-clause" id="3.8.4">
+<p><a class="clause-num" href="#3.8.4">3.8.4</a><button class="copy-link" type="button" data-anchor="3.8.4" aria-label="Copy link to 3.8.4" title="Copy link"></button>  ZSCII codes 129 to 154 are defined for input only:</p>
+<pre>
+129: cursor up  130: cursor down  131: cursor left  132: cursor right
+133: f1         134: f2           ....              144: f12
+145: keypad 0   146: keypad 1     ....              154: keypad 9
+</pre>
+</section>
+
+<section class="clause-section is-clause" id="3.8.5">
+<p><a class="clause-num" href="#3.8.5">3.8.5</a><button class="copy-link" type="button" data-anchor="3.8.5" aria-label="Copy link to 3.8.5" title="Copy link"></button> The block of codes between 155 and 251 are the "extra
+   characters" and are used differently by different story files.
+   Some will need accented Latin characters (such as French E-acute),
+   others unusual punctuation (Spanish question mark), others new
+   alphabets (Cyrillic or Hebrew); still others may want dingbat
+   characters, mathematical or musical symbols, and so on.
+</p>
+</section>
+
+<section class="clause-section is-clause has-marker is-v1-0" id="3.8.5.1">
+<p><a class="clause-num" href="#3.8.5.1">3.8.5.1</a><button class="copy-link" type="button" data-anchor="3.8.5.1" aria-label="Copy link to 3.8.5.1" title="Copy link"></button> <strong class="spec-marker spec-marker--v1-0">***[1.0]</strong>
+   To define which characters are required, the Unicode
+   (or ISO 10646-1) Basic Multilingual Plane character set is used: characters are specified
+   by unsigned 16-bit codes.  These values agree with ISO 8859 Latin-1
+   in the range 0 to 255, and with ASCII and ZSCII in the range
+   32 to 126.  The Unicode standard leaves a range of values, the
+   Private Use Area, free: however, an Internet group called the
+   ConScript Unicode Registry is organising a standard mapping of
+   invented scripts (such as Klingon, or Tolkien's Elvish) into the
+   Private Use Area, and this should be considered part of the Unicode
+   standard for Z-machine purposes.
+</p>
+<p>The Z-machine does not provide access to non-BMP characters (ie characters
+   outside the range U+0000 to U+FFFF).
+</p>
+</section>
+
+<section class="clause-section is-clause has-marker is-v1-0" id="3.8.5.2">
+<p><a class="clause-num" href="#3.8.5.2">3.8.5.2</a><button class="copy-link" type="button" data-anchor="3.8.5.2" aria-label="Copy link to 3.8.5.2" title="Copy link"></button> <strong class="spec-marker spec-marker--v1-0">***[1.0]</strong>
+   The story file chooses its stock of extra characters
+   with a "Unicode translation table" as follows.  Under Versions
+   1 to 4, the "default table" is always used (<a href="sect03.html#table1">see below</a>).
+   In Version 5 or later, if Word 3 of the header extension table is
+   present and non-zero then it is interpreted as the byte address
+   of the Unicode translation table.  If Word 3 is absent or zero,
+   the default table is used.
+</p>
+</section>
+
+<section class="clause-section is-clause" id="3.8.5.2.1">
+<p><a class="clause-num" href="#3.8.5.2.1">3.8.5.2.1</a><button class="copy-link" type="button" data-anchor="3.8.5.2.1" aria-label="Copy link to 3.8.5.2.1" title="Copy link"></button> The table consists of one byte giving a number N,
+   followed by N two-byte words.
+</p>
+</section>
+
+<section class="clause-section is-clause" id="3.8.5.2.2">
+<p><a class="clause-num" href="#3.8.5.2.2">3.8.5.2.2</a><button class="copy-link" type="button" data-anchor="3.8.5.2.2" aria-label="Copy link to 3.8.5.2.2" title="Copy link"></button> This indicates that ZSCII characters 155 to 155+N-1
+   are defined for both input and output.  (It's possible for N to
+   be zero, leaving the whole range 155 to 251 undefined.)
+</p>
+</section>
+
+<section class="clause-section is-clause" id="3.8.5.2.3">
+<p><a class="clause-num" href="#3.8.5.2.3">3.8.5.2.3</a><button class="copy-link" type="button" data-anchor="3.8.5.2.3" aria-label="Copy link to 3.8.5.2.3" title="Copy link"></button> The words in the table give Unicode character codes
+   for each of the ZSCII characters 155 to 155+N-1 in turn.
+</p>
+</section>
+
+<section class="clause-section is-clause" id="3.8.5.3">
+<p><a class="clause-num" href="#3.8.5.3">3.8.5.3</a><button class="copy-link" type="button" data-anchor="3.8.5.3" aria-label="Copy link to 3.8.5.3" title="Copy link"></button> The default table is as shown in <a href="sect03.html#table1">Table 1</a>.</p>
+</section>
+
+<section class="clause-section is-clause" id="3.8.5.4">
+<p><a class="clause-num" href="#3.8.5.4">3.8.5.4</a><button class="copy-link" type="button" data-anchor="3.8.5.4" aria-label="Copy link to 3.8.5.4" title="Copy link"></button> The defined extra characters are entirely normal
+   ZSCII characters.  They can appear in a story file's alphabet
+   table, in an array created by print stream 3 and so on.
+</p>
+</section>
+
+<section class="clause-section is-clause has-marker is-v1-0" id="3.8.5.4.1">
+<p><a class="clause-num" href="#3.8.5.4.1">3.8.5.4.1</a><button class="copy-link" type="button" data-anchor="3.8.5.4.1" aria-label="Copy link to 3.8.5.4.1" title="Copy link"></button> <strong class="spec-marker spec-marker--v1-0">***[1.0]</strong>
+   The interpreter is required to be able to print
+   representations of every defined Unicode character under <strong>$0100</strong>
+   (i.e. of every defined ISO 8859-1 Latin1 character).  If no
+   suitable letter forms are available, textual equivalents may
+   be used (such as "ss" in place of German sharp "s").
+</p>
+</section>
+
+<section class="clause-section is-clause" id="3.8.5.4.2">
+<p><a class="clause-num" href="#3.8.5.4.2">3.8.5.4.2</a><button class="copy-link" type="button" data-anchor="3.8.5.4.2" aria-label="Copy link to 3.8.5.4.2" title="Copy link"></button> Normally, and where sensibly possible, all
+   punctuation and letter characters in ISO 8859-1 Latin1
+   should be readable from the interpreter's keyboard.  (However,
+   some interpreters may want to provide alternative keyboard
+   mappings, or to run in a different ISO 8859 set: Cyrillic,
+   for example.)
+</p>
+</section>
+
+<section class="clause-section is-clause has-marker is-v1-0" id="3.8.5.4.3">
+<p><a class="clause-num" href="#3.8.5.4.3">3.8.5.4.3</a><button class="copy-link" type="button" data-anchor="3.8.5.4.3" aria-label="Copy link to 3.8.5.4.3" title="Copy link"></button> <strong class="spec-marker spec-marker--v1-0">***[1.0]</strong>
+   An interpreter is not required to have suitable
+   letter-forms for printing Unicode characters <strong>$0100</strong> to <strong>$FFFF</strong>.
+   (It may, if it chooses, allow the user to configure certain
+   fonts for certain Unicode ranges; but this is not required.)
+   If a Unicode character must be printed which an interpreter
+   has no letter-form for, a question mark should be printed
+   instead.
+</p>
+</section>
+
+<section class="clause-section is-clause" id="3.8.5.4.4">
+<p><a class="clause-num" href="#3.8.5.4.4">3.8.5.4.4</a><button class="copy-link" type="button" data-anchor="3.8.5.4.4" aria-label="Copy link to 3.8.5.4.4" title="Copy link"></button> The Z-machine is not required to handle complex Unicode formatting like
+   combining characters, bidirectional formatting and unusual line-wrapping
+   rules.
+</p>
+<p>In Versions other than 6, interpreters may either handle these features, or not,
+   in window 0. In window 1, and all version 6 windows, they should be ignored.
+</p>
+</section>
+
+<section class="clause-section is-clause" id="3.8.5.4.5">
+<p><a class="clause-num" href="#3.8.5.4.5">3.8.5.4.5</a><button class="copy-link" type="button" data-anchor="3.8.5.4.5" aria-label="Copy link to 3.8.5.4.5" title="Copy link"></button> Unicode characters U+0000 to U+001F and U+007F to U+009F are control codes,
+   and must not be used.
+</p>
+</section>
+
+<section class="clause-section is-clause" id="3.8.6">
+<p><a class="clause-num" href="#3.8.6">3.8.6</a><button class="copy-link" type="button" data-anchor="3.8.6" aria-label="Copy link to 3.8.6" title="Copy link"></button> ZSCII codes 252 to 254 are defined for input only:</p>
+<pre>
+252: menu click   253: mouse double-click   254: mouse single-click
+</pre>
+<p>Menu clicks are available only in Version 6. A single click, or the first click of a double-click, is passed
+   in as 254. The second click of a double-click is passed in as 253. In Versions 5 and later
+   it is recommended that an interpreter should only send code 254,
+   whether the mouse is clicked once or twice.
+</p>
+</section>
+
+<section class="clause-section is-clause" id="3.8.7">
+<p><a class="clause-num" href="#3.8.7">3.8.7</a><button class="copy-link" type="button" data-anchor="3.8.7" aria-label="Copy link to 3.8.7" title="Copy link"></button> ZSCII code 255 is undefined.  (This value is needed in
+   the "terminating characters table" as a wildcard, indicating
+   "any Input-only character with code 128 or above."  However,
+   it cannot itself be printed or read from the keyboard.)
+</p>
+<div class="table-scroll" tabindex="0" role="region" aria-label="Table 1: default Unicode translations (see S 3.8.5.3)"><table id="table1"><caption><strong>Table 1: default Unicode translations (see <a href="sect03.html#3.8.5.3">S 3.8.5.3</a>)</strong></caption><thead><tr> <th scope="col">ZSCII code (dec)</th> <th scope="col">Unicode code (hex)</th> <th scope="col">Name</th> <th scope="col">Character</th> <th scope="col">Textual Equivalent</th> </tr></thead><tbody><tr><td>155</td><td>0e4</td><td>a-diaeresis</td><td>ä</td><td>ae</td></tr><tr><td>156</td><td>0f6</td><td>o-diaeresis</td><td>ö</td><td>oe</td></tr><tr><td>157</td><td>0fc</td><td>u-diaeresis</td><td>ü</td><td>ue</td></tr><tr><td>158</td><td>0c4</td><td>A-diaeresis</td><td>Ä</td><td>Ae</td></tr><tr><td>159</td><td>0d6</td><td>O-diaeresis</td><td>Ö</td><td>Oe</td></tr><tr><td>160</td><td>0dc</td><td>U-diaeresis</td><td>Ü</td><td>Ue</td></tr><tr><td>161</td><td>0df</td><td>sz-ligature</td><td>ß</td><td>ss</td></tr><tr><td>162</td><td>0bb</td><td>quotation</td><td>»</td><td>&gt;&gt; or "</td></tr><tr><td>163</td><td>0ab</td><td>marks</td><td>«</td><td>&lt;&lt; or "</td></tr><tr><td>164</td><td>0eb</td><td>e-diaeresis</td><td>ë</td><td>e</td></tr><tr><td>165</td><td>0ef</td><td>i-diaeresis</td><td>ï</td><td>i</td></tr><tr><td>166</td><td>0ff</td><td>y-diaeresis</td><td>ÿ</td><td>y</td></tr><tr><td>167</td><td>0cb</td><td>E-diaeresis</td><td>Ë</td><td>E</td></tr><tr><td>168</td><td>0cf</td><td>I-diaeresis</td><td>Ï</td><td>I</td></tr><tr><td>169</td><td>0e1</td><td>a-acute</td><td>á</td><td>a</td></tr><tr><td>170</td><td>0e9</td><td>e-acute</td><td>é</td><td>e</td></tr><tr><td>171</td><td>0ed</td><td>i-acute</td><td>í</td><td>i</td></tr><tr><td>172</td><td>0f3</td><td>o-acute</td><td>ó</td><td>o</td></tr><tr><td>173</td><td>0fa</td><td>u-acute</td><td>ú</td><td>u</td></tr><tr><td>174</td><td>0fd</td><td>y-acute</td><td>ý</td><td>y</td></tr><tr><td>175</td><td>0c1</td><td>A-acute</td><td>Á</td><td>A</td></tr><tr><td>176</td><td>0c9</td><td>E-acute</td><td>É</td><td>E</td></tr><tr><td>177</td><td>0cd</td><td>I-acute</td><td>Í</td><td>I</td></tr><tr><td>178</td><td>0d3</td><td>O-acute</td><td>Ó</td><td>O</td></tr><tr><td>179</td><td>0da</td><td>U-acute</td><td>Ú</td><td>U</td></tr><tr><td>180</td><td>0dd</td><td>Y-acute</td><td>Ý</td><td>Y</td></tr><tr><td>181</td><td>0e0</td><td>a-grave</td><td>à</td><td>a</td></tr><tr><td>182</td><td>0e8</td><td>e-grave</td><td>è</td><td>e</td></tr><tr><td>183</td><td>0ec</td><td>i-grave</td><td>ì</td><td>i</td></tr><tr><td>184</td><td>0f2</td><td>o-grave</td><td>ò</td><td>o</td></tr><tr><td>185</td><td>0f9</td><td>u-grave</td><td>ù</td><td>u</td></tr><tr><td>186</td><td>0c0</td><td>A-grave</td><td>À</td><td>A</td></tr><tr><td>187</td><td>0c8</td><td>E-grave</td><td>È</td><td>E</td></tr><tr><td>188</td><td>0cc</td><td>I-grave</td><td>Ì</td><td>I</td></tr><tr><td>189</td><td>0d2</td><td>O-grave</td><td>Ò</td><td>O</td></tr><tr><td>190</td><td>0d9</td><td>U-grave</td><td>Ù</td><td>U</td></tr><tr><td>191</td><td>0e2</td><td>a-circumflex</td><td>â</td><td>a</td></tr><tr><td>192</td><td>0ea</td><td>e-circumflex</td><td>ê</td><td>e</td></tr><tr><td>193</td><td>0ee</td><td>i-circumflex</td><td>î</td><td>i</td></tr><tr><td>194</td><td>0f4</td><td>o-circumflex</td><td>ô</td><td>o</td></tr><tr><td>195</td><td>0fb</td><td>u-circumflex</td><td>û</td><td>u</td></tr><tr><td>196</td><td>0c2</td><td>A-circumflex</td><td>Â</td><td>A</td></tr><tr><td>197</td><td>0ca</td><td>E-circumflex</td><td>Ê</td><td>E</td></tr><tr><td>198</td><td>0ce</td><td>I-circumflex</td><td>Î</td><td>I</td></tr><tr><td>199</td><td>0d4</td><td>O-circumflex</td><td>Ô</td><td>O</td></tr><tr><td>200</td><td>0db</td><td>U-circumflex</td><td>Û</td><td>U</td></tr><tr><td>201</td><td>0e5</td><td>a-ring</td><td>å</td><td>a</td></tr><tr><td>202</td><td>0c5</td><td>A-ring</td><td>Å</td><td>A</td></tr><tr><td>203</td><td>0f8</td><td>o-slash</td><td>ø</td><td>o</td></tr><tr><td>204</td><td>0d8</td><td>O-slash</td><td>Ø</td><td>O</td></tr><tr><td>205</td><td>0e3</td><td>a-tilde</td><td>ã</td><td>a</td></tr><tr><td>206</td><td>0f1</td><td>n-tilde</td><td>ñ</td><td>n</td></tr><tr><td>207</td><td>0f5</td><td>o-tilde</td><td>õ</td><td>o</td></tr><tr><td>208</td><td>0c3</td><td>A-tilde</td><td>Ã</td><td>A</td></tr><tr><td>209</td><td>0d1</td><td>N-tilde</td><td>Ñ</td><td>N</td></tr><tr><td>210</td><td>0d5</td><td>O-tilde</td><td>Õ</td><td>O</td></tr><tr><td>211</td><td>0e6</td><td>ae-ligature</td><td>æ</td><td>ae</td></tr><tr><td>212</td><td>0c6</td><td>AE-ligature</td><td>Æ</td><td>AE</td></tr><tr><td>213</td><td>0e7</td><td>c-cedilla</td><td>ç</td><td>c</td></tr><tr><td>214</td><td>0c7</td><td>C-cedilla</td><td>Ç</td><td>C</td></tr><tr><td>215</td><td>0fe</td><td>Icelandic thorn</td><td>þ</td><td>th</td></tr><tr><td>216</td><td>0f0</td><td>Icelandic eth</td><td>ð</td><td>th</td></tr><tr><td>217</td><td>0de</td><td>Icelandic Thorn</td><td>Þ</td><td>Th</td></tr><tr><td>218</td><td>0d0</td><td>Icelandic Eth</td><td>Ð</td><td>Th</td></tr><tr><td>219</td><td>0a3</td><td>pound symbol</td><td>£</td><td>L</td></tr><tr><td>220</td><td>153</td><td>oe-ligature</td><td>œ</td><td>oe</td></tr><tr><td>221</td><td>152</td><td>OE-ligature</td><td>Œ</td><td>OE</td></tr><tr><td>222</td><td>0a1</td><td>inverted !</td><td>¡</td><td>!</td></tr><tr><td>223</td><td>0bf</td><td>inverted ?</td><td>¿</td><td>?</td></tr></tbody></table></div>
+</section>
+
+<section class="clause-section is-topic" id="remarks">
+<h2 id="h-remarks">Remarks<a class="heading-anchor" href="#remarks" aria-label="Link to Remarks"></a></h2>
+<p>In practice the text compression factor is not really very good: for
+   instance, 155000 characters of text squashes into 99000 bytes.  (Text
+   usually accounts for about 75% of a story file.)  Encoding does
+   at least encrypt the text so that casual browsers can't read it.
+   Well-chosen abbreviations will reduce total story file size by 10% or so.
+</p>
+<p>The German translation of 'Zork I' uses an alphabet table to make
+   accented letters (from the standard extra characters set) efficient
+   in dictionary words.  In Version 6, 'Shogun' also uses an alphabet
+   table.
+</p>
+<p>Unicode translation tables are new in Standard 1.0: in Standard
+   0.2, the extra characters were always mapped using the default
+   Unicode translation table.
+</p>
+<p>Note that if a random stretch of memory is accidentally printed as
+   a string (due to an error in the story file), illegal ZSCII codes
+   may well be printed using the 4-Z-character escape sequence.  It's
+   helpful for interpreters to filter out any such illegal codes
+   so that the resulting on-screen mess will not cause trouble for the
+   terminal (e.g. by causing the interpreter to print ASCII 12,
+   clear screen, or 7, bell sound).
+</p>
+<p>The continental European quotation marks <strong>&lt;&lt;</strong> and <strong>&gt;&gt;</strong> should have
+   spacing which looks sensible either in French style <strong>&lt;&lt;</strong>Merci!<strong>&gt;&gt;</strong>
+   or in German style <strong>&gt;&gt;</strong>Danke!<strong>&lt;&lt;</strong>.
+</p>
+<p>Ideally, an interpreter should be able to read time delays (for timed input)
+   from stream 1 (i.e., from a script file).  See the <a href="sect07.html#remarks">
+   remarks</a> in <strong>§</strong> 7.
+</p>
+<p>The 'Beyond Zork' story file is capable of receiving both mouse-click
+   codes (253 and 254), listing both in its terminating characters table
+   and treating them equally.
+</p>
+<p>The extant Infocom games in Versions 4 and 5 use the control characters
+   1 to 31 only as follows: they all accept 10 or 13 as equivalent, except
+   that 'Bureaucracy' will only accept 13.  'Bureaucracy' needs either 127
+   or 8 to be a delete code.  No other codes are used.
+</p>
+<p>Curiously, 'Nord 'n' Bert Couldn't Make Head Nor Tail Of It' and
+   'A Mind Forever Voyaging' allow some letter characters to be typed
+   in with the top bit set.  That is, if reading an A, they would recognise
+   65 or 91 (upper or lower case) and also 193 or 219.  Matthew Russotto
+   suggests this was an accommodation for the Apple II, whose keyboard
+   primitives returned the last key pressed in the bottom 7 bits of a
+   byte, plus a top bit flag indicating whether or not the keyboard had
+   been hit since last time.
+</p>
+<p>In Version 3 and later, many of Infocom's interpreters (and some subsequent
+   interpreters, such as ITF's) treat two consecutive Z-characters 4 or 5 as
+   shift locks, contrary to the Standard. As a result, story files should not
+   use multiple consecutive 4 or 5 codes except for padding at the end of
+   strings and dictionary words. In any case, these shift locks are not used in
+   dictionary words, or any of Infocom's story files.
+</p>
+<p>In the available Version 1 and 2 Infocom gamefiles, dictionary words that leave a
+   multi-Z-character construction incomplete due to the truncation to 6 Z-characters do not 
+   have the end-bit of the last word set. However, the Infocom interpreters for these files 
+   do not recognize this, indicating that it is most likely a bug.
+</p>
+<p>In the past, not just in the Z-machine world, there has been general
+   confusion over the rendering of ASCII/ZSCII/Latin-1/Unicode characters $27
+   and $60. For the Z-machine, the traditional interpretations of
+   right-single-quote/apostrophe and left-single-quote are preferred over the
+   modern neutral-single-quote and grave accent - see Table 2A of the Inform
+   Designer's Manual. $22 is a neutral double-quote.
+</p>
+<p>An alternative rendering is to interpret both $27 and $60 as neutral quotes,
+   but interpreting $60 as a grave accent is to be avoided.
+</p>
+<p>No doubt aware of this confusion, Infocom never used character $60, and used
+   $27 almost exclusively as an apostrophe - hardly any single quotes appear in
+   Infocom games. Modern authors would do well to follow their lead.
+</p>
+<p>The few Infocom games that do use single quotes use $27 for both opening and
+   closing - but even on many of their interpreters this looked a little odd, so
+   suggesting that $27 be a right quote introduces no extra compatibility
+   problems.
+</p>
+<p>In Version 3 and later, many of Infocom's interpreters (and some subsequent
+   interpreters, such as ITF's) treat two consecutive Z-characters 4 or 5 as
+   shift locks, contrary to the Standard. As a result, story files should not
+   use multiple consecutive 4 or 5 codes except for padding at the end of
+   strings and dictionary words. In any case, these shift locks are not used in
+   dictionary words, or any of Infocom's story files.
+</p>
+<p>In the dictionary words in Infocom's Version 1 and 2 games, if the truncation 
+   to 6 Z-characters leaves a multi-Z-character construction incomplete, the end-bit 
+   of the last word is  not set. However, Infocom's interpreters for these games do
+   not recognize this, indicating that it is likely a bug in the game files.
+</p>
+</section>
+</main>
+<nav class="pager" aria-label="Previous and next section"><a class="pager-link pager-prev" rel="prev" href="sect02.html"><span class="pager-kind">Previous</span><span class="pager-title">2. Numbers and arithmetic</span></a><a class="pager-link pager-next" rel="next" href="sect04.html"><span class="pager-kind">Next</span><span class="pager-title">4. Instruction encoding</span></a></nav>
+<footer class="site-footer">
+  <p>The Z-Machine Standards Document, version 1.1 &mdash; 24 February 2014.
+     Canonical copy at <a href="https://www.inform-fiction.org/zmachine/standards/current/">inform-fiction.org</a>.</p>
+</footer>
+</div>
+<aside class="outline" id="outline" aria-label="On this page" data-generated>
+<h2>On this page</h2>
+<ol>
+<li class="depth-2"><a href="#3.1" title="Z-machine text is a sequence of ZSCII character codes (ZSCII is a system similar to ASCII: see § 3.8 below). These ZSCII">3.1</a></li>
+<li class="depth-2"><a href="#3.2" title="Text in memory consists of a sequence of 2-byte words. Each word is divided into three 5-bit 'Z-characters', plus 1 bit ">3.2</a></li>
+<li class="depth-3"><a href="#3.2.1" title="There are three 'alphabets', A0 (lower case), A1 (upper case) and A2 (punctuation) and during printing one of these is c">3.2.1</a></li>
+<li class="depth-3"><a href="#3.2.2" title="In Versions 1 and 2, the current alphabet can be any of the three. The Z-characters 2 and 3 are called 'shift' character">3.2.2</a></li>
+<li class="depth-3"><a href="#3.2.3" title="In Versions 3 and later, the current alphabet is always A0 unless changed for 1 character only: Z-characters 4 and 5 are">3.2.3</a></li>
+<li class="depth-3"><a href="#3.2.4" title="An indefinite sequence of shift or shift lock characters is legal (but prints nothing).">3.2.4</a></li>
+<li class="depth-2"><a href="#3.3" title="In Versions 3 and later, Z-characters 1, 2 and 3 represent abbreviations, sometimes also called 'synonyms' (for traditio">3.3</a></li>
+<li class="depth-3"><a href="#3.3.1" title="Abbreviation string-printing follows all the rules of this section except that an abbreviation string must not itself us">3.3.1</a></li>
+<li class="depth-2"><a href="#3.4" title="Z-character 6 from A2 is a 'ZSCII escape' character. It means that the two subsequent Z-characters specify a ten-bit ZSC">3.4</a></li>
+<li class="depth-2"><a href="#3.5" title="The remaining Z-characters are translated into ZSCII character codes using the "alphabet table".">3.5</a></li>
+<li class="depth-3"><a href="#3.5.1" title="The Z-character 0 is printed as a space (ZSCII 32).">3.5.1</a></li>
+<li class="depth-3"><a href="#3.5.2" title="In Version 1, Z-character 1 is printed as a new-line (ZSCII 13).">3.5.2</a></li>
+<li class="depth-3"><a href="#3.5.3" title="In Versions 2 to 4, the alphabet table for converting Z-characters into ZSCII character codes is as follows: Z-char 6789">3.5.3</a></li>
+<li class="depth-3"><a href="#3.5.4" title="Version 1 has a slightly different A2 row in its alphabet table (new-line is not needed, making room for the &lt; character">3.5.4</a></li>
+<li class="depth-3"><a href="#3.5.5" title="In Versions 5 and later, the interpreter should look at the word at $34 in the header. If this is zero, then the alphabe">3.5.5</a></li>
+<li class="depth-4"><a href="#3.5.5.1" title="Such an alphabet table consists of 78 bytes arranged as 3 blocks of 26 ZSCII values, translating Z-characters 6 to 31 fo">3.5.5.1</a></li>
+<li class="depth-2"><a href="#3.6" title="Since the end-bit only comes up once every three Z-characters, a string may have to be 'padded out' with null values. Th">3.6</a></li>
+<li class="depth-3"><a href="#3.6.1" title="It is legal for the string to end while a multi-Z-character construction is incomplete: for instance, after only the top">3.6.1</a></li>
+<li class="depth-2"><a href="#3.7" title="When an interpreter is encrypting typed-in text to match against dictionary words, the following restrictions apply. Tex">3.7</a></li>
+<li class="depth-3"><a href="#3.7.1" title="In Versions 1 and 2 only, when encoding text for dictionary words, shift-lock Z-characters 4 and 5 are used instead of t">3.7.1</a></li>
+<li class="depth-2"><a href="#3.8" title="The character set of the Z-machine is called ZSCII (Zork Standard Code for Information Interchange; pronounced to rhyme ">3.8</a></li>
+<li class="depth-3"><a href="#3.8.1" title="The codes 256 to 1023 are undefined, so that for all practical purposes ZSCII is an 8-bit unsigned code.">3.8.1</a></li>
+<li class="depth-3"><a href="#3.8.2" title="The codes 0 to 31 are undefined except as follows:">3.8.2</a></li>
+<li class="depth-4"><a href="#3.8.2.1" title="ZSCII code 0 ("null") is defined for output but has no effect in any output stream. (It is also used as a value meaning ">3.8.2.1</a></li>
+<li class="depth-4"><a href="#3.8.2.2" title="ZSCII code 8 ("delete") is defined for input only.">3.8.2.2</a></li>
+<li class="depth-4"><a href="#3.8.2.3" title="ZSCII code 9 ("tab") is defined for output in Version 6 only. At the start of a screen line this should print a paragrap">3.8.2.3</a></li>
+<li class="depth-4"><a href="#3.8.2.4" title="ZSCII code 11 ("sentence space") is defined for output in Version 6 only. This should be printed as a suitable gap betwe">3.8.2.4</a></li>
+<li class="depth-4"><a href="#3.8.2.5" title="ZSCII code 13 ("carriage return") is defined for input and output.">3.8.2.5</a></li>
+<li class="depth-4"><a href="#3.8.2.6" title="ZSCII code 27 ("escape" or "break") is defined for input only.">3.8.2.6</a></li>
+<li class="depth-3"><a href="#3.8.3" title="ZSCII codes between 32 ("space") and 126 ("tilde") are defined for input and output, and agree with standard ASCII (as w">3.8.3</a></li>
+<li class="depth-4"><a href="#3.8.3.1" title="ZSCII codes 127 ("delete" in some forms of ASCII) and 128 are undefined.">3.8.3.1</a></li>
+<li class="depth-3"><a href="#3.8.4" title="ZSCII codes 129 to 154 are defined for input only: 129: cursor up 130: cursor down 131: cursor left 132: cursor right 13">3.8.4</a></li>
+<li class="depth-3"><a href="#3.8.5" title="The block of codes between 155 and 251 are the "extra characters" and are used differently by different story files. Som">3.8.5</a></li>
+<li class="depth-4"><a href="#3.8.5.1" title="***[1.0] To define which characters are required, the Unicode (or ISO 10646-1) Basic Multilingual Plane character set is">3.8.5.1</a></li>
+<li class="depth-4"><a href="#3.8.5.2" title="***[1.0] The story file chooses its stock of extra characters with a "Unicode translation table" as follows. Under Versi">3.8.5.2</a></li>
+<li class="depth-4"><a href="#3.8.5.2.1" title="The table consists of one byte giving a number N, followed by N two-byte words.">3.8.5.2.1</a></li>
+<li class="depth-4"><a href="#3.8.5.2.2" title="This indicates that ZSCII characters 155 to 155+N-1 are defined for both input and output. (It's possible for N to be ze">3.8.5.2.2</a></li>
+<li class="depth-4"><a href="#3.8.5.2.3" title="The words in the table give Unicode character codes for each of the ZSCII characters 155 to 155+N-1 in turn.">3.8.5.2.3</a></li>
+<li class="depth-4"><a href="#3.8.5.3" title="The default table is as shown in Table 1.">3.8.5.3</a></li>
+<li class="depth-4"><a href="#3.8.5.4" title="The defined extra characters are entirely normal ZSCII characters. They can appear in a story file's alphabet table, in ">3.8.5.4</a></li>
+<li class="depth-4"><a href="#3.8.5.4.1" title="***[1.0] The interpreter is required to be able to print representations of every defined Unicode character under $0100 ">3.8.5.4.1</a></li>
+<li class="depth-4"><a href="#3.8.5.4.2" title="Normally, and where sensibly possible, all punctuation and letter characters in ISO 8859-1 Latin1 should be readable fro">3.8.5.4.2</a></li>
+<li class="depth-4"><a href="#3.8.5.4.3" title="***[1.0] An interpreter is not required to have suitable letter-forms for printing Unicode characters $0100 to $FFFF. (I">3.8.5.4.3</a></li>
+<li class="depth-4"><a href="#3.8.5.4.4" title="The Z-machine is not required to handle complex Unicode formatting like combining characters, bidirectional formatting a">3.8.5.4.4</a></li>
+<li class="depth-4"><a href="#3.8.5.4.5" title="Unicode characters U+0000 to U+001F and U+007F to U+009F are control codes, and must not be used.">3.8.5.4.5</a></li>
+<li class="depth-3"><a href="#3.8.6" title="ZSCII codes 252 to 254 are defined for input only: 252: menu click 253: mouse double-click 254: mouse single-click Menu ">3.8.6</a></li>
+<li class="depth-3"><a href="#3.8.7" title="ZSCII code 255 is undefined. (This value is needed in the "terminating characters table" as a wildcard, indicating "any ">3.8.7</a></li>
+<li class="depth-1"><a href="#remarks">Remarks</a></li>
+</ol>
+</aside>
+</div>
+<script src="assets/nav.js"></script>
+<script src="assets/zspec.js" defer></script>
+</body>
+</html>

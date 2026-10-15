@@ -1,0 +1,1529 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Quetzal: a common format for saved games — mirrored in the Z-Machine Standard 1.1</title>
+<meta name="description" content="Quetzal by Martin Frost, version 1.4, 13 November 1997. Mirrored alongside the Z-Machine Standards Document.">
+<link rel="canonical" href="https://jeffnyman.github.io/z-machine-standard/quetzal.html">
+<meta name="theme-color" content="#0d63c9">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="The Z-Machine Standards Document 1.1">
+<meta property="og:title" content="Quetzal: a common format for saved games — mirrored in the Z-Machine Standard 1.1">
+<meta property="og:description" content="Quetzal by Martin Frost, version 1.4, 13 November 1997. Mirrored alongside the Z-Machine Standards Document.">
+<meta property="og:url" content="https://jeffnyman.github.io/z-machine-standard/quetzal.html">
+<link rel="stylesheet" href="assets/zspec.css">
+<script>/* Set the theme before first paint to avoid a flash. */
+(function(){try{var t=localStorage.getItem('zspec-theme');if(t==='dark'||t==='light')document.documentElement.dataset.theme=t;}catch(e){}})();
+</script>
+</head>
+<body>
+<a class="skip-link" href="#content">Skip to content</a>
+<header class="topbar">
+  <button class="icon-button nav-toggle" type="button" aria-expanded="false" aria-controls="sidebar" aria-label="Show contents">
+    <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 5h14M3 10h14M3 15h14"/></svg>
+  </button>
+  <a class="brand" href="index.html"><span class="brand-name">Z-Machine Standard</span><span class="brand-version">1.1</span></a>
+  <div class="topbar-actions">
+    <button class="search-trigger" type="button" data-search-open>
+      <svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="9" cy="9" r="6"/><path d="M13.5 13.5 18 18"/></svg>
+      <span>Search</span><kbd>/</kbd>
+    </button>
+    <button class="icon-button theme-toggle" type="button" aria-label="Switch colour theme">
+      <svg class="icon-sun" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="4"/><path d="M10 1v2M10 17v2M1 10h2M17 10h2M3.9 3.9l1.4 1.4M14.7 14.7l1.4 1.4M16.1 3.9l-1.4 1.4M5.3 14.7l-1.4 1.4"/></svg>
+      <svg class="icon-moon" viewBox="0 0 20 20" aria-hidden="true"><path d="M17 12.3A7.5 7.5 0 0 1 7.7 3a7.5 7.5 0 1 0 9.3 9.3z"/></svg>
+    </button>
+  </div>
+</header>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Specification contents">
+<!--nav:start-->
+<div class="nav-inner">
+<a class="nav-home" href="index.html">Contents</a>
+<ul class="nav-list">
+<li><a href="preface.html"><span class="nav-label">Preface</span></a></li>
+<li><a href="overview.html"><span class="nav-label">Overview</span></a></li>
+</ul>
+<h2 class="nav-group">Fundamentals</h2>
+<ul class="nav-list">
+<li><a href="sect01.html"><span class="nav-num">1</span><span class="nav-label">The memory map</span></a></li>
+<li><a href="sect02.html"><span class="nav-num">2</span><span class="nav-label">Numbers and arithmetic</span></a></li>
+<li><a href="sect03.html"><span class="nav-num">3</span><span class="nav-label">Text and characters</span></a></li>
+<li><a href="sect04.html"><span class="nav-num">4</span><span class="nav-label">Instruction encoding</span></a></li>
+<li><a href="sect05.html"><span class="nav-num">5</span><span class="nav-label">Routine encoding</span></a></li>
+<li><a href="sect06.html"><span class="nav-num">6</span><span class="nav-label">The game state</span></a></li>
+</ul>
+<h2 class="nav-group">Input/Output</h2>
+<ul class="nav-list">
+<li><a href="sect07.html"><span class="nav-num">7</span><span class="nav-label">Output streams</span></a></li>
+<li><a href="sect08.html"><span class="nav-num">8</span><span class="nav-label">The screen model</span></a></li>
+<li><a href="sect09.html"><span class="nav-num">9</span><span class="nav-label">Sound effects</span></a></li>
+<li><a href="sect10.html"><span class="nav-num">10</span><span class="nav-label">Input streams</span></a></li>
+</ul>
+<h2 class="nav-group">Tables</h2>
+<ul class="nav-list">
+<li><a href="sect11.html"><span class="nav-num">11</span><span class="nav-label">The header</span></a></li>
+<li><a href="sect12.html"><span class="nav-num">12</span><span class="nav-label">The object table</span></a></li>
+<li><a href="sect13.html"><span class="nav-num">13</span><span class="nav-label">Dictionary and lexing</span></a></li>
+</ul>
+<h2 class="nav-group">Instruction Set</h2>
+<ul class="nav-list">
+<li><a href="sect14.html"><span class="nav-num">14</span><span class="nav-label">Table of opcodes</span></a></li>
+<li><a href="sect15.html"><span class="nav-num">15</span><span class="nav-label">Dictionary of opcodes</span></a></li>
+</ul>
+<h2 class="nav-group">An Unusual Font</h2>
+<ul class="nav-list">
+<li><a href="sect16.html"><span class="nav-num">16</span><span class="nav-label">Font 3</span></a></li>
+</ul>
+<h2 class="nav-group">Appendices</h2>
+<ul class="nav-list">
+<li><a href="appa.html"><span class="nav-num">A</span><span class="nav-label">Error messages and debugging</span></a></li>
+<li><a href="appb.html"><span class="nav-num">B</span><span class="nav-label">Header conventions</span></a></li>
+<li><a href="appc.html"><span class="nav-num">C</span><span class="nav-label">Resources available</span></a></li>
+<li><a href="appd.html"><span class="nav-num">D</span><span class="nav-label">History</span></a></li>
+<li><a href="appe.html"><span class="nav-num">E</span><span class="nav-label">Statistics</span></a></li>
+<li><a href="appf.html"><span class="nav-num">F</span><span class="nav-label">Canonical story files</span></a></li>
+</ul>
+<h2 class="nav-group">Related standards</h2>
+<p class="nav-note">Mirrored in this repository</p>
+<ul class="nav-list">
+<li class="is-current"><a href="quetzal.html" aria-current="page"><span class="nav-label">Quetzal</span></a></li>
+<li><a href="blorb.html"><span class="nav-label">Blorb</span></a></li>
+</ul>
+</div>
+<!--nav:end-->
+</nav>
+<div class="main-column">
+<main class="content" id="content">
+<div class="page-head">
+<img class="page-icon" src="images/qlogo.svg" alt="" width="100" height="111" loading="lazy" decoding="async">
+<h1>Quetzal: a common format for saved games</h1>
+</div>
+<div class="provenance" data-generated>
+<p><strong>Quetzal</strong> is a separate standard by
+   Martin Frost (version 1.4, 13 November 1997) — HTML typesetting by Graham Nelson.
+   It is not part of the Z-Machine Standard, but is referenced throughout it.</p>
+<p>Mirrored here so the specification is complete offline, and restyled to match.
+   The text is reproduced verbatim. Retrieved 1 August 2026 from
+   <a href="https://inform-fiction.org/zmachine/standards/quetzal/index.html">https://inform-fiction.org/zmachine/standards/quetzal/index.html</a>, which remains canonical.</p>
+
+</div>
+
+<section class="clause-section is-topic" id="one">
+<h2>1. Conventions<a class="heading-anchor" href="#one" aria-label="Link to 1. Conventions"></a></h2>
+</section>
+
+<section class="clause-section is-clause" id="1.1">
+<p><a class="clause-num" href="#1.1">1.1</a><button class="copy-link" type="button" data-anchor="1.1" aria-label="Copy link to 1.1" title="Copy link"></button> A <b>byte</b> is an 8-bit unsigned quantity.
+
+</p>
+</section>
+
+<section class="clause-section is-clause" id="1.2">
+<p><a class="clause-num" href="#1.2">1.2</a><button class="copy-link" type="button" data-anchor="1.2" aria-label="Copy link to 1.2" title="Copy link"></button> A <b>word</b> is a 16-bit unsigned quantity.
+
+</p>
+</section>
+
+<section class="clause-section is-clause" id="1.3">
+<p><a class="clause-num" href="#1.3">1.3</a><button class="copy-link" type="button" data-anchor="1.3" aria-label="Copy link to 1.3" title="Copy link"></button> 
+Bitfields are represented as blocks of characters, with the first
+character representing the most significant bit of the byte in
+question. Multi-bit subfields are indicated by using the same character
+multiple times, and values of 0 or 1 indicate that these bits are
+always of the specified value. Therefore a bitfield described as
+<b>010abbcc cccdd111</b> would be a two-byte bitfield containing four
+subfields, <b>a</b>, of 1 bit, <b>b</b>, 2 bits, <b>c</b>, 5 bits,
+and <b>d</b>, 2 bits, together with a field 'hardwired' to
+010 and one to 111.
+
+</p>
+</section>
+
+<section class="clause-section is-clause" id="1.4">
+<p><a class="clause-num" href="#1.4">1.4</a><button class="copy-link" type="button" data-anchor="1.4" aria-label="Copy link to 1.4" title="Copy link"></button> 
+All multi-byte numbers are stored in big-endian form: most significant
+        byte first, then in strictly descending order of significance.
+
+</p>
+</section>
+
+<section class="clause-section is-clause" id="1.5">
+<p><a class="clause-num" href="#1.5">1.5</a><button class="copy-link" type="button" data-anchor="1.5" aria-label="Copy link to 1.5" title="Copy link"></button> 
+The reader is assumed to already be familiar with the Z-machine;
+        in particular its instruction set, memory map and stack conventions.
+</p>
+</section>
+
+<section class="clause-section is-clause" id="1.6">
+<p><a class="clause-num" href="#1.6">1.6</a><button class="copy-link" type="button" data-anchor="1.6" aria-label="Copy link to 1.6" title="Copy link"></button> 
+When form type names, which are four characters long, are set in running
+text, they're set in bold-face with spaces replaced by underscores.  Thus
+<b>____</b> means "four spaces" and <b>(c)_</b> means three letters of
+the copyright notation followed by a space.
+</p>
+</section>
+
+<section class="clause-section is-topic" id="two">
+<h2>2. Overall structure<a class="heading-anchor" href="#two" aria-label="Link to 2. Overall structure"></a></h2>
+</section>
+
+<section class="clause-section is-clause" id="2.1">
+<p><a class="clause-num" href="#2.1">2.1</a><button class="copy-link" type="button" data-anchor="2.1" aria-label="Copy link to 2.1" title="Copy link"></button> 
+For the purposes of flexibility, the overall format will be a new IFF
+        type. A standard core is defined, and customised information can be
+        stored by specific interpreters in such a way that it can be easily
+        read by others. The FORM type is <b>IFZS</b>.
+
+</p>
+</section>
+
+<section class="clause-section is-clause" id="2.2">
+<p><a class="clause-num" href="#2.2">2.2</a><button class="copy-link" type="button" data-anchor="2.2" aria-label="Copy link to 2.2" title="Copy link"></button> 
+Several chunks are defined within this document to appear in the IFZS
+FORM:
+</p>
+<pre>
+                'IFhd'          5.4
+                'CMem'          3.7
+                'UMem'          3.8
+                'Stks'          4.10
+                'IntD'          7.8
+</pre>
+</section>
+
+<section class="clause-section is-clause" id="2.3">
+<p><a class="clause-num" href="#2.3">2.3</a><button class="copy-link" type="button" data-anchor="2.3" aria-label="Copy link to 2.3" title="Copy link"></button> 
+Several chunks may also appear by convention in any IFF FORM:
+</p>
+<pre>
+                'AUTH'          7.2, 7.3
+                '(c) '          7.2, 7.4
+                'ANNO'          7.2, 7.5
+</pre>
+</section>
+
+<section class="clause-section is-topic" id="three">
+<h2>3. Content of dynamic memory<a class="heading-anchor" href="#three" aria-label="Link to 3. Content of dynamic memory"></a></h2>
+</section>
+
+<section class="clause-section is-clause" id="3.1">
+<p><a class="clause-num" href="#3.1">3.1</a><button class="copy-link" type="button" data-anchor="3.1" aria-label="Copy link to 3.1" title="Copy link"></button> 
+Since the contents of dynamic memory may be anything up to 65534 bytes,
+        it is desirable to have some form of compression available as an
+        option. Bryan Scattergood's port of ITF uses a method that is both
+        elegant and effective, and this is the method adopted.
+
+</p>
+</section>
+
+<section class="clause-section is-clause" id="3.2">
+<p><a class="clause-num" href="#3.2">3.2</a><button class="copy-link" type="button" data-anchor="3.2" aria-label="Copy link to 3.2" title="Copy link"></button> 
+The data is compressed by exclusive-oring the current contents of
+dynamic memory with the original (from the original story file). The
+result is then compressed with a simple run-length scheme: a non-zero
+byte in the output represents the byte itself, but a zero byte is
+followed by a length byte, and the pair represent a block of <b>n+1</b>
+zero bytes, where <b>n</b> is the value of the length byte.
+
+</p>
+</section>
+
+<section class="clause-section is-clause" id="3.3">
+<p><a class="clause-num" href="#3.3">3.3</a><button class="copy-link" type="button" data-anchor="3.3" aria-label="Copy link to 3.3" title="Copy link"></button> 
+It is not necessary to compress optimally, if to do so would be
+        difficult. For example, an interpreter that does not store the whole
+        of dynamic memory in physical memory may compress a single page at a
+        time, ignoring the possibility of a run crossing a page boundary;
+        this case can be encoded as two adjacent runs of bytes. It is
+    required, however, that interpreters read encoded data even if it does
+    not happen to be compressed to their particular page-boundary
+    preferences. This is not difficult, requiring merely the maintenance of
+    a small amount of state (namely the current run length, if any) across
+    page boundaries on a read.
+
+</p>
+</section>
+
+<section class="clause-section is-clause" id="3.4">
+<p><a class="clause-num" href="#3.4">3.4</a><button class="copy-link" type="button" data-anchor="3.4" aria-label="Copy link to 3.4" title="Copy link"></button> 
+If the decoded data is shorter than the length of dynamic memory, then
+    the missing section is assumed to be a run of zeroes (and hence equal
+    to the original contents of that part of dynamic memory). This permits
+    the removal of redundant runs at the end of the encoded block; again
+    it is not necessary to implement this on writes, but it must be
+    understood on reads.
+
+</p>
+</section>
+
+<section class="clause-section is-clause" id="3.5">
+<p><a class="clause-num" href="#3.5">3.5</a><button class="copy-link" type="button" data-anchor="3.5" aria-label="Copy link to 3.5" title="Copy link"></button> 
+Two error cases are possible on reads: the decoded data may be larger
+    than dynamic memory, and the encoded data may finish with an incomplete
+    run (a zero byte without a length byte). These should be dealt with in
+    whatever way seems appropriate to the interpreter writer.
+
+</p>
+</section>
+
+<section class="clause-section is-clause" id="3.6">
+<p><a class="clause-num" href="#3.6">3.6</a><button class="copy-link" type="button" data-anchor="3.6" aria-label="Copy link to 3.6" title="Copy link"></button> 
+Dissenting voices have suggested that compression is unnecessary in
+    today's world of cheap storage, and so the format also includes the
+    capability to dump the contents of dynamic memory without modification.
+    The ability to write such files is optional; the ability to read both
+    types is necessary. It is an error for this dump to be shorter or
+    longer than the expected length of dynamic memory.
+
+</p>
+</section>
+
+<section class="clause-section is-clause" id="3.7">
+<p><a class="clause-num" href="#3.7">3.7</a><button class="copy-link" type="button" data-anchor="3.7" aria-label="Copy link to 3.7" title="Copy link"></button> 
+The IFF chunk used to contain the compressed data has type <b>CMem</b>.
+    Its format is as follows:
+
+</p>
+</section>
+
+<section class="clause-section is-clause" id="3.7.1">
+<p class="clause-num-row"><a class="clause-num" href="#3.7.1">3.7.1</a><button class="copy-link" type="button" data-anchor="3.7.1" aria-label="Copy link to 3.7.1" title="Copy link"></button></p>
+<pre>
+        4 bytes         'CMem'          chunk ID
+</pre>
+</section>
+
+<section class="clause-section is-clause" id="3.7.2">
+<p class="clause-num-row"><a class="clause-num" href="#3.7.2">3.7.2</a><button class="copy-link" type="button" data-anchor="3.7.2" aria-label="Copy link to 3.7.2" title="Copy link"></button></p>
+<pre>
+        4 bytes         n               chunk length
+</pre>
+</section>
+
+<section class="clause-section is-clause" id="3.7.3">
+<p class="clause-num-row"><a class="clause-num" href="#3.7.3">3.7.3</a><button class="copy-link" type="button" data-anchor="3.7.3" aria-label="Copy link to 3.7.3" title="Copy link"></button></p>
+<pre>
+        n bytes         ...             compressed data as above
+</pre>
+</section>
+
+<section class="clause-section is-clause" id="3.8">
+<p><a class="clause-num" href="#3.8">3.8</a><button class="copy-link" type="button" data-anchor="3.8" aria-label="Copy link to 3.8" title="Copy link"></button> 
+The chunk used to contain the uncompressed data has type <b>UMem</b>. It
+        has the format:
+
+</p>
+</section>
+
+<section class="clause-section is-clause" id="3.8.1">
+<p class="clause-num-row"><a class="clause-num" href="#3.8.1">3.8.1</a><button class="copy-link" type="button" data-anchor="3.8.1" aria-label="Copy link to 3.8.1" title="Copy link"></button></p>
+<pre>
+        4 bytes         'UMem'          chunk ID
+</pre>
+</section>
+
+<section class="clause-section is-clause" id="3.8.2">
+<p class="clause-num-row"><a class="clause-num" href="#3.8.2">3.8.2</a><button class="copy-link" type="button" data-anchor="3.8.2" aria-label="Copy link to 3.8.2" title="Copy link"></button></p>
+<pre>
+        4 bytes         n               chunk length
+</pre>
+</section>
+
+<section class="clause-section is-clause" id="3.8.3">
+<p class="clause-num-row"><a class="clause-num" href="#3.8.3">3.8.3</a><button class="copy-link" type="button" data-anchor="3.8.3" aria-label="Copy link to 3.8.3" title="Copy link"></button></p>
+<pre>
+        n bytes         ...             simple dump of dynamic memory
+</pre>
+</section>
+
+<section class="clause-section is-topic" id="four">
+<h2>4. Content of stacks<a class="heading-anchor" href="#four" aria-label="Link to 4. Content of stacks"></a></h2>
+</section>
+
+<section class="clause-section is-clause" id="4.1">
+<p><a class="clause-num" href="#4.1">4.1</a><button class="copy-link" type="button" data-anchor="4.1" aria-label="Copy link to 4.1" title="Copy link"></button> 
+One of the biggest differences between current interpreters is how they
+    handle the Z-machine's stacks. Conceptually, there are two, but many
+    interpreters store both in the same array. This format stores both in
+    the same IFF chunk, which has chunk ID <b>Stks</b>.
+
+</p>
+</section>
+
+<section class="clause-section is-clause" id="4.2">
+<p><a class="clause-num" href="#4.2">4.2</a><button class="copy-link" type="button" data-anchor="4.2" aria-label="Copy link to 4.2" title="Copy link"></button> 
+The IFF format includes a length field on each chunk, so we can write
+    only the used portion of the stacks, to save space. The least recent
+    frames on the stacks are saved first, to ensure that the missing part
+    appears at the end of the data in the file.
+
+</p>
+</section>
+
+<section class="clause-section is-clause" id="4.3">
+<p><a class="clause-num" href="#4.3">4.3</a><button class="copy-link" type="button" data-anchor="4.3" aria-label="Copy link to 4.3" title="Copy link"></button> 
+Each frame has the format:
+
+</p>
+</section>
+
+<section class="clause-section is-clause" id="4.3.1">
+<p class="clause-num-row"><a class="clause-num" href="#4.3.1">4.3.1</a><button class="copy-link" type="button" data-anchor="4.3.1" aria-label="Copy link to 4.3.1" title="Copy link"></button></p>
+<pre>
+        3 bytes         ...             return PC (byte address)
+</pre>
+</section>
+
+<section class="clause-section is-clause" id="4.3.2">
+<p class="clause-num-row"><a class="clause-num" href="#4.3.2">4.3.2</a><button class="copy-link" type="button" data-anchor="4.3.2" aria-label="Copy link to 4.3.2" title="Copy link"></button></p>
+<pre>
+        1 byte          000pvvvv        flags
+</pre>
+</section>
+
+<section class="clause-section is-clause" id="4.3.3">
+<p class="clause-num-row"><a class="clause-num" href="#4.3.3">4.3.3</a><button class="copy-link" type="button" data-anchor="4.3.3" aria-label="Copy link to 4.3.3" title="Copy link"></button></p>
+<pre>
+        1 byte          ...             variable number to store result
+</pre>
+</section>
+
+<section class="clause-section is-clause" id="4.3.4">
+<p class="clause-num-row"><a class="clause-num" href="#4.3.4">4.3.4</a><button class="copy-link" type="button" data-anchor="4.3.4" aria-label="Copy link to 4.3.4" title="Copy link"></button></p>
+<pre>
+        1 byte          0gfedcba        arguments supplied
+</pre>
+</section>
+
+<section class="clause-section is-clause" id="4.3.5">
+<p class="clause-num-row"><a class="clause-num" href="#4.3.5">4.3.5</a><button class="copy-link" type="button" data-anchor="4.3.5" aria-label="Copy link to 4.3.5" title="Copy link"></button></p>
+<pre>
+        1 word          n               number of words of evaluation
+                                        stack used by this call
+</pre>
+</section>
+
+<section class="clause-section is-clause" id="4.3.6">
+<p class="clause-num-row"><a class="clause-num" href="#4.3.6">4.3.6</a><button class="copy-link" type="button" data-anchor="4.3.6" aria-label="Copy link to 4.3.6" title="Copy link"></button></p>
+<pre>
+        v words         ...             local variables
+</pre>
+</section>
+
+<section class="clause-section is-clause" id="4.3.7">
+<p class="clause-num-row"><a class="clause-num" href="#4.3.7">4.3.7</a><button class="copy-link" type="button" data-anchor="4.3.7" aria-label="Copy link to 4.3.7" title="Copy link"></button></p>
+<pre>
+        n words         ...             evaluation stack for this call
+</pre>
+</section>
+
+<section class="clause-section is-clause" id="4.4">
+<p><a class="clause-num" href="#4.4">4.4</a><button class="copy-link" type="button" data-anchor="4.4" aria-label="Copy link to 4.4" title="Copy link"></button> 
+The return PC is a byte offset from the start of the story file.
+
+</p>
+</section>
+
+<section class="clause-section is-clause" id="4.6">
+<p><a class="clause-num" href="#4.6">4.6</a><button class="copy-link" type="button" data-anchor="4.6" aria-label="Copy link to 4.6" title="Copy link"></button> 
+The p flag is set on calls made by
+        <b>call_xN</b> (discard result), in which
+        case the variable number is meaningless (and should be written as a
+        zero).
+
+</p>
+</section>
+
+<section class="clause-section is-clause" id="4.7">
+<p><a class="clause-num" href="#4.7">4.7</a><button class="copy-link" type="button" data-anchor="4.7" aria-label="Copy link to 4.7" title="Copy link"></button> 
+Assigning each of the possible 7 supplied arguments a letter a-g in
+        order, each bit is set if its respective argument is supplied. The
+        evaluation stack count allows the reconstruction of the chain of frame
+        pointers for all possible stack models. Words on the evaluation stack
+        are also stored least recent first.
+
+</p>
+</section>
+
+<section class="clause-section is-clause" id="4.8">
+<p><a class="clause-num" href="#4.8">4.8</a><button class="copy-link" type="button" data-anchor="4.8" aria-label="Copy link to 4.8" title="Copy link"></button> 
+Although some interpreters may impose an arbitrary limit on the size of
+    the stacks (such as ZIP's 1024-word total stack size), others may not,
+    or may set larger limits. This means that the size of a stack dump may
+    be larger than will fit. If you cannot dynamically resize your stack
+    you must trap this as an error.
+
+</p>
+</section>
+
+<section class="clause-section is-clause" id="4.9">
+<p><a class="clause-num" href="#4.9">4.9</a><button class="copy-link" type="button" data-anchor="4.9" aria-label="Copy link to 4.9" title="Copy link"></button> 
+The stack pointer itself is not stored anywhere in the save file,
+    except implicitly, as the top frame on the stack will be the last
+    saved.
+
+</p>
+</section>
+
+<section class="clause-section is-clause" id="4.10">
+<p><a class="clause-num" href="#4.10">4.10</a><button class="copy-link" type="button" data-anchor="4.10" aria-label="Copy link to 4.10" title="Copy link"></button> 
+The chunk itself is simply a sequence of frames as above:
+
+</p>
+</section>
+
+<section class="clause-section is-clause" id="4.10.1">
+<p class="clause-num-row"><a class="clause-num" href="#4.10.1">4.10.1</a><button class="copy-link" type="button" data-anchor="4.10.1" aria-label="Copy link to 4.10.1" title="Copy link"></button></p>
+<pre>
+        4 bytes         'Stks'          chunk ID
+</pre>
+</section>
+
+<section class="clause-section is-clause" id="4.10.2">
+<p class="clause-num-row"><a class="clause-num" href="#4.10.2">4.10.2</a><button class="copy-link" type="button" data-anchor="4.10.2" aria-label="Copy link to 4.10.2" title="Copy link"></button></p>
+<pre>
+        4 bytes         n               chunk length
+</pre>
+</section>
+
+<section class="clause-section is-clause" id="4.10.3">
+<p class="clause-num-row"><a class="clause-num" href="#4.10.3">4.10.3</a><button class="copy-link" type="button" data-anchor="4.10.3" aria-label="Copy link to 4.10.3" title="Copy link"></button></p>
+<pre>
+        n bytes         ...             frames (oldest first)
+</pre>
+</section>
+
+<section class="clause-section is-clause" id="4.11">
+<p><a class="clause-num" href="#4.11">4.11</a><button class="copy-link" type="button" data-anchor="4.11" aria-label="Copy link to 4.11" title="Copy link"></button> 
+In Z-machine versions other than V6 execution starts at an address
+    rather than at a routine, and therefore data can be pushed on the
+    evaluation stack without anything being on the call stack. Therefore,
+    in all versions other than V6 a dummy stack frame must be stored as
+    the first in the file (the oldest chunk).
+
+</p>
+</section>
+
+<section class="clause-section is-clause" id="4.11.1">
+<p><a class="clause-num" href="#4.11.1">4.11.1</a><button class="copy-link" type="button" data-anchor="4.11.1" aria-label="Copy link to 4.11.1" title="Copy link"></button> 
+The dummy frame has all fields set to zero except <b>n</b>, the amount
+    of evaluation stack used. Note that this may also be zero if the
+    game does not use any evaluation stack at the top level.
+
+</p>
+</section>
+
+<section class="clause-section is-clause" id="4.11.2">
+<p><a class="clause-num" href="#4.11.2">4.11.2</a><button class="copy-link" type="button" data-anchor="4.11.2" aria-label="Copy link to 4.11.2" title="Copy link"></button> 
+This frame must be written even if no evaluation stack is used at
+    the top level, and therefore interpreters may assume its presence on
+    savefiles for V1-5 and V7-8 games.
+
+</p>
+</section>
+
+<section class="clause-section is-topic" id="five">
+<h2>5. Associated story file<a class="heading-anchor" href="#five" aria-label="Link to 5. Associated story file"></a></h2>
+</section>
+
+<section class="clause-section is-clause" id="5.1">
+<p><a class="clause-num" href="#5.1">5.1</a><button class="copy-link" type="button" data-anchor="5.1" aria-label="Copy link to 5.1" title="Copy link"></button> 
+We now come to one of the most difficult (yet most important) parts of
+    the format: how to find the story file associated with this save file,
+    or the related (but easier) problem of checking whether a given save
+    file belongs to a given story.
+
+</p>
+</section>
+
+<section class="clause-section is-clause" id="5.2">
+<p><a class="clause-num" href="#5.2">5.2</a><button class="copy-link" type="button" data-anchor="5.2" aria-label="Copy link to 5.2" title="Copy link"></button> 
+Considering the easier second problem first, the actual name of the
+    story file is often not much use. Firstly, filenames are highly
+    dependent on the operating system in use, and secondly, many original
+    Infocom story files were called simply 'story.data' or similar.
+
+</p>
+</section>
+
+<section class="clause-section is-clause" id="5.3">
+<p><a class="clause-num" href="#5.3">5.3</a><button class="copy-link" type="button" data-anchor="5.3" aria-label="Copy link to 5.3" title="Copy link"></button> 
+The method most existing interpreters use is to compare the variables
+    at offsets $2, $12, and $1C in the header (that is, the release number,
+    the serial number and the checksum), and refuse to load if they differ.
+    These variables are duplicated in the file (since the header will be
+    compressed with the rest of dynamic memory).
+
+</p>
+</section>
+
+<section class="clause-section is-clause" id="5.4">
+<p><a class="clause-num" href="#5.4">5.4</a><button class="copy-link" type="button" data-anchor="5.4" aria-label="Copy link to 5.4" title="Copy link"></button> 
+This data will be stored in a chunk of type <b>IFhd</b>. This chunk must
+    come before the <b>[CU]Mem</b> and <b>Stks</b> chunks to save
+    interpreters the trouble of decoding these only to find that the
+    wrong story file is loaded. The format is:
+
+</p>
+</section>
+
+<section class="clause-section is-clause" id="5.4.1">
+<p class="clause-num-row"><a class="clause-num" href="#5.4.1">5.4.1</a><button class="copy-link" type="button" data-anchor="5.4.1" aria-label="Copy link to 5.4.1" title="Copy link"></button></p>
+<pre>
+        4 bytes         'IFhd'          chunk ID
+</pre>
+</section>
+
+<section class="clause-section is-clause" id="5.4.2">
+<p class="clause-num-row"><a class="clause-num" href="#5.4.2">5.4.2</a><button class="copy-link" type="button" data-anchor="5.4.2" aria-label="Copy link to 5.4.2" title="Copy link"></button></p>
+<pre>
+        4 bytes         13              chunk length
+</pre>
+</section>
+
+<section class="clause-section is-clause" id="5.4.3">
+<p class="clause-num-row"><a class="clause-num" href="#5.4.3">5.4.3</a><button class="copy-link" type="button" data-anchor="5.4.3" aria-label="Copy link to 5.4.3" title="Copy link"></button></p>
+<pre>
+        1 word          ...             release number ($2 in header)
+</pre>
+</section>
+
+<section class="clause-section is-clause" id="5.4.4">
+<p class="clause-num-row"><a class="clause-num" href="#5.4.4">5.4.4</a><button class="copy-link" type="button" data-anchor="5.4.4" aria-label="Copy link to 5.4.4" title="Copy link"></button></p>
+<pre>
+        6 bytes         ...             serial number ($12 in header)
+</pre>
+</section>
+
+<section class="clause-section is-clause" id="5.4.5">
+<p class="clause-num-row"><a class="clause-num" href="#5.4.5">5.4.5</a><button class="copy-link" type="button" data-anchor="5.4.5" aria-label="Copy link to 5.4.5" title="Copy link"></button></p>
+<pre>
+        1 word          ...             checksum ($1C in header)
+</pre>
+</section>
+
+<section class="clause-section is-clause" id="5.4.6">
+<p class="clause-num-row"><a class="clause-num" href="#5.4.6">5.4.6</a><button class="copy-link" type="button" data-anchor="5.4.6" aria-label="Copy link to 5.4.6" title="Copy link"></button></p>
+<pre>
+        3 bytes         ...             PC (see 5.8)
+</pre>
+</section>
+
+<section class="clause-section is-clause" id="5.5">
+<p><a class="clause-num" href="#5.5">5.5</a><button class="copy-link" type="button" data-anchor="5.5" aria-label="Copy link to 5.5" title="Copy link"></button> 
+If the save file belongs to an old game that does not have a checksum,
+    it should be calculated in the normal way from the original story file
+    when saving. It is possible that a future version of this format may
+    have a larger <b>IFhd</b> chunk, but the first 13 bytes will always
+    contain this data, and if the other chunks described herein are
+    present they will be guaranteed to contain the data specified.
+
+</p>
+</section>
+
+<section class="clause-section is-clause" id="5.6">
+<p><a class="clause-num" href="#5.6">5.6</a><button class="copy-link" type="button" data-anchor="5.6" aria-label="Copy link to 5.6" title="Copy link"></button> 
+The first problem (of trying to find a story file given only a save
+    file) cannot really be solved in an operating-system independent
+    manner, and so there is provision for OS-dependent chunks to handle
+    this.
+
+</p>
+</section>
+
+<section class="clause-section is-clause" id="5.7">
+<p><a class="clause-num" href="#5.7">5.7</a><button class="copy-link" type="button" data-anchor="5.7" aria-label="Copy link to 5.7" title="Copy link"></button> 
+It should be noted that the current state of the <b>IFhd</b> chunk means
+    it has odd length (13 bytes). It should, of course, be written with
+    a pad byte (as mentioned in 8.4.1).
+
+</p>
+</section>
+
+<section class="clause-section is-clause" id="5.8">
+<p><a class="clause-num" href="#5.8">5.8</a><button class="copy-link" type="button" data-anchor="5.8" aria-label="Copy link to 5.8" title="Copy link"></button> 
+The value of the PC saved in the chunk depends on the version of the
+	Z-machine which the story runs on.
+
+</p>
+</section>
+
+<section class="clause-section is-clause" id="5.8.1">
+<p><a class="clause-num" href="#5.8.1">5.8.1</a><button class="copy-link" type="button" data-anchor="5.8.1" aria-label="Copy link to 5.8.1" title="Copy link"></button>  On Z-machine versions 3 and below, the <b>save</b> instruction takes a branch 
+  depending on the success of the save. The saved PC points to the one or two 
+  bytes which describe this branch. 
+</p>
+</section>
+
+<section class="clause-section is-clause" id="5.8.2">
+<p><a class="clause-num" href="#5.8.2">5.8.2</a><button class="copy-link" type="button" data-anchor="5.8.2" aria-label="Copy link to 5.8.2" title="Copy link"></button>  On versions 4 and above, the <b>save</b> instruction stores a value depending 
+  on the success of the save. The saved PC points to the single byte describing 
+  where to store the result. 
+</p>
+</section>
+
+<section class="clause-section is-clause" id="5.8.3">
+<p><a class="clause-num" href="#5.8.3">5.8.3</a><button class="copy-link" type="button" data-anchor="5.8.3" aria-label="Copy link to 5.8.3" title="Copy link"></button> 
+This behaviour differs from that specified by previous versions of this
+	standard, but the behaviour expected there would be difficult to
+	implement in existing interpreters. The situation has been complicated
+	as the patches available for the Zip interpreter did not correctly
+	implement the previous standard; instead, they behaved as specified
+	here.
+
+</p>
+</section>
+
+<section class="clause-section is-topic" id="six">
+<h2>6. Miscellaneous<a class="heading-anchor" href="#six" aria-label="Link to 6. Miscellaneous"></a></h2>
+</section>
+
+<section class="clause-section is-clause" id="6.1">
+<p><a class="clause-num" href="#6.1">6.1</a><button class="copy-link" type="button" data-anchor="6.1" aria-label="Copy link to 6.1" title="Copy link"></button> 
+It must be specified exactly what the magic cookie returned by <b>catch</b>
+        is, since this value can be stored in any random variable, on the
+        evaluation stack, or indeed anywhere in memory.
+
+</p>
+</section>
+
+<section class="clause-section is-clause" id="6.2">
+<p><a class="clause-num" href="#6.2">6.2</a><button class="copy-link" type="button" data-anchor="6.2" aria-label="Copy link to 6.2" title="Copy link"></button> 
+For greatest independence of internal interpreter implementation,
+<b>catch</b>
+    is hereby specified to return the number of frames currently on the
+    system stack. This makes <b>throw</b> slightly inefficient on many
+    interpreters (a current frame count can be maintained internally to
+    avoid problems with <b>catch</b>), but this is unavoidable without
+    using two stacks and a fixed-size activation record
+    (always 15 local variables).  Since most applications of
+    <b>catch</b>/<b>throw</b> do not unwind enormous depths,
+    (and they are somewhat infrequent), this should not be too much of a
+    problem.
+
+</p>
+</section>
+
+<section class="clause-section is-clause" id="6.3">
+<p><a class="clause-num" href="#6.3">6.3</a><button class="copy-link" type="button" data-anchor="6.3" aria-label="Copy link to 6.3" title="Copy link"></button> 
+The numbers of pictures and sounds do not need specification, since
+        they are requested by number by the story file itself.
+
+</p>
+</section>
+
+<section class="clause-section is-topic" id="seven">
+<h2>7. Extensions to the format<a class="heading-anchor" href="#seven" aria-label="Link to 7. Extensions to the format"></a></h2>
+</section>
+
+<section class="clause-section is-clause" id="7.1">
+<p><a class="clause-num" href="#7.1">7.1</a><button class="copy-link" type="button" data-anchor="7.1" aria-label="Copy link to 7.1" title="Copy link"></button> 
+One of the advantages of the IFF standard is that extra chunks can be
+    added to the format to extend it in various ways. For example, there
+    are three standard chunk types defined, namely <b>AUTH</b>,
+    <b>(c)_</b>, and <b>ANNO</b>.
+
+</p>
+</section>
+
+<section class="clause-section is-clause" id="7.2">
+<p><a class="clause-num" href="#7.2">7.2</a><button class="copy-link" type="button" data-anchor="7.2" aria-label="Copy link to 7.2" title="Copy link"></button> 
+<b>AUTH</b>, <b>(c)_</b>, and <b>ANNO</b> chunks all contain simple
+    ASCII text
+    (all characters in the range 0x20 to 0x7E).
+
+</p>
+</section>
+
+<section class="clause-section is-clause" id="7.2.1">
+<p><a class="clause-num" href="#7.2.1">7.2.1</a><button class="copy-link" type="button" data-anchor="7.2.1" aria-label="Copy link to 7.2.1" title="Copy link"></button> 
+The only indication of the length of this text is the chunk length (there
+    is no zero byte termination as in C, for example).
+
+</p>
+</section>
+
+<section class="clause-section is-clause" id="7.2.2">
+<p><a class="clause-num" href="#7.2.2">7.2.2</a><button class="copy-link" type="button" data-anchor="7.2.2" aria-label="Copy link to 7.2.2" title="Copy link"></button> 
+The IFF standard suggests a maximum of 256 characters in this text as it
+    may be displayed to the user upon reading, although it could get longer
+    if required.
+
+</p>
+</section>
+
+<section class="clause-section is-clause" id="7.3">
+<p><a class="clause-num" href="#7.3">7.3</a><button class="copy-link" type="button" data-anchor="7.3" aria-label="Copy link to 7.3" title="Copy link"></button> 
+The <b>AUTH</b> chunk, if present, contains the name of the author or
+    creator of the file. This could be a login name on multi-user systems,
+    for example. There should only be one such chunk per file.
+
+</p>
+</section>
+
+<section class="clause-section is-clause" id="7.4">
+<p><a class="clause-num" href="#7.4">7.4</a><button class="copy-link" type="button" data-anchor="7.4" aria-label="Copy link to 7.4" title="Copy link"></button> 
+The <b>(c)_</b> chunk contains the copyright message (date and holder,
+    without the actual copyright symbol). This is unlikely to be useful on
+    save files. There should only be one such chunk per file.
+
+</p>
+</section>
+
+<section class="clause-section is-clause" id="7.5">
+<p><a class="clause-num" href="#7.5">7.5</a><button class="copy-link" type="button" data-anchor="7.5" aria-label="Copy link to 7.5" title="Copy link"></button> 
+The <b>ANNO</b> chunk contains any textual annotation that the user or
+        writing program sees fit to include. For save files, interpreters
+        could prompt the user for an annotation when saving, and could write
+        an <b>ANNO</b>
+        with the score and time for V3 games, or a chunk containing
+        the name/version of the interpreter saving it, and many other things.
+
+</p>
+</section>
+
+<section class="clause-section is-clause" id="7.6">
+<p><a class="clause-num" href="#7.6">7.6</a><button class="copy-link" type="button" data-anchor="7.6" aria-label="Copy link to 7.6" title="Copy link"></button> 
+The <b>ANNO</b>, <b>(c)_</b> and <b>AUTH</b> chunks are all user-level
+    information.
+    Interpreters must not rely on the presence or absence of these chunks,
+    and should not store any internal magic that would not make sense to
+    a user in them.
+
+</p>
+</section>
+
+<section class="clause-section is-clause" id="7.7">
+<p><a class="clause-num" href="#7.7">7.7</a><button class="copy-link" type="button" data-anchor="7.7" aria-label="Copy link to 7.7" title="Copy link"></button> 
+These chunks should be either ignored or (optionally) displayed to
+    the user. <b>(c)_</b> chunks should be prefixed with a copyright symbol
+    if displayed.
+
+</p>
+</section>
+
+<section class="clause-section is-clause" id="7.8">
+<p><a class="clause-num" href="#7.8">7.8</a><button class="copy-link" type="button" data-anchor="7.8" aria-label="Copy link to 7.8" title="Copy link"></button> 
+The save-file may contain interpreter-dependent information. This is
+    stored in an <b>IntD</b> chunk, which has format:
+
+</p>
+</section>
+
+<section class="clause-section is-clause" id="7.8.1">
+<p class="clause-num-row"><a class="clause-num" href="#7.8.1">7.8.1</a><button class="copy-link" type="button" data-anchor="7.8.1" aria-label="Copy link to 7.8.1" title="Copy link"></button></p>
+<pre>
+        4 bytes         'IntD'          chunk ID
+</pre>
+</section>
+
+<section class="clause-section is-clause" id="7.8.2">
+<p class="clause-num-row"><a class="clause-num" href="#7.8.2">7.8.2</a><button class="copy-link" type="button" data-anchor="7.8.2" aria-label="Copy link to 7.8.2" title="Copy link"></button></p>
+<pre>
+        4 bytes         n               chunk length
+</pre>
+</section>
+
+<section class="clause-section is-clause" id="7.8.3">
+<p class="clause-num-row"><a class="clause-num" href="#7.8.3">7.8.3</a><button class="copy-link" type="button" data-anchor="7.8.3" aria-label="Copy link to 7.8.3" title="Copy link"></button></p>
+<pre>
+        4 bytes         ...             operating system ID
+</pre>
+</section>
+
+<section class="clause-section is-clause" id="7.8.4">
+<p class="clause-num-row"><a class="clause-num" href="#7.8.4">7.8.4</a><button class="copy-link" type="button" data-anchor="7.8.4" aria-label="Copy link to 7.8.4" title="Copy link"></button></p>
+<pre>
+        1 byte          000000sc        flags
+</pre>
+</section>
+
+<section class="clause-section is-clause" id="7.8.5">
+<p class="clause-num-row"><a class="clause-num" href="#7.8.5">7.8.5</a><button class="copy-link" type="button" data-anchor="7.8.5" aria-label="Copy link to 7.8.5" title="Copy link"></button></p>
+<pre>
+        1 byte          ...             contents ID
+</pre>
+</section>
+
+<section class="clause-section is-clause" id="7.8.6">
+<p class="clause-num-row"><a class="clause-num" href="#7.8.6">7.8.6</a><button class="copy-link" type="button" data-anchor="7.8.6" aria-label="Copy link to 7.8.6" title="Copy link"></button></p>
+<pre>
+        2 bytes         0               reserved
+</pre>
+</section>
+
+<section class="clause-section is-clause" id="7.8.7">
+<p class="clause-num-row"><a class="clause-num" href="#7.8.7">7.8.7</a><button class="copy-link" type="button" data-anchor="7.8.7" aria-label="Copy link to 7.8.7" title="Copy link"></button></p>
+<pre>
+        4 bytes         ...             interpreter ID
+</pre>
+</section>
+
+<section class="clause-section is-clause" id="7.8.8">
+<p class="clause-num-row"><a class="clause-num" href="#7.8.8">7.8.8</a><button class="copy-link" type="button" data-anchor="7.8.8" aria-label="Copy link to 7.8.8" title="Copy link"></button></p>
+<pre>
+        n-12 bytes      ...             data
+</pre>
+</section>
+
+<section class="clause-section is-clause" id="7.9">
+<p><a class="clause-num" href="#7.9">7.9</a><button class="copy-link" type="button" data-anchor="7.9" aria-label="Copy link to 7.9" title="Copy link"></button> 
+The operating system and interpreter IDs are normal IFF 4-character
+    IDs in form. Please register IDs used with Martin Frost (at the
+    email address <a href="#ten">given below</a>) so that
+    this can be managed sensibly. They can then be added to future
+    versions of this specification, and contents IDs can be assigned.
+
+</p>
+</section>
+
+<section class="clause-section is-clause" id="7.10">
+<p><a class="clause-num" href="#7.10">7.10</a><button class="copy-link" type="button" data-anchor="7.10" aria-label="Copy link to 7.10" title="Copy link"></button> 
+If the s flag is set, then the contents are only meaningful on the
+    same machine/network on which they were saved. This covers filenames
+    and similar things. How to handle checking if this is indeed the same
+    machine is an open question, and beyond the scope of this document.
+    It is certainly true, however, that if the operating system ID does
+    not match the current system and this bit is set, then the chunk
+    should not be copied.
+
+</p>
+</section>
+
+<section class="clause-section is-clause" id="7.11">
+<p><a class="clause-num" href="#7.11">7.11</a><button class="copy-link" type="button" data-anchor="7.11" aria-label="Copy link to 7.11" title="Copy link"></button> 
+If the c flag is set, the contents should not be copied when loading
+    and saving a game--they are only relevant to the exact current
+    state of play as stored in the file. The data need not be copied
+    even if this flag is clear, but must not be copied if it is set.
+
+</p>
+</section>
+
+<section class="clause-section is-clause" id="7.12">
+<p><a class="clause-num" href="#7.12">7.12</a><button class="copy-link" type="button" data-anchor="7.12" aria-label="Copy link to 7.12" title="Copy link"></button> 
+If the interpreter ID is <b>____</b> (four spaces), then the chunk contains
+    information useful to *all* interpreters running on a particular
+    system. This can store a magical OS-dependent reference to the original
+    story file, which need not worry about vagaries of filename handling on
+    more than one system. This chunk may contain anything that can be put
+    in a file and retrieved intact. If the file is restored on a suitable
+    system this can be used to do Good Things.
+
+</p>
+</section>
+
+<section class="clause-section is-clause" id="7.13">
+<p><a class="clause-num" href="#7.13">7.13</a><button class="copy-link" type="button" data-anchor="7.13" aria-label="Copy link to 7.13" title="Copy link"></button> 
+If the operating-system ID is <b>____</b>, then the chunk contains data
+    useful to *all* ports of a particular interpreter. This may or may
+    not be useful.
+
+</p>
+</section>
+
+<section class="clause-section is-clause" id="7.14">
+<p><a class="clause-num" href="#7.14">7.14</a><button class="copy-link" type="button" data-anchor="7.14" aria-label="Copy link to 7.14" title="Copy link"></button> 
+The interpreter and operating-system IDs may not both be <b>____</b>.
+    This should not be neccessary.
+
+</p>
+</section>
+
+<section class="clause-section is-clause" id="7.15">
+<p><a class="clause-num" href="#7.15">7.15</a><button class="copy-link" type="button" data-anchor="7.15" aria-label="Copy link to 7.15" title="Copy link"></button> 
+If neither ID is <b>____</b>, the contents are meaningful only to a
+    particular port of a particular interpreter. Save-file specific
+    preferences probably fall into this category.
+
+</p>
+</section>
+
+<section class="clause-section is-clause" id="7.16">
+<p><a class="clause-num" href="#7.16">7.16</a><button class="copy-link" type="button" data-anchor="7.16" aria-label="Copy link to 7.16" title="Copy link"></button> 
+The contents ID will be defined when chunk IDs are picked. Its
+    purpose is to allow multiple chunks to be written containing
+    different data, which is necessary if they need different settings
+    of the c and s flags.
+
+</p>
+</section>
+
+<section class="clause-section is-clause" id="7.17">
+<p><a class="clause-num" href="#7.17">7.17</a><button class="copy-link" type="button" data-anchor="7.17" aria-label="Copy link to 7.17" title="Copy link"></button> 
+These extensions add no overhead to interpreters which choose not to
+    handle them, except for larger save files and more chunks to skip
+    when reading files written on another program. Interpreters are not
+    expected to preserve these optional chunks when files are re-saved,
+    although some may be copied, at the option of the interpreter writer
+    or user.
+
+</p>
+</section>
+
+<section class="clause-section is-clause" id="7.18">
+<p><a class="clause-num" href="#7.18">7.18</a><button class="copy-link" type="button" data-anchor="7.18" aria-label="Copy link to 7.18" title="Copy link"></button> 
+The only required chunks are <b>IFhd</b>, either <b>CMem</b> or
+    <b>UMem</b>, and <b>Stks</b>. The total overhead to a save file is
+    12 bytes plus 8 for each chunk; in the minimal case
+    (<b>IFhd</b>, <b>[CU]Mem</b>, <b>Stks</b> = 3 chunks), this
+    comes to 36 bytes.
+
+</p>
+</section>
+
+<section class="clause-section is-clause" id="7.19">
+<p><a class="clause-num" href="#7.19">7.19</a><button class="copy-link" type="button" data-anchor="7.19" aria-label="Copy link to 7.19" title="Copy link"></button> 
+The following operating system IDs have been registered:
+
+</p>
+</section>
+
+<section class="clause-section is-clause" id="7.19.1">
+<p class="clause-num-row"><a class="clause-num" href="#7.19.1">7.19.1</a><button class="copy-link" type="button" data-anchor="7.19.1" aria-label="Copy link to 7.19.1" title="Copy link"></button></p>
+<pre>
+        'DOS '          MS-DOS (also PC-DOS, DR-DOS)
+</pre>
+</section>
+
+<section class="clause-section is-clause" id="7.19.2">
+<p class="clause-num-row"><a class="clause-num" href="#7.19.2">7.19.2</a><button class="copy-link" type="button" data-anchor="7.19.2" aria-label="Copy link to 7.19.2" title="Copy link"></button></p>
+<pre>
+        'MACS'          Macintosh
+</pre>
+</section>
+
+<section class="clause-section is-clause" id="7.19.3">
+<p class="clause-num-row"><a class="clause-num" href="#7.19.3">7.19.3</a><button class="copy-link" type="button" data-anchor="7.19.3" aria-label="Copy link to 7.19.3" title="Copy link"></button></p>
+<pre>
+        'UNIX'          Generic UNIX
+</pre>
+</section>
+
+<section class="clause-section is-clause" id="7.20">
+<p><a class="clause-num" href="#7.20">7.20</a><button class="copy-link" type="button" data-anchor="7.20" aria-label="Copy link to 7.20" title="Copy link"></button> 
+The following interpreter IDs have been registered:
+
+</p>
+</section>
+
+<section class="clause-section is-clause" id="7.20.1">
+<p class="clause-num-row"><a class="clause-num" href="#7.20.1">7.20.1</a><button class="copy-link" type="button" data-anchor="7.20.1" aria-label="Copy link to 7.20.1" title="Copy link"></button></p>
+<pre>
+        'JZIP'          JZIP, the enhanced ZIP by John Holder
+</pre>
+</section>
+
+<section class="clause-section is-clause" id="7.21">
+<p><a class="clause-num" href="#7.21">7.21</a><button class="copy-link" type="button" data-anchor="7.21" aria-label="Copy link to 7.21" title="Copy link"></button> 
+The following extension chunks have been registered to date:
+</p>
+<pre>
+                System ID       Interp ID       Content ID      Section
+                'MACS'          '    '          0               7.22
+</pre>
+</section>
+
+<section class="clause-section is-clause" id="7.22">
+<p><a class="clause-num" href="#7.22">7.22</a><button class="copy-link" type="button" data-anchor="7.22" aria-label="Copy link to 7.22" title="Copy link"></button> 
+The following chunk has been registered for MacOS, to enable a
+    Macintosh interpreter to find a story file given a save file using
+    the System 7 ResolveAlias call. The MacOS alias record can be of
+    variable size: the actual size can be calculated from the chunk size.
+    Aliases are valid only on the same network as they were saved.
+
+</p>
+</section>
+
+<section class="clause-section is-clause" id="7.22.1">
+<p class="clause-num-row"><a class="clause-num" href="#7.22.1">7.22.1</a><button class="copy-link" type="button" data-anchor="7.22.1" aria-label="Copy link to 7.22.1" title="Copy link"></button></p>
+<pre>
+        4 bytes         'IntD'          chunk ID
+</pre>
+</section>
+
+<section class="clause-section is-clause" id="7.22.2">
+<p class="clause-num-row"><a class="clause-num" href="#7.22.2">7.22.2</a><button class="copy-link" type="button" data-anchor="7.22.2" aria-label="Copy link to 7.22.2" title="Copy link"></button></p>
+<pre>
+        4 bytes         n               chunk length (variable)
+</pre>
+</section>
+
+<section class="clause-section is-clause" id="7.22.3">
+<p class="clause-num-row"><a class="clause-num" href="#7.22.3">7.22.3</a><button class="copy-link" type="button" data-anchor="7.22.3" aria-label="Copy link to 7.22.3" title="Copy link"></button></p>
+<pre>
+        4 bytes         'MACS'          operating system ID: MacOS
+</pre>
+</section>
+
+<section class="clause-section is-clause" id="7.22.4">
+<p class="clause-num-row"><a class="clause-num" href="#7.22.4">7.22.4</a><button class="copy-link" type="button" data-anchor="7.22.4" aria-label="Copy link to 7.22.4" title="Copy link"></button></p>
+<pre>
+        1 byte          00000010        flags (s set; c clear)
+</pre>
+</section>
+
+<section class="clause-section is-clause" id="7.22.5">
+<p class="clause-num-row"><a class="clause-num" href="#7.22.5">7.22.5</a><button class="copy-link" type="button" data-anchor="7.22.5" aria-label="Copy link to 7.22.5" title="Copy link"></button></p>
+<pre>
+        1 byte          0               contents ID
+</pre>
+</section>
+
+<section class="clause-section is-clause" id="7.22.6">
+<p class="clause-num-row"><a class="clause-num" href="#7.22.6">7.22.6</a><button class="copy-link" type="button" data-anchor="7.22.6" aria-label="Copy link to 7.22.6" title="Copy link"></button></p>
+<pre>
+        2 bytes         0               reserved
+</pre>
+</section>
+
+<section class="clause-section is-clause" id="7.22.7">
+<p class="clause-num-row"><a class="clause-num" href="#7.22.7">7.22.7</a><button class="copy-link" type="button" data-anchor="7.22.7" aria-label="Copy link to 7.22.7" title="Copy link"></button></p>
+<pre>
+        4 bytes         '    '          interpreter ID: any
+</pre>
+</section>
+
+<section class="clause-section is-clause" id="7.22.8">
+<p class="clause-num-row"><a class="clause-num" href="#7.22.8">7.22.8</a><button class="copy-link" type="button" data-anchor="7.22.8" aria-label="Copy link to 7.22.8" title="Copy link"></button></p>
+<pre>
+        n-12 bytes      ...             MacOS alias record referencing
+                                        the story file; from NewAlias
+</pre>
+</section>
+
+<section class="clause-section is-clause" id="7.19.9">
+<p><a class="clause-num" href="#7.19.9">7.19.9</a><button class="copy-link" type="button" data-anchor="7.19.9" aria-label="Copy link to 7.19.9" title="Copy link"></button> 
+Alias records are of variable length, reflected in the chunk length;
+        they are only valid on the same network they were created.
+
+</p>
+</section>
+
+<section class="clause-section is-topic" id="eight">
+<h2>8. Introduction to the IFF format<a class="heading-anchor" href="#eight" aria-label="Link to 8. Introduction to the IFF format"></a></h2>
+</section>
+
+<section class="clause-section is-clause" id="8.1">
+<p><a class="clause-num" href="#8.1">8.1</a><button class="copy-link" type="button" data-anchor="8.1" aria-label="Copy link to 8.1" title="Copy link"></button> 
+This is based on the official IFF standards document, which is rather
+	long and contains much that is irrelevant to the task in hand. Feel
+	free to mail me (i.e. Martin Frost) if there are errors, inconsistencies, or omissions.
+	For the inquisitive, a document containing much of the original
+	standard, including the philosophy behind the structure, can be found
+	at 
+    <!-- http://www.cica.indiana.edu/graphics/image_specs/ilbm.format.txt-->
+    <a href="http://www.concentric.net/~Bradds/iff.html">http://www.concentric.net/~Bradds/iff.html</a>
+
+</p>
+</section>
+
+<section class="clause-section is-clause" id="8.2">
+<p><a class="clause-num" href="#8.2">8.2</a><button class="copy-link" type="button" data-anchor="8.2" aria-label="Copy link to 8.2" title="Copy link"></button> 
+IFF stands for "Interchange File Format", and was developed by a
+    committee consisting of people from Commodore-Amiga, Electronic Arts
+    and Apple. It draws strongly on the Macintosh's concept of resources.
+
+</p>
+</section>
+
+<section class="clause-section is-clause" id="8.3">
+<p><a class="clause-num" href="#8.3">8.3</a><button class="copy-link" type="button" data-anchor="8.3" aria-label="Copy link to 8.3" title="Copy link"></button> 
+The most fundamental concept in an IFF file is that of a chunk.
+</p>
+</section>
+
+<section class="clause-section is-clause" id="8.3.1">
+<p><a class="clause-num" href="#8.3.1">8.3.1</a><button class="copy-link" type="button" data-anchor="8.3.1" aria-label="Copy link to 8.3.1" title="Copy link"></button> 
+A chunk starts with an ID and a length.
+</p>
+</section>
+
+<section class="clause-section is-clause" id="8.3.2">
+<p><a class="clause-num" href="#8.3.2">8.3.2</a><button class="copy-link" type="button" data-anchor="8.3.2" aria-label="Copy link to 8.3.2" title="Copy link"></button> 
+The ID is the concatenation of four ASCII characters in the range 0x20
+        to 0x7E.
+</p>
+</section>
+
+<section class="clause-section is-clause" id="8.3.3">
+<p><a class="clause-num" href="#8.3.3">8.3.3</a><button class="copy-link" type="button" data-anchor="8.3.3" aria-label="Copy link to 8.3.3" title="Copy link"></button> 
+If spaces are present, they must be the last characters (there
+        must be no printing characters after a space).
+</p>
+</section>
+
+<section class="clause-section is-clause" id="8.3.4">
+<p><a class="clause-num" href="#8.3.4">8.3.4</a><button class="copy-link" type="button" data-anchor="8.3.4" aria-label="Copy link to 8.3.4" title="Copy link"></button> 
+IDs are compared using a simple 32-bit equality test - note that this
+        implies case sensitivity.
+</p>
+</section>
+
+<section class="clause-section is-clause" id="8.3.5">
+<p><a class="clause-num" href="#8.3.5">8.3.5</a><button class="copy-link" type="button" data-anchor="8.3.5" aria-label="Copy link to 8.3.5" title="Copy link"></button> 
+The length is a 32-bit unsigned integer, stored in big-endian format
+        (most significant byte, then second most, and so on).
+
+</p>
+</section>
+
+<section class="clause-section is-clause" id="8.4">
+<p><a class="clause-num" href="#8.4">8.4</a><button class="copy-link" type="button" data-anchor="8.4" aria-label="Copy link to 8.4" title="Copy link"></button> 
+After the ID and length, there follow (length) bytes of data.
+</p>
+</section>
+
+<section class="clause-section is-clause" id="8.4.1">
+<p><a class="clause-num" href="#8.4.1">8.4.1</a><button class="copy-link" type="button" data-anchor="8.4.1" aria-label="Copy link to 8.4.1" title="Copy link"></button> 
+If length is odd, these are followed by a single zero byte. This byte
+        is *not* included in the chunk length, but it is very important, as
+        otherwise many 68000-based readers will crash.
+
+</p>
+</section>
+
+<section class="clause-section is-clause" id="8.5">
+<p><a class="clause-num" href="#8.5">8.5</a><button class="copy-link" type="button" data-anchor="8.5" aria-label="Copy link to 8.5" title="Copy link"></button> 
+A simple IFF file (such as the ones we will be considering) consists of
+        a *single* chunk of type <b>FORM</b>.
+</p>
+</section>
+
+<section class="clause-section is-clause" id="8.5.1">
+<p><a class="clause-num" href="#8.5.1">8.5.1</a><button class="copy-link" type="button" data-anchor="8.5.1" aria-label="Copy link to 8.5.1" title="Copy link"></button> 
+The contents of a <b>FORM</b> chunk start with another 4-character ID.
+</p>
+</section>
+
+<section class="clause-section is-clause" id="8.5.2">
+<p><a class="clause-num" href="#8.5.2">8.5.2</a><button class="copy-link" type="button" data-anchor="8.5.2" aria-label="Copy link to 8.5.2" title="Copy link"></button> 
+This ID is also the concatenation of four characters, but these
+    characters may only be uppercase letters and trailing spaces. This is
+    to allow the <b>FORM</b> sub-ID to be used as a filename extension.
+
+</p>
+</section>
+
+<section class="clause-section is-clause" id="8.6">
+<p><a class="clause-num" href="#8.6">8.6</a><button class="copy-link" type="button" data-anchor="8.6" aria-label="Copy link to 8.6" title="Copy link"></button> 
+After the sub-ID comes a concatenation of chunks. The interpretation of
+    these chunks depends on the <b>FORM</b> sub-ID (in this proposal,
+    the sub-ID is <b>IFZS</b>), except that a few chunk types always
+    have the same meaning
+    (notably the <b>AUTH</b>, <b>(c)_</b> and <b>ANNO</b> chunks
+    described in section 7).
+    For reference, the other reserved types are:
+    <b>FOR[M1-9]</b>, <b>CAT[ 1-9]</b>,
+    <b>LIS[T1-9]</b>, <b>TEXT</b>, and <b>____</b> (that is, four spaces).
+
+</p>
+</section>
+
+<section class="clause-section is-clause" id="8.7">
+<p><a class="clause-num" href="#8.7">8.7</a><button class="copy-link" type="button" data-anchor="8.7" aria-label="Copy link to 8.7" title="Copy link"></button> 
+Each of these chunks may contain as much data as required, in whatever
+    format is required.
+
+</p>
+</section>
+
+<section class="clause-section is-clause" id="8.8">
+<p><a class="clause-num" href="#8.8">8.8</a><button class="copy-link" type="button" data-anchor="8.8" aria-label="Copy link to 8.8" title="Copy link"></button> 
+Multiple chunks with the same ID may appear; the interpretation of such
+    chunks depends on the chunk. For example, multiple <b>ANNO</b> chunks are
+    acceptable, and simply refer to multiple annotations. If more than one
+    chunk of a certain type is found, when the reader was only expecting
+    one, (for example, two <b>IFhd</b> chunks), the later chunks should
+    simply be ignored (hopefully with a warning to the user).
+
+</p>
+</section>
+
+<section class="clause-section is-clause" id="8.9">
+<p><a class="clause-num" href="#8.9">8.9</a><button class="copy-link" type="button" data-anchor="8.9" aria-label="Copy link to 8.9" title="Copy link"></button> 
+Indeed, skipping is the expected procedure for dealing with any unknown
+    or unexpected chunk.
+
+</p>
+</section>
+
+<section class="clause-section is-clause" id="8.10">
+<p><a class="clause-num" href="#8.10">8.10</a><button class="copy-link" type="button" data-anchor="8.10" aria-label="Copy link to 8.10" title="Copy link"></button> 
+Certain chunks may be compulsory if the <b>FORM</b> is meaningless without
+    them. In this case the <b>IFhd</b>, <b>[CU]Mem</b> and <b>Stks</b> are compulsory.
+
+</p>
+</section>
+
+<section class="clause-section is-topic" id="nine">
+<h2>9. Resources available<a class="heading-anchor" href="#nine" aria-label="Link to 9. Resources available"></a></h2>
+</section>
+
+<section class="clause-section is-clause" id="9.1">
+<p><a class="clause-num" href="#9.1">9.1</a><button class="copy-link" type="button" data-anchor="9.1" aria-label="Copy link to 9.1" title="Copy link"></button> 
+A set of patches exists for the Zip interpreter, adding Quetzal
+        support. They can be obtained from:
+</p>
+<p><a href="http://www.geocities.com/SiliconValley/Vista/6631/">
+        http://www.geocities.com/SiliconValley/Vista/6631/</a>
+
+</p>
+</section>
+
+<section class="clause-section is-clause" id="9.2">
+<p><a class="clause-num" href="#9.2">9.2</a><button class="copy-link" type="button" data-anchor="9.2" aria-label="Copy link to 9.2" title="Copy link"></button> 
+A utility, <b>ckifzs</b> is available as C source code to check the
+        validity of generated save files. A small set of correct Quetzal
+        files are also available. These may be of use in debugging an
+        interpreter supporting Quetzal. These may be obtained from the
+        web page mentioned in 9.1.
+
+</p>
+</section>
+
+<section class="clause-section is-clause" id="9.3">
+<p><a class="clause-num" href="#9.3">9.3</a><button class="copy-link" type="button" data-anchor="9.3" aria-label="Copy link to 9.3" title="Copy link"></button> 
+This document is updated whenever errors are noticed or new extension
+        chunks are registered. The latest version will always be available
+        from the above web page. The latest revision designated stable
+        (currently version 1.3) will be in the IF archive,
+        <a href="http://ifarchive.org">ifarchive.org</a>,
+        in the directory
+ <a href="http://mirror.ifarchive.org/indexes/if-archiveXinfocomXinterpretersXspecification.html">
+if-archive/infocom/interpreters/specification/</a>.
+
+</p>
+</section>
+
+<section class="clause-section is-clause" id="9.4">
+<p><a class="clause-num" href="#9.4">9.4</a><button class="copy-link" type="button" data-anchor="9.4" aria-label="Copy link to 9.4" title="Copy link"></button> 
+This document is itself available in a number of forms. The base version
+        is in preformatted ASCII text, but there is also a PDF version
+        (converted by John Holder) and this HTML version (converted by
+	Graham Nelson). Links to all of these may be found on the web page.
+
+</p>
+</section>
+
+<section class="clause-section is-clause" id="9.5">
+<p><a class="clause-num" href="#9.5">9.5</a><button class="copy-link" type="button" data-anchor="9.5" aria-label="Copy link to 9.5" title="Copy link"></button> 
+A few interpreters support Quetzal; details will appear here as
+        they become available.
+
+</p>
+</section>
+
+<section class="clause-section is-topic" id="ten">
+<h2>10. Credits<a class="heading-anchor" href="#ten" aria-label="Link to 10. Credits"></a></h2>
+</section>
+
+<section class="clause-section is-clause" id="10.1">
+<p><a class="clause-num" href="#10.1">10.1</a><button class="copy-link" type="button" data-anchor="10.1" aria-label="Copy link to 10.1" title="Copy link"></button> 
+This standard was created by Martin Frost (email:
+<a href="mailto:mdf@doc.ic.ac.uk">mdf@doc.ic.ac.uk</a>). Comments
+and suggestions are always welcome (and any errors in this document
+are entirely my own, or those of the HTML typesetter, Graham Nelson).
+
+</p>
+</section>
+
+<section class="clause-section is-clause" id="10.2">
+<p><a class="clause-num" href="#10.2">10.2</a><button class="copy-link" type="button" data-anchor="10.2" aria-label="Copy link to 10.2" title="Copy link"></button> 
+The following people have contributed with ideas and criticism
+(in alphabetical order):
+King Dale, Marnix Klooster, Graham Nelson, Andrew Plotkin,
+Matthew T. Russotto, Bryan Scattergood, Miron Schmidt, Colin Turnbull,
+John Wood.
+
+
+</p>
+</section>
+
+<section class="clause-section is-topic" id="remarks">
+<h2><i>Remarks</i><a class="heading-anchor" href="#remarks" aria-label="Link to Remarks"></a></h2>
+<p>
+Queztal is not a compulsory part of the Z-Machine Standard, since
+it does not have implications for the behaviour of story files,
+but it is attached to the HTML copy of the Standard as
+a highly recommended "optional extra".
+</p>
+<p>
+<i>Links to related sections of the Z-Machine Standards Document:</i>
+</p>
+<p> <a href="index.html">Contents</a> /
+<a href="sect06.html">Section 6.1</a> on the saved state
+</p>
+<p>Opcodes:
+<a href="sect15.html#save"><b>save</b></a> /
+<a href="sect15.html#save_undo"><b>save_undo</b></a> /
+<a href="sect15.html#restore"><b>restore</b></a> /
+<a href="sect15.html#restore_undo"><b>restore_undo</b></a> /
+<a href="sect15.html#catch"><b>catch</b></a> /
+<a href="sect15.html#throw"><b>throw</b></a>
+</p>
+</section>
+</main>
+<nav class="pager" aria-label="Previous and next section"><a class="pager-link pager-prev" rel="prev" href="appf.html"><span class="pager-kind">Previous</span><span class="pager-title">F. Canonical story files</span></a><a class="pager-link pager-next" rel="next" href="blorb.html"><span class="pager-kind">Next</span><span class="pager-title">Blorb</span></a></nav>
+<footer class="site-footer">
+  <p>The Z-Machine Standards Document, version 1.1 &mdash; 24 February 2014.
+     Canonical copy at <a href="https://www.inform-fiction.org/zmachine/standards/current/">inform-fiction.org</a>.</p>
+</footer>
+</div>
+<aside class="outline" id="outline" aria-label="On this page" data-generated>
+<h2>On this page</h2>
+<ol>
+<li class="depth-1"><a href="#one">1. Conventions</a></li>
+<li class="depth-2"><a href="#1.1" title="A byte is an 8-bit unsigned quantity.">1.1</a></li>
+<li class="depth-2"><a href="#1.2" title="A word is a 16-bit unsigned quantity.">1.2</a></li>
+<li class="depth-2"><a href="#1.3" title="Bitfields are represented as blocks of characters, with the first character representing the most significant bit of the">1.3</a></li>
+<li class="depth-2"><a href="#1.4" title="All multi-byte numbers are stored in big-endian form: most significant byte first, then in strictly descending order of ">1.4</a></li>
+<li class="depth-2"><a href="#1.5" title="The reader is assumed to already be familiar with the Z-machine; in particular its instruction set, memory map and stack">1.5</a></li>
+<li class="depth-2"><a href="#1.6" title="When form type names, which are four characters long, are set in running text, they're set in bold-face with spaces repl">1.6</a></li>
+<li class="depth-1"><a href="#two">2. Overall structure</a></li>
+<li class="depth-2"><a href="#2.1" title="For the purposes of flexibility, the overall format will be a new IFF type. A standard core is defined, and customised i">2.1</a></li>
+<li class="depth-2"><a href="#2.2" title="Several chunks are defined within this document to appear in the IFZS FORM: 'IFhd' 5.4 'CMem' 3.7 'UMem' 3.8 'Stks' 4.10">2.2</a></li>
+<li class="depth-2"><a href="#2.3" title="Several chunks may also appear by convention in any IFF FORM: 'AUTH' 7.2, 7.3 '(c) ' 7.2, 7.4 'ANNO' 7.2, 7.5">2.3</a></li>
+<li class="depth-1"><a href="#three">3. Content of dynamic memory</a></li>
+<li class="depth-2"><a href="#3.1" title="Since the contents of dynamic memory may be anything up to 65534 bytes, it is desirable to have some form of compression">3.1</a></li>
+<li class="depth-2"><a href="#3.2" title="The data is compressed by exclusive-oring the current contents of dynamic memory with the original (from the original st">3.2</a></li>
+<li class="depth-2"><a href="#3.3" title="It is not necessary to compress optimally, if to do so would be difficult. For example, an interpreter that does not sto">3.3</a></li>
+<li class="depth-2"><a href="#3.4" title="If the decoded data is shorter than the length of dynamic memory, then the missing section is assumed to be a run of zer">3.4</a></li>
+<li class="depth-2"><a href="#3.5" title="Two error cases are possible on reads: the decoded data may be larger than dynamic memory, and the encoded data may fini">3.5</a></li>
+<li class="depth-2"><a href="#3.6" title="Dissenting voices have suggested that compression is unnecessary in today's world of cheap storage, and so the format al">3.6</a></li>
+<li class="depth-2"><a href="#3.7" title="The IFF chunk used to contain the compressed data has type CMem. Its format is as follows:">3.7</a></li>
+<li class="depth-3"><a href="#3.7.1" title="4 bytes 'CMem' chunk ID">3.7.1</a></li>
+<li class="depth-3"><a href="#3.7.2" title="4 bytes n chunk length">3.7.2</a></li>
+<li class="depth-3"><a href="#3.7.3" title="n bytes ... compressed data as above">3.7.3</a></li>
+<li class="depth-2"><a href="#3.8" title="The chunk used to contain the uncompressed data has type UMem. It has the format:">3.8</a></li>
+<li class="depth-3"><a href="#3.8.1" title="4 bytes 'UMem' chunk ID">3.8.1</a></li>
+<li class="depth-3"><a href="#3.8.2" title="4 bytes n chunk length">3.8.2</a></li>
+<li class="depth-3"><a href="#3.8.3" title="n bytes ... simple dump of dynamic memory">3.8.3</a></li>
+<li class="depth-1"><a href="#four">4. Content of stacks</a></li>
+<li class="depth-2"><a href="#4.1" title="One of the biggest differences between current interpreters is how they handle the Z-machine's stacks. Conceptually, the">4.1</a></li>
+<li class="depth-2"><a href="#4.2" title="The IFF format includes a length field on each chunk, so we can write only the used portion of the stacks, to save space">4.2</a></li>
+<li class="depth-2"><a href="#4.3" title="Each frame has the format:">4.3</a></li>
+<li class="depth-3"><a href="#4.3.1" title="3 bytes ... return PC (byte address)">4.3.1</a></li>
+<li class="depth-3"><a href="#4.3.2" title="1 byte 000pvvvv flags">4.3.2</a></li>
+<li class="depth-3"><a href="#4.3.3" title="1 byte ... variable number to store result">4.3.3</a></li>
+<li class="depth-3"><a href="#4.3.4" title="1 byte 0gfedcba arguments supplied">4.3.4</a></li>
+<li class="depth-3"><a href="#4.3.5" title="1 word n number of words of evaluation stack used by this call">4.3.5</a></li>
+<li class="depth-3"><a href="#4.3.6" title="v words ... local variables">4.3.6</a></li>
+<li class="depth-3"><a href="#4.3.7" title="n words ... evaluation stack for this call">4.3.7</a></li>
+<li class="depth-2"><a href="#4.4" title="The return PC is a byte offset from the start of the story file.">4.4</a></li>
+<li class="depth-2"><a href="#4.6" title="The p flag is set on calls made by call_xN (discard result), in which case the variable number is meaningless (and shoul">4.6</a></li>
+<li class="depth-2"><a href="#4.7" title="Assigning each of the possible 7 supplied arguments a letter a-g in order, each bit is set if its respective argument is">4.7</a></li>
+<li class="depth-2"><a href="#4.8" title="Although some interpreters may impose an arbitrary limit on the size of the stacks (such as ZIP's 1024-word total stack ">4.8</a></li>
+<li class="depth-2"><a href="#4.9" title="The stack pointer itself is not stored anywhere in the save file, except implicitly, as the top frame on the stack will ">4.9</a></li>
+<li class="depth-2"><a href="#4.10" title="The chunk itself is simply a sequence of frames as above:">4.10</a></li>
+<li class="depth-3"><a href="#4.10.1" title="4 bytes 'Stks' chunk ID">4.10.1</a></li>
+<li class="depth-3"><a href="#4.10.2" title="4 bytes n chunk length">4.10.2</a></li>
+<li class="depth-3"><a href="#4.10.3" title="n bytes ... frames (oldest first)">4.10.3</a></li>
+<li class="depth-2"><a href="#4.11" title="In Z-machine versions other than V6 execution starts at an address rather than at a routine, and therefore data can be p">4.11</a></li>
+<li class="depth-3"><a href="#4.11.1" title="The dummy frame has all fields set to zero except n, the amount of evaluation stack used. Note that this may also be zer">4.11.1</a></li>
+<li class="depth-3"><a href="#4.11.2" title="This frame must be written even if no evaluation stack is used at the top level, and therefore interpreters may assume i">4.11.2</a></li>
+<li class="depth-1"><a href="#five">5. Associated story file</a></li>
+<li class="depth-2"><a href="#5.1" title="We now come to one of the most difficult (yet most important) parts of the format: how to find the story file associated">5.1</a></li>
+<li class="depth-2"><a href="#5.2" title="Considering the easier second problem first, the actual name of the story file is often not much use. Firstly, filenames">5.2</a></li>
+<li class="depth-2"><a href="#5.3" title="The method most existing interpreters use is to compare the variables at offsets $2, $12, and $1C in the header (that is">5.3</a></li>
+<li class="depth-2"><a href="#5.4" title="This data will be stored in a chunk of type IFhd. This chunk must come before the [CU]Mem and Stks chunks to save interp">5.4</a></li>
+<li class="depth-3"><a href="#5.4.1" title="4 bytes 'IFhd' chunk ID">5.4.1</a></li>
+<li class="depth-3"><a href="#5.4.2" title="4 bytes 13 chunk length">5.4.2</a></li>
+<li class="depth-3"><a href="#5.4.3" title="1 word ... release number ($2 in header)">5.4.3</a></li>
+<li class="depth-3"><a href="#5.4.4" title="6 bytes ... serial number ($12 in header)">5.4.4</a></li>
+<li class="depth-3"><a href="#5.4.5" title="1 word ... checksum ($1C in header)">5.4.5</a></li>
+<li class="depth-3"><a href="#5.4.6" title="3 bytes ... PC (see 5.8)">5.4.6</a></li>
+<li class="depth-2"><a href="#5.5" title="If the save file belongs to an old game that does not have a checksum, it should be calculated in the normal way from th">5.5</a></li>
+<li class="depth-2"><a href="#5.6" title="The first problem (of trying to find a story file given only a save file) cannot really be solved in an operating-system">5.6</a></li>
+<li class="depth-2"><a href="#5.7" title="It should be noted that the current state of the IFhd chunk means it has odd length (13 bytes). It should, of course, be">5.7</a></li>
+<li class="depth-2"><a href="#5.8" title="The value of the PC saved in the chunk depends on the version of the Z-machine which the story runs on.">5.8</a></li>
+<li class="depth-3"><a href="#5.8.1" title="On Z-machine versions 3 and below, the save instruction takes a branch depending on the success of the save. The saved P">5.8.1</a></li>
+<li class="depth-3"><a href="#5.8.2" title="On versions 4 and above, the save instruction stores a value depending on the success of the save. The saved PC points t">5.8.2</a></li>
+<li class="depth-3"><a href="#5.8.3" title="This behaviour differs from that specified by previous versions of this standard, but the behaviour expected there would">5.8.3</a></li>
+<li class="depth-1"><a href="#six">6. Miscellaneous</a></li>
+<li class="depth-2"><a href="#6.1" title="It must be specified exactly what the magic cookie returned by catch is, since this value can be stored in any random va">6.1</a></li>
+<li class="depth-2"><a href="#6.2" title="For greatest independence of internal interpreter implementation, catch is hereby specified to return the number of fram">6.2</a></li>
+<li class="depth-2"><a href="#6.3" title="The numbers of pictures and sounds do not need specification, since they are requested by number by the story file itsel">6.3</a></li>
+<li class="depth-1"><a href="#seven">7. Extensions to the format</a></li>
+<li class="depth-2"><a href="#7.1" title="One of the advantages of the IFF standard is that extra chunks can be added to the format to extend it in various ways. ">7.1</a></li>
+<li class="depth-2"><a href="#7.2" title="AUTH, (c)_, and ANNO chunks all contain simple ASCII text (all characters in the range 0x20 to 0x7E).">7.2</a></li>
+<li class="depth-3"><a href="#7.2.1" title="The only indication of the length of this text is the chunk length (there is no zero byte termination as in C, for examp">7.2.1</a></li>
+<li class="depth-3"><a href="#7.2.2" title="The IFF standard suggests a maximum of 256 characters in this text as it may be displayed to the user upon reading, alth">7.2.2</a></li>
+<li class="depth-2"><a href="#7.3" title="The AUTH chunk, if present, contains the name of the author or creator of the file. This could be a login name on multi-">7.3</a></li>
+<li class="depth-2"><a href="#7.4" title="The (c)_ chunk contains the copyright message (date and holder, without the actual copyright symbol). This is unlikely t">7.4</a></li>
+<li class="depth-2"><a href="#7.5" title="The ANNO chunk contains any textual annotation that the user or writing program sees fit to include. For save files, int">7.5</a></li>
+<li class="depth-2"><a href="#7.6" title="The ANNO, (c)_ and AUTH chunks are all user-level information. Interpreters must not rely on the presence or absence of ">7.6</a></li>
+<li class="depth-2"><a href="#7.7" title="These chunks should be either ignored or (optionally) displayed to the user. (c)_ chunks should be prefixed with a copyr">7.7</a></li>
+<li class="depth-2"><a href="#7.8" title="The save-file may contain interpreter-dependent information. This is stored in an IntD chunk, which has format:">7.8</a></li>
+<li class="depth-3"><a href="#7.8.1" title="4 bytes 'IntD' chunk ID">7.8.1</a></li>
+<li class="depth-3"><a href="#7.8.2" title="4 bytes n chunk length">7.8.2</a></li>
+<li class="depth-3"><a href="#7.8.3" title="4 bytes ... operating system ID">7.8.3</a></li>
+<li class="depth-3"><a href="#7.8.4" title="1 byte 000000sc flags">7.8.4</a></li>
+<li class="depth-3"><a href="#7.8.5" title="1 byte ... contents ID">7.8.5</a></li>
+<li class="depth-3"><a href="#7.8.6" title="2 bytes 0 reserved">7.8.6</a></li>
+<li class="depth-3"><a href="#7.8.7" title="4 bytes ... interpreter ID">7.8.7</a></li>
+<li class="depth-3"><a href="#7.8.8" title="n-12 bytes ... data">7.8.8</a></li>
+<li class="depth-2"><a href="#7.9" title="The operating system and interpreter IDs are normal IFF 4-character IDs in form. Please register IDs used with Martin Fr">7.9</a></li>
+<li class="depth-2"><a href="#7.10" title="If the s flag is set, then the contents are only meaningful on the same machine/network on which they were saved. This c">7.10</a></li>
+<li class="depth-2"><a href="#7.11" title="If the c flag is set, the contents should not be copied when loading and saving a game--they are only relevant to the ex">7.11</a></li>
+<li class="depth-2"><a href="#7.12" title="If the interpreter ID is ____ (four spaces), then the chunk contains information useful to *all* interpreters running on">7.12</a></li>
+<li class="depth-2"><a href="#7.13" title="If the operating-system ID is ____, then the chunk contains data useful to *all* ports of a particular interpreter. This">7.13</a></li>
+<li class="depth-2"><a href="#7.14" title="The interpreter and operating-system IDs may not both be ____. This should not be neccessary.">7.14</a></li>
+<li class="depth-2"><a href="#7.15" title="If neither ID is ____, the contents are meaningful only to a particular port of a particular interpreter. Save-file spec">7.15</a></li>
+<li class="depth-2"><a href="#7.16" title="The contents ID will be defined when chunk IDs are picked. Its purpose is to allow multiple chunks to be written contain">7.16</a></li>
+<li class="depth-2"><a href="#7.17" title="These extensions add no overhead to interpreters which choose not to handle them, except for larger save files and more ">7.17</a></li>
+<li class="depth-2"><a href="#7.18" title="The only required chunks are IFhd, either CMem or UMem, and Stks. The total overhead to a save file is 12 bytes plus 8 f">7.18</a></li>
+<li class="depth-2"><a href="#7.19" title="The following operating system IDs have been registered:">7.19</a></li>
+<li class="depth-3"><a href="#7.19.1" title="'DOS ' MS-DOS (also PC-DOS, DR-DOS)">7.19.1</a></li>
+<li class="depth-3"><a href="#7.19.2" title="'MACS' Macintosh">7.19.2</a></li>
+<li class="depth-3"><a href="#7.19.3" title="'UNIX' Generic UNIX">7.19.3</a></li>
+<li class="depth-2"><a href="#7.20" title="The following interpreter IDs have been registered:">7.20</a></li>
+<li class="depth-3"><a href="#7.20.1" title="'JZIP' JZIP, the enhanced ZIP by John Holder">7.20.1</a></li>
+<li class="depth-2"><a href="#7.21" title="The following extension chunks have been registered to date: System ID Interp ID Content ID Section 'MACS' ' ' 0 7.22">7.21</a></li>
+<li class="depth-2"><a href="#7.22" title="The following chunk has been registered for MacOS, to enable a Macintosh interpreter to find a story file given a save f">7.22</a></li>
+<li class="depth-3"><a href="#7.22.1" title="4 bytes 'IntD' chunk ID">7.22.1</a></li>
+<li class="depth-3"><a href="#7.22.2" title="4 bytes n chunk length (variable)">7.22.2</a></li>
+<li class="depth-3"><a href="#7.22.3" title="4 bytes 'MACS' operating system ID: MacOS">7.22.3</a></li>
+<li class="depth-3"><a href="#7.22.4" title="1 byte 00000010 flags (s set; c clear)">7.22.4</a></li>
+<li class="depth-3"><a href="#7.22.5" title="1 byte 0 contents ID">7.22.5</a></li>
+<li class="depth-3"><a href="#7.22.6" title="2 bytes 0 reserved">7.22.6</a></li>
+<li class="depth-3"><a href="#7.22.7" title="4 bytes ' ' interpreter ID: any">7.22.7</a></li>
+<li class="depth-3"><a href="#7.22.8" title="n-12 bytes ... MacOS alias record referencing the story file; from NewAlias">7.22.8</a></li>
+<li class="depth-3"><a href="#7.19.9" title="Alias records are of variable length, reflected in the chunk length; they are only valid on the same network they were c">7.19.9</a></li>
+<li class="depth-1"><a href="#eight">8. Introduction to the IFF format</a></li>
+<li class="depth-2"><a href="#8.1" title="This is based on the official IFF standards document, which is rather long and contains much that is irrelevant to the t">8.1</a></li>
+<li class="depth-2"><a href="#8.2" title="IFF stands for "Interchange File Format", and was developed by a committee consisting of people from Commodore-Amiga, El">8.2</a></li>
+<li class="depth-2"><a href="#8.3" title="The most fundamental concept in an IFF file is that of a chunk.">8.3</a></li>
+<li class="depth-3"><a href="#8.3.1" title="A chunk starts with an ID and a length.">8.3.1</a></li>
+<li class="depth-3"><a href="#8.3.2" title="The ID is the concatenation of four ASCII characters in the range 0x20 to 0x7E.">8.3.2</a></li>
+<li class="depth-3"><a href="#8.3.3" title="If spaces are present, they must be the last characters (there must be no printing characters after a space).">8.3.3</a></li>
+<li class="depth-3"><a href="#8.3.4" title="IDs are compared using a simple 32-bit equality test - note that this implies case sensitivity.">8.3.4</a></li>
+<li class="depth-3"><a href="#8.3.5" title="The length is a 32-bit unsigned integer, stored in big-endian format (most significant byte, then second most, and so on">8.3.5</a></li>
+<li class="depth-2"><a href="#8.4" title="After the ID and length, there follow (length) bytes of data.">8.4</a></li>
+<li class="depth-3"><a href="#8.4.1" title="If length is odd, these are followed by a single zero byte. This byte is *not* included in the chunk length, but it is v">8.4.1</a></li>
+<li class="depth-2"><a href="#8.5" title="A simple IFF file (such as the ones we will be considering) consists of a *single* chunk of type FORM.">8.5</a></li>
+<li class="depth-3"><a href="#8.5.1" title="The contents of a FORM chunk start with another 4-character ID.">8.5.1</a></li>
+<li class="depth-3"><a href="#8.5.2" title="This ID is also the concatenation of four characters, but these characters may only be uppercase letters and trailing sp">8.5.2</a></li>
+<li class="depth-2"><a href="#8.6" title="After the sub-ID comes a concatenation of chunks. The interpretation of these chunks depends on the FORM sub-ID (in this">8.6</a></li>
+<li class="depth-2"><a href="#8.7" title="Each of these chunks may contain as much data as required, in whatever format is required.">8.7</a></li>
+<li class="depth-2"><a href="#8.8" title="Multiple chunks with the same ID may appear; the interpretation of such chunks depends on the chunk. For example, multip">8.8</a></li>
+<li class="depth-2"><a href="#8.9" title="Indeed, skipping is the expected procedure for dealing with any unknown or unexpected chunk.">8.9</a></li>
+<li class="depth-2"><a href="#8.10" title="Certain chunks may be compulsory if the FORM is meaningless without them. In this case the IFhd, [CU]Mem and Stks are co">8.10</a></li>
+<li class="depth-1"><a href="#nine">9. Resources available</a></li>
+<li class="depth-2"><a href="#9.1" title="A set of patches exists for the Zip interpreter, adding Quetzal support. They can be obtained from: http://www.geocities">9.1</a></li>
+<li class="depth-2"><a href="#9.2" title="A utility, ckifzs is available as C source code to check the validity of generated save files. A small set of correct Qu">9.2</a></li>
+<li class="depth-2"><a href="#9.3" title="This document is updated whenever errors are noticed or new extension chunks are registered. The latest version will alw">9.3</a></li>
+<li class="depth-2"><a href="#9.4" title="This document is itself available in a number of forms. The base version is in preformatted ASCII text, but there is als">9.4</a></li>
+<li class="depth-2"><a href="#9.5" title="A few interpreters support Quetzal; details will appear here as they become available.">9.5</a></li>
+<li class="depth-1"><a href="#ten">10. Credits</a></li>
+<li class="depth-2"><a href="#10.1" title="This standard was created by Martin Frost (email: mdf@doc.ic.ac.uk). Comments and suggestions are always welcome (and an">10.1</a></li>
+<li class="depth-2"><a href="#10.2" title="The following people have contributed with ideas and criticism (in alphabetical order): King Dale, Marnix Klooster, Grah">10.2</a></li>
+<li class="depth-1"><a href="#remarks">Remarks</a></li>
+</ol>
+</aside>
+</div>
+<script src="assets/nav.js"></script>
+<script src="assets/zspec.js" defer></script>
+</body>
+</html>

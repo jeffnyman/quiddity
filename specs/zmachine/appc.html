@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Appendix C. Resources available — The Z-Machine Standards Document 1.1</title>
+<meta name="description" content="Appendix C. Resources available — section of the Z-Machine Standards Document, version 1.1.">
+<link rel="canonical" href="https://jeffnyman.github.io/z-machine-standard/appc.html">
+<meta name="theme-color" content="#0d63c9">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="The Z-Machine Standards Document 1.1">
+<meta property="og:title" content="Appendix C. Resources available — The Z-Machine Standards Document 1.1">
+<meta property="og:description" content="Appendix C. Resources available — section of the Z-Machine Standards Document, version 1.1.">
+<meta property="og:url" content="https://jeffnyman.github.io/z-machine-standard/appc.html">
+<link rel="stylesheet" href="assets/zspec.css">
+<script>/* Set the theme before first paint to avoid a flash. */
+(function(){try{var t=localStorage.getItem('zspec-theme');if(t==='dark'||t==='light')document.documentElement.dataset.theme=t;}catch(e){}})();
+</script>
+</head>
+<body>
+<a class="skip-link" href="#content">Skip to content</a>
+<header class="topbar">
+  <button class="icon-button nav-toggle" type="button" aria-expanded="false" aria-controls="sidebar" aria-label="Show contents">
+    <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 5h14M3 10h14M3 15h14"/></svg>
+  </button>
+  <a class="brand" href="index.html"><span class="brand-name">Z-Machine Standard</span><span class="brand-version">1.1</span></a>
+  <div class="topbar-actions">
+    <button class="search-trigger" type="button" data-search-open>
+      <svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="9" cy="9" r="6"/><path d="M13.5 13.5 18 18"/></svg>
+      <span>Search</span><kbd>/</kbd>
+    </button>
+    <button class="icon-button theme-toggle" type="button" aria-label="Switch colour theme">
+      <svg class="icon-sun" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="4"/><path d="M10 1v2M10 17v2M1 10h2M17 10h2M3.9 3.9l1.4 1.4M14.7 14.7l1.4 1.4M16.1 3.9l-1.4 1.4M5.3 14.7l-1.4 1.4"/></svg>
+      <svg class="icon-moon" viewBox="0 0 20 20" aria-hidden="true"><path d="M17 12.3A7.5 7.5 0 0 1 7.7 3a7.5 7.5 0 1 0 9.3 9.3z"/></svg>
+    </button>
+  </div>
+</header>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Specification contents">
+<!--nav:start-->
+<div class="nav-inner">
+<a class="nav-home" href="index.html">Contents</a>
+<ul class="nav-list">
+<li><a href="preface.html"><span class="nav-label">Preface</span></a></li>
+<li><a href="overview.html"><span class="nav-label">Overview</span></a></li>
+</ul>
+<h2 class="nav-group">Fundamentals</h2>
+<ul class="nav-list">
+<li><a href="sect01.html"><span class="nav-num">1</span><span class="nav-label">The memory map</span></a></li>
+<li><a href="sect02.html"><span class="nav-num">2</span><span class="nav-label">Numbers and arithmetic</span></a></li>
+<li><a href="sect03.html"><span class="nav-num">3</span><span class="nav-label">Text and characters</span></a></li>
+<li><a href="sect04.html"><span class="nav-num">4</span><span class="nav-label">Instruction encoding</span></a></li>
+<li><a href="sect05.html"><span class="nav-num">5</span><span class="nav-label">Routine encoding</span></a></li>
+<li><a href="sect06.html"><span class="nav-num">6</span><span class="nav-label">The game state</span></a></li>
+</ul>
+<h2 class="nav-group">Input/Output</h2>
+<ul class="nav-list">
+<li><a href="sect07.html"><span class="nav-num">7</span><span class="nav-label">Output streams</span></a></li>
+<li><a href="sect08.html"><span class="nav-num">8</span><span class="nav-label">The screen model</span></a></li>
+<li><a href="sect09.html"><span class="nav-num">9</span><span class="nav-label">Sound effects</span></a></li>
+<li><a href="sect10.html"><span class="nav-num">10</span><span class="nav-label">Input streams</span></a></li>
+</ul>
+<h2 class="nav-group">Tables</h2>
+<ul class="nav-list">
+<li><a href="sect11.html"><span class="nav-num">11</span><span class="nav-label">The header</span></a></li>
+<li><a href="sect12.html"><span class="nav-num">12</span><span class="nav-label">The object table</span></a></li>
+<li><a href="sect13.html"><span class="nav-num">13</span><span class="nav-label">Dictionary and lexing</span></a></li>
+</ul>
+<h2 class="nav-group">Instruction Set</h2>
+<ul class="nav-list">
+<li><a href="sect14.html"><span class="nav-num">14</span><span class="nav-label">Table of opcodes</span></a></li>
+<li><a href="sect15.html"><span class="nav-num">15</span><span class="nav-label">Dictionary of opcodes</span></a></li>
+</ul>
+<h2 class="nav-group">An Unusual Font</h2>
+<ul class="nav-list">
+<li><a href="sect16.html"><span class="nav-num">16</span><span class="nav-label">Font 3</span></a></li>
+</ul>
+<h2 class="nav-group">Appendices</h2>
+<ul class="nav-list">
+<li><a href="appa.html"><span class="nav-num">A</span><span class="nav-label">Error messages and debugging</span></a></li>
+<li><a href="appb.html"><span class="nav-num">B</span><span class="nav-label">Header conventions</span></a></li>
+<li class="is-current"><a href="appc.html" aria-current="page"><span class="nav-num">C</span><span class="nav-label">Resources available</span></a></li>
+<li><a href="appd.html"><span class="nav-num">D</span><span class="nav-label">History</span></a></li>
+<li><a href="appe.html"><span class="nav-num">E</span><span class="nav-label">Statistics</span></a></li>
+<li><a href="appf.html"><span class="nav-num">F</span><span class="nav-label">Canonical story files</span></a></li>
+</ul>
+<h2 class="nav-group">Related standards</h2>
+<p class="nav-note">Mirrored in this repository</p>
+<ul class="nav-list">
+<li><a href="quetzal.html"><span class="nav-label">Quetzal</span></a></li>
+<li><a href="blorb.html"><span class="nav-label">Blorb</span></a></li>
+</ul>
+</div>
+<!--nav:end-->
+</nav>
+<div class="main-column">
+<main class="content" id="content">
+<div class="page-head">
+<img class="page-icon" src="images/iconac.gif" alt="" width="82" height="86" loading="lazy" decoding="async">
+<h1>Appendix C. Resources available</h1>
+</div>
+<div class="intro">
+<blockquote>
+  <p>...the dead hand of the academy had yet to stifle the unbridled
+     enthusiasms of a small band of amateurs in Europe and America.
+  </p>
+  <p>Michael D. Coe, <strong>Breaking the Maya Code</strong></p>
+</blockquote>
+<p>[Note: the hypertext links in this appendix are to WWW sites external to 
+   the standards document, and were correct as of 21th February 2014.] 
+</p>
+<p>The resources below are mainly available from the
+   <a href="http://www.ifarchive.org/if-archive/">if-archive</a>
+   maintained by David Kinder and Stephen Granade.
+</p>
+</div>
+
+<section class="clause-section is-topic" id="public-interpreters">
+<h2 id="h-public-interpreters">Public Interpreters<a class="heading-anchor" href="#public-interpreters" aria-label="Link to Public Interpreters"></a></h2>
+<p>Since the 1.0 Standard was first introduced, a variety of 
+   <a href="http://www.ifarchive.org/indexes/if-archiveXinfocomXinterpreters.html">interpreters</a>
+   have become available, for many different platforms and with a variety of features.
+   The page on <a href="http://inform7.com/if/interpreters/">Playing Interactive Fiction</a>
+   at inform7.com is a good place to start when looking for an interpreter, as is the 
+   <a href="http://www.ifwiki.org/index.php/Z-machine#Assorted_Z-machine_interpreters">ifwiki
+   page on the Z-Machine</a>.
+</p>
+</section>
+
+<section class="clause-section is-topic" id="testing-compliance">
+<h2 id="h-testing-compliance">Testing compliance<a class="heading-anchor" href="#testing-compliance" aria-label="Link to Testing compliance"></a></h2>
+<p>A few story files exist to test interpreters for various Z-Machine features:</p>
+<ol>
+  <li><a href="http://ifarchive.org/if-archive/infocom/interpreters/tools/czech_0_8.zip">Czech</a> 
+      is a general Z-Machine unit test by Evin Robertson and Amir Karger.
+  </li>
+  <li><a href="http://eblong.com/zarf/ftp/praxix.z5">Praxix</a> is a general Z-Machine unit
+      test by Andrew Plotkin and Dannii Willis.
+  </li>
+  <li><a href="http://ifarchive.org/if-archive/infocom/interpreters/tools/etude.tar.Z">TerpEtude</a>
+      by Andrew Plotkin is a unit test with a focus on IO.
+  </li>
+  <li><a href="http://curiousdannii.github.com/if/tests/unicode.z5">Unicode</a> by David Kinder
+      tests Unicode input and output.
+  </li>
+  <li><a href="http://ifarchive.org/if-archive/infocom/interpreters/tools/strictz.z5">Strict Z Test</a>
+      by Torbjorn Andersson tests an interpreter's abilitity to handle errors in story files.
+  </li>
+</ol>
+</section>
+
+<section class="clause-section is-topic" id="compilers">
+<h2 id="h-compilers">Compilers<a class="heading-anchor" href="#compilers" aria-label="Link to Compilers"></a></h2>
+<p>Infocom's original compiler <strong>Zilch</strong> no longer exists, but a 
+   PDF copy of <a href="http://www.xlisp.org/zil.pdf">Learning ZIL</a>, Infocom's
+   documentation for their <strong>ZIL</strong> language, is available. Since
+   the emergence of this file, there have been a few attempts at making a new <strong>ZIL</strong> compiler,
+   most notably <a href="https://sourceforge.net/projects/zilf/">ZILF</a> by
+   Jesse McGrew.
+</p>
+<p>No continuous part of the source code of any of Infocom's games is in the public domain [but see
+   <a href="http://www.ifarchive.org/if-archive/infocom/articles/NZT-Zorkhistory.txt">
+   Stu Galley's chapter of an Infocom history article</a>, and the IEEE
+   article, for fragments].
+</p>
+<p><strong>Inform</strong> remains the most popular compiler for Z-Machine games. In
+   2006, the first public release of <a href="http://inform7.com/">Inform 7</a> was
+   made available. <strong>Inform 7</strong> is a very different language from previous versions of Inform,
+   with a focus on natural language and a powerful IDE. 
+</p>
+<p>While <strong>Inform 7</strong> is the main focus of development, <a href="http://inform-fiction.org/">Inform 6</a> is
+   still widely used and the compiler and libraries continue to be maintained.
+</p>
+<p>A few <a href="http://www.ifarchive.org/indexes/if-archiveXinfocomXcompilers.html">other compilers</a>
+   have been made available over the years.
+</p>
+</section>
+
+<section class="clause-section is-topic" id="utility-programs">
+<h2 id="h-utility-programs">Utility programs<a class="heading-anchor" href="#utility-programs" aria-label="Link to Utility programs"></a></h2>
+<p>Mark Howell has written a toolkit of
+   <a href="http://www.ifarchive.org/indexes/if-archiveXinfocomXtoolsXztools.html">
+   Ztools</a>, or utility programs (1991-5, updated 1997), which includes:
+</p>
+<ol>
+  <li><strong>Txd</strong>, a disassembler for Versions 1 to 8.  (Uses the
+      same opcode names as Inform and this document, and has an option to
+      disassemble in Inform assembly-language syntax.)
+  </li>
+
+  <li><strong>Infodump</strong>, capable of printing the header information,
+      object tree (with properties and attributes), dictionary and grammar
+      tables of any Infocom or Inform-compiled game.  (Understands four
+      varieties of grammar table: Infocom pre-Version 6, Infocom Version 6,
+      Inform GV1 and GV2.)
+  </li>
+
+  <li><strong>Pix2gif</strong>, for converting Version 6 picture data
+      to GIF files.
+  </li>
+
+  <li><strong>Check</strong>, for verifying Infocom or Inform story files.
+  </li>
+</ol>
+<p>These continue to be maintained (by Matthew Russotto) and the first two
+   are extremely useful. <strong>Infodump</strong> largely supersedes Mike Threepoint's vocabulary
+   dumper <strong>Zorkword</strong> (1991-2), which was important in its day (and
+   which this author found extremely helpful when writing Inform 1).
+</p>
+<p><a href="http://www.ifarchive.org/indexes/if-archiveXinfocomXtoolsXreform.html">Reform</a>,
+    by Ben Rudiak-Gould, is a decompiler for Z-Machine games which will attempt to convert them into Inform 6 source code.
+</p>
+</section>
+
+<section class="clause-section is-topic" id="story-files">
+<h2 id="h-story-files">Story files<a class="heading-anchor" href="#story-files" aria-label="Link to Story files"></a></h2>
+<ol>
+  <li>Numerous <a href="http://www.ifarchive.org/indexes/if-archiveXgamesXzcode.html">
+      Inform-compiled story files</a> are publically available.
+  </li>
+  <li>A few Infocom story files are public, notably two 4-in-1 sample
+      games (released for advertising purposes:
+      <a href="http://www.ifarchive.org/if-archive/infocom/demos/sampler1_R55.z3">
+      55.850823</a>
+      and 
+      <a href="http://www.ifarchive.org/if-archive/infocom/demos/sampler2.z3">
+      97.870601</a>) and
+      <a href="http://www.ifarchive.org/if-archive/infocom/demos/minizork.z3">
+      Minizork</a> (a heavily
+      abbreviated form of Zork I released with a Commodore magazine).
+  </li>
+  <li>Almost all Infocom's games remain commercially available in
+      anthologies published by
+      <a href="http://www.activision.com">Activision</a>.
+      Copyright resides in them and they should not available by FTP
+      from any site.
+  </li>
+  <li>A few other Infocom story files have existed but are neither
+      on sale nor released from copyright: this applies to several of the
+      Version 6 games, those games involving literary rights or other
+      legal issues ('Shogun', 'Hitch-Hiker's Guide To The Galaxy') and
+      ephemera such as beta-test versions (notably the German version
+      of 'Zork I') which have somehow passed into private circulation.
+  </li>
+</ol>
+<p>Most of the Infocom games exist in
+   <a href="appf.html">several different releases</a>, and some
+   were written for one Version and then ported to later ones.  'Zork I', for
+   instance, has at least 11 releases, 2 early, 8 in Version 3
+   (with release numbers between 5 to 88 in chronological order) and one in
+   Version 5 (release 52 -- the releases go back to 1 when the version changes).
+</p>
+<p>Version 1 and 2 games are extinct, though there are a few fossils
+   in the hands of collectors.
+</p>
+</section>
+
+<section class="clause-section is-topic" id="documents">
+<h2 id="h-documents">Documents<a class="heading-anchor" href="#documents" aria-label="Link to Documents"></a></h2>
+<p>The definitive guide to all Infocom story files known to exist, and an
+   indispensable reference for anyone interested in Infocom, is Paul David
+   Doherty's
+   <a href="http://www.ifarchive.org/if-archive/infocom/info/fact-sheet.txt">
+   Infocom fact sheet</a>, which is regularly updated, concise and
+   precise.  This supersedes Paul Smith's "Infocom Game Information" file.
+</p>
+<p>Stefan Jokisch has written a
+  <a href="http://www.ifarchive.org/if-archive/infocom/info/sound_format.txt">
+  brief specification of Infocom-format sound effects files</a>.
+</p>
+<p>Martin Frost is the author of the
+   <a href="quetzal.html">Quetzal</a>
+   standard for saved-game files.  Patches to adapt <strong>Zip</strong>-based
+   interpreters to use <strong>Quetzal</strong> are available.
+</p>
+<p>Andrew Plotkin is the author of the <a href="blorb.html">
+   Blorb</a> standard for packaging up images and sounds with Z-machine games.
+</p>
+<p>The <a href="http://www.inform-fiction.org/source/tm/TechMan.txt">
+   Inform Technical Manual</a> documents the format of parsing tables
+   used in Inform games.
+</p>
+<p>The documentation for Infocom's games is available online (with permission
+   from Activision) courtesy of the <a href="http://infodoc.plover.net/">Infocom
+   Documentation Project</a>. In addition, an archive of the 
+   "<a href="http://www.ifarchive.org/indexes/if-archiveXinfocomXshipped-documentation.html">samplers</a>"
+   is publically available, as is 
+   <a href="http://www.ifarchive.org/indexes/if-archiveXinfocomXarticles.html">
+   an interesting historical archive of magazine articles</a> concerning
+   Infocom, and articles from Infocom's own publicity magazine
+   [indexed
+   <a href="http://www.ifarchive.org/if-archive/infocom/NZT+TSL/NZT+TSL.list">
+   here</a>].
+</p>
+</section>
+</main>
+<nav class="pager" aria-label="Previous and next section"><a class="pager-link pager-prev" rel="prev" href="appb.html"><span class="pager-kind">Previous</span><span class="pager-title">B. Header conventions</span></a><a class="pager-link pager-next" rel="next" href="appd.html"><span class="pager-kind">Next</span><span class="pager-title">D. History</span></a></nav>
+<footer class="site-footer">
+  <p>The Z-Machine Standards Document, version 1.1 &mdash; 24 February 2014.
+     Canonical copy at <a href="https://www.inform-fiction.org/zmachine/standards/current/">inform-fiction.org</a>.</p>
+</footer>
+</div>
+<aside class="outline" id="outline" aria-label="On this page" data-generated>
+<h2>On this page</h2>
+<ol>
+<li class="depth-1"><a href="#public-interpreters">Public Interpreters</a></li>
+<li class="depth-1"><a href="#testing-compliance">Testing compliance</a></li>
+<li class="depth-1"><a href="#compilers">Compilers</a></li>
+<li class="depth-1"><a href="#utility-programs">Utility programs</a></li>
+<li class="depth-1"><a href="#story-files">Story files</a></li>
+<li class="depth-1"><a href="#documents">Documents</a></li>
+</ol>
+</aside>
+</div>
+<script src="assets/nav.js"></script>
+<script src="assets/zspec.js" defer></script>
+</body>
+</html>

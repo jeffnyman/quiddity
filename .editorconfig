@@ -1,0 +1,29 @@
+# Root file for the project.
+root = true
+
+# Default settings for all text files.
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 4
+
+[*.json]
+indent_size = 2
+
+[*.sh]
+indent_size = 2
+
+# Windows scripts keep CRLF to match .gitattributes.
+[*.{bat,cmd,ps1,psm1}]
+end_of_line = crlf
+
+# Makefiles require tabs.
+[{Makefile,*.mk}]
+indent_style = tab
+
+# Markdown allows trailing spaces for hard line breaks.
+[*.md]
+trim_trailing_whitespace = false

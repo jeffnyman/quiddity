@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>1. The memory map — The Z-Machine Standards Document 1.1</title>
+<meta name="description" content="1. The memory map — section of the Z-Machine Standards Document, version 1.1.">
+<link rel="canonical" href="https://jeffnyman.github.io/z-machine-standard/sect01.html">
+<meta name="theme-color" content="#0d63c9">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="The Z-Machine Standards Document 1.1">
+<meta property="og:title" content="1. The memory map — The Z-Machine Standards Document 1.1">
+<meta property="og:description" content="1. The memory map — section of the Z-Machine Standards Document, version 1.1.">
+<meta property="og:url" content="https://jeffnyman.github.io/z-machine-standard/sect01.html">
+<link rel="stylesheet" href="assets/zspec.css">
+<script>/* Set the theme before first paint to avoid a flash. */
+(function(){try{var t=localStorage.getItem('zspec-theme');if(t==='dark'||t==='light')document.documentElement.dataset.theme=t;}catch(e){}})();
+</script>
+</head>
+<body>
+<a class="skip-link" href="#content">Skip to content</a>
+<header class="topbar">
+  <button class="icon-button nav-toggle" type="button" aria-expanded="false" aria-controls="sidebar" aria-label="Show contents">
+    <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 5h14M3 10h14M3 15h14"/></svg>
+  </button>
+  <a class="brand" href="index.html"><span class="brand-name">Z-Machine Standard</span><span class="brand-version">1.1</span></a>
+  <div class="topbar-actions">
+    <button class="search-trigger" type="button" data-search-open>
+      <svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="9" cy="9" r="6"/><path d="M13.5 13.5 18 18"/></svg>
+      <span>Search</span><kbd>/</kbd>
+    </button>
+    <button class="icon-button theme-toggle" type="button" aria-label="Switch colour theme">
+      <svg class="icon-sun" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="4"/><path d="M10 1v2M10 17v2M1 10h2M17 10h2M3.9 3.9l1.4 1.4M14.7 14.7l1.4 1.4M16.1 3.9l-1.4 1.4M5.3 14.7l-1.4 1.4"/></svg>
+      <svg class="icon-moon" viewBox="0 0 20 20" aria-hidden="true"><path d="M17 12.3A7.5 7.5 0 0 1 7.7 3a7.5 7.5 0 1 0 9.3 9.3z"/></svg>
+    </button>
+  </div>
+</header>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Specification contents">
+<!--nav:start-->
+<div class="nav-inner">
+<a class="nav-home" href="index.html">Contents</a>
+<ul class="nav-list">
+<li><a href="preface.html"><span class="nav-label">Preface</span></a></li>
+<li><a href="overview.html"><span class="nav-label">Overview</span></a></li>
+</ul>
+<h2 class="nav-group">Fundamentals</h2>
+<ul class="nav-list">
+<li class="is-current"><a href="sect01.html" aria-current="page"><span class="nav-num">1</span><span class="nav-label">The memory map</span></a></li>
+<li><a href="sect02.html"><span class="nav-num">2</span><span class="nav-label">Numbers and arithmetic</span></a></li>
+<li><a href="sect03.html"><span class="nav-num">3</span><span class="nav-label">Text and characters</span></a></li>
+<li><a href="sect04.html"><span class="nav-num">4</span><span class="nav-label">Instruction encoding</span></a></li>
+<li><a href="sect05.html"><span class="nav-num">5</span><span class="nav-label">Routine encoding</span></a></li>
+<li><a href="sect06.html"><span class="nav-num">6</span><span class="nav-label">The game state</span></a></li>
+</ul>
+<h2 class="nav-group">Input/Output</h2>
+<ul class="nav-list">
+<li><a href="sect07.html"><span class="nav-num">7</span><span class="nav-label">Output streams</span></a></li>
+<li><a href="sect08.html"><span class="nav-num">8</span><span class="nav-label">The screen model</span></a></li>
+<li><a href="sect09.html"><span class="nav-num">9</span><span class="nav-label">Sound effects</span></a></li>
+<li><a href="sect10.html"><span class="nav-num">10</span><span class="nav-label">Input streams</span></a></li>
+</ul>
+<h2 class="nav-group">Tables</h2>
+<ul class="nav-list">
+<li><a href="sect11.html"><span class="nav-num">11</span><span class="nav-label">The header</span></a></li>
+<li><a href="sect12.html"><span class="nav-num">12</span><span class="nav-label">The object table</span></a></li>
+<li><a href="sect13.html"><span class="nav-num">13</span><span class="nav-label">Dictionary and lexing</span></a></li>
+</ul>
+<h2 class="nav-group">Instruction Set</h2>
+<ul class="nav-list">
+<li><a href="sect14.html"><span class="nav-num">14</span><span class="nav-label">Table of opcodes</span></a></li>
+<li><a href="sect15.html"><span class="nav-num">15</span><span class="nav-label">Dictionary of opcodes</span></a></li>
+</ul>
+<h2 class="nav-group">An Unusual Font</h2>
+<ul class="nav-list">
+<li><a href="sect16.html"><span class="nav-num">16</span><span class="nav-label">Font 3</span></a></li>
+</ul>
+<h2 class="nav-group">Appendices</h2>
+<ul class="nav-list">
+<li><a href="appa.html"><span class="nav-num">A</span><span class="nav-label">Error messages and debugging</span></a></li>
+<li><a href="appb.html"><span class="nav-num">B</span><span class="nav-label">Header conventions</span></a></li>
+<li><a href="appc.html"><span class="nav-num">C</span><span class="nav-label">Resources available</span></a></li>
+<li><a href="appd.html"><span class="nav-num">D</span><span class="nav-label">History</span></a></li>
+<li><a href="appe.html"><span class="nav-num">E</span><span class="nav-label">Statistics</span></a></li>
+<li><a href="appf.html"><span class="nav-num">F</span><span class="nav-label">Canonical story files</span></a></li>
+</ul>
+<h2 class="nav-group">Related standards</h2>
+<p class="nav-note">Mirrored in this repository</p>
+<ul class="nav-list">
+<li><a href="quetzal.html"><span class="nav-label">Quetzal</span></a></li>
+<li><a href="blorb.html"><span class="nav-label">Blorb</span></a></li>
+</ul>
+</div>
+<!--nav:end-->
+</nav>
+<div class="main-column">
+<main class="content" id="content">
+<div class="page-head">
+<img class="page-icon" src="images/icon01.gif" alt="" width="82" height="86" loading="lazy" decoding="async">
+<h1>1. The memory map</h1>
+</div>
+<section class="clause-section is-clause" id="1.1">
+<p><a class="clause-num" href="#1.1">1.1</a><button class="copy-link" type="button" data-anchor="1.1" aria-label="Copy link to 1.1" title="Copy link"></button> The memory map of the Z-machine is an array of bytes with
+   "byte addresses" running from 0 upwards.  This is divided into
+   three regions: "dynamic", "static" and "high".  Dynamic
+   memory begins from byte address <strong>$00000</strong> and runs up to the byte
+   before the byte address stored in the word at <strong>$0e</strong> in the header.
+   (Dynamic memory must contain at least 64 bytes.)  Static memory
+   follows immediately on.  Its extent is not defined in the header
+   (or anywhere else), though it must end by the last byte of the
+   story file or by byte address <strong>$0ffff</strong> (whichever is lower).
+   High memory begins at the "high memory mark" (the byte address
+   stored in the word at <strong>$04</strong> in the header) and continues to the
+   end of the story file.  The bottom of high memory may overlap with
+   the top of static memory (but not with dynamic memory).
+</p>
+</section>
+
+<section class="clause-section is-clause" id="1.1.1">
+<p><a class="clause-num" href="#1.1.1">1.1.1</a><button class="copy-link" type="button" data-anchor="1.1.1" aria-label="Copy link to 1.1.1" title="Copy link"></button> Dynamic memory can be read or written to (either directly,
+   using <a href="sect15.html#loadb"><strong>loadb</strong></a>, <a href="sect15.html#loadw"><strong>loadw</strong></a>, 
+   <a href="sect15.html#storeb"><strong>storeb</strong></a> and <a href="sect15.html#storew"><strong>storew</strong></a>, 
+   or indirectly with opcodes such as <a href="sect15.html#insert_obj"><strong>insert_obj</strong></a> and 
+   <a href="sect15.html#remove_obj"><strong>remove_obj</strong></a>).
+</p>
+</section>
+
+<section class="clause-section is-clause" id="1.1.1.1">
+<p><a class="clause-num" href="#1.1.1.1">1.1.1.1</a><button class="copy-link" type="button" data-anchor="1.1.1.1" aria-label="Copy link to 1.1.1.1" title="Copy link"></button> By tradition, the first 64 bytes are known as the
+   "header".  The contents of this are given later but note that games
+   are not permitted to alter many bits inside it.
+</p>
+</section>
+
+<section class="clause-section is-clause" id="1.1.1.2">
+<p><a class="clause-num" href="#1.1.1.2">1.1.1.2</a><button class="copy-link" type="button" data-anchor="1.1.1.2" aria-label="Copy link to 1.1.1.2" title="Copy link"></button> It is legal for games to alter any of the tables stored
+   in dynamic memory above the header, provided they leave the tables
+   in legal states.
+</p>
+</section>
+
+<section class="clause-section is-clause" id="1.1.2">
+<p><a class="clause-num" href="#1.1.2">1.1.2</a><button class="copy-link" type="button" data-anchor="1.1.2" aria-label="Copy link to 1.1.2" title="Copy link"></button> Static memory can be read using the opcodes <a href="sect15.html#loadb"><strong>loadb</strong></a> and
+   <a href="sect15.html#loadw"><strong>loadw</strong></a>.  It is illegal for a game to attempt to write to static
+   memory.
+</p>
+</section>
+
+<section class="clause-section is-clause" id="1.1.3">
+<p><a class="clause-num" href="#1.1.3">1.1.3</a><button class="copy-link" type="button" data-anchor="1.1.3" aria-label="Copy link to 1.1.3" title="Copy link"></button> Except for its (possible) overlap with static memory,
+   high memory cannot be directly accessed at all by a
+   game program.  It contains routines, which can be called,
+   and strings, which can be printed using <strong>print_paddr</strong>.
+</p>
+</section>
+
+<section class="clause-section is-clause" id="1.1.4">
+<p><a class="clause-num" href="#1.1.4">1.1.4</a><button class="copy-link" type="button" data-anchor="1.1.4" aria-label="Copy link to 1.1.4" title="Copy link"></button> The maximum permitted length of a story file depends
+   on the Version, as follows:
+</p>
+<pre>
+    V1-3    V4-5    V6-8
+    128K    256K    512K
+</pre>
+<aside class="editor-note" data-generated>
+<p class="note-head">
+<span class="note-tag">Editor&rsquo;s note</span>
+<span class="note-title">These limits are not arbitrary</span>
+</p>
+<p>Each figure is exactly what a 16-bit packed address can reach once it has
+   been multiplied by that Version's scale factor
+   (<a href="#1.2.3">&#167;1.2.3</a>):</p>
+<pre>V1-3   65535 x 2 = 128K
+V4-5   65535 x 4 = 256K
+V8     65535 x 8 = 512K</pre>
+<p>So the story-size limit is a consequence of how addresses are packed, not a
+   separate decision. Versions 6 and 7 are the exception that proves it: they
+   scale by 4, which would cap them at 256K, and reach 512K only by adding an
+   offset.</p>
+<p class="note-by">&mdash; Jeff Nyman</p>
+</aside>
+</section>
+
+<section class="clause-section is-clause" id="1.2">
+<p><a class="clause-num" href="#1.2">1.2</a><button class="copy-link" type="button" data-anchor="1.2" aria-label="Copy link to 1.2" title="Copy link"></button> There are three kinds of address in the Z-machine, all of
+   which can be stored in a 2-byte number: byte addresses, word
+   addresses and packed addresses.
+</p>
+</section>
+
+<section class="clause-section is-clause" id="1.2.1">
+<p><a class="clause-num" href="#1.2.1">1.2.1</a><button class="copy-link" type="button" data-anchor="1.2.1" aria-label="Copy link to 1.2.1" title="Copy link"></button> A byte address specifies a byte in memory in the range 0
+   up to the last byte of static memory.
+</p>
+</section>
+
+<section class="clause-section is-clause" id="1.2.2">
+<p><a class="clause-num" href="#1.2.2">1.2.2</a><button class="copy-link" type="button" data-anchor="1.2.2" aria-label="Copy link to 1.2.2" title="Copy link"></button> A word address specifies an even address in the bottom
+   128K of memory (by giving the address divided by 2).  (Word addresses
+   are used only in the abbreviations table.)
+</p>
+</section>
+
+<section class="clause-section is-clause has-marker is-v1-0" id="1.2.3">
+<p><a class="clause-num" href="#1.2.3">1.2.3</a><button class="copy-link" type="button" data-anchor="1.2.3" aria-label="Copy link to 1.2.3" title="Copy link"></button> <strong class="spec-marker spec-marker--v1-0">***[1.0]</strong>
+   A packed address specifies where a routine or string begins
+   in high memory.  Given a packed address <em>P</em>, the formula to obtain the
+   corresponding byte address <em>B</em> is:
+</p>
+<pre>
+  2P           Versions 1, 2 and 3
+  4P           Versions 4 and 5
+  4P + 8R_O    Versions 6 and 7, for routine calls
+  4P + 8S_O    Versions 6 and 7, for print_paddr
+  8P           Version 8
+</pre>
+<p><em>R_O</em> and <em>S_O</em> are the routine and strings offsets
+   (specified in the <a href="sect11.html">header</a> as words at <strong>$28</strong> and <strong>$2a</strong>,
+   respectively).
+</p>
+<aside class="editor-note" data-generated>
+<p class="note-head">
+<span class="note-tag">Editor&rsquo;s note</span>
+<span class="note-title">Packed addresses: the one to get right first</span>
+</p>
+<p>This is usually the first thing a new interpreter gets wrong, and the failure
+   is a jump into the middle of nowhere rather than a clean error.</p>
+<p>The scale factor exists because a routine's address will not fit in 16 bits.
+   Multiplying buys range at the cost of alignment: a routine or string can only
+   begin on a multiple of the factor (<a href="sect05.html#5.1">&#167;5.1</a>),
+   which is why a Version 5 routine must start on a 4-byte boundary.</p>
+<p><strong>Versions 6 and 7 need two different unpacking functions.</strong>
+   Everywhere else a single one will do, because the same formula serves both
+   routines and strings. In Versions 6 and 7 they use separate offsets, so the
+   <em>same</em> packed address denotes two different byte addresses depending
+   on whether you are about to call it or print it:</p>
+<pre>routine   B = 4P + 8 x R_O     R_O from header $28
+string    B = 4P + 8 x S_O     S_O from header $2a</pre>
+<p>Both header fields are stored <em>already divided by 8</em>, which is why the
+   formula multiplies by 8 again &mdash; the stored word is a count of 8-byte
+   units, not a byte count. Writing one <code>unpack(P)</code> helper works
+   perfectly until the first Version 6 story file, at which point every string
+   prints garbage while routines still call correctly.</p>
+<pre>Version 5, packed $1a2b:
+  4 x 6699 = 26796 = $68ac</pre>
+<p class="note-by">&mdash; Jeff Nyman</p>
+</aside>
+</section>
+
+<section class="clause-section is-clause has-marker is-v1-0" id="1.2.4">
+<p><a class="clause-num" href="#1.2.4">1.2.4</a><button class="copy-link" type="button" data-anchor="1.2.4" aria-label="Copy link to 1.2.4" title="Copy link"></button> <strong class="spec-marker spec-marker--v1-0">***[1.0]</strong>
+   Throughout the specification, Versions 7 and 8 are identical
+   to Version 5 except as stated at <a href="sect01.html#1.1.4"><strong>§</strong> 1.1.4</a> and 
+   <a href="sect01.html#1.2.3"><strong>§</strong> 1.2.3</a> above, and in the constant used to 
+   find the file length, as stated in <a href="sect11.html#11.1.6"><strong>§</strong> 11.1.6</a>.
+</p>
+<div class="table-scroll" tabindex="0" role="region" aria-label="An example memory map of a small game"><table><caption><strong>An example memory map of a small game</strong></caption><thead><tr><th scope="col">Dynamic</th><th scope="col"><strong>00000</strong></th><th scope="col">header</th></tr></thead><tbody><tr><td></td><td><strong>00040</strong></td><td>abbreviation strings</td></tr><tr><td></td><td><strong>00042</strong></td><td>abbreviation table</td></tr><tr><td></td><td><strong>00102</strong></td><td>property defaults</td></tr><tr><td></td><td><strong>00140</strong></td><td>objects</td></tr><tr><td></td><td><strong>002f0</strong></td><td>object descriptions and properties</td></tr><tr><td></td><td><strong>006e3</strong></td><td>global variables</td></tr><tr><td></td><td><strong>008c3</strong></td><td>arrays</td></tr><tr><td>Static</td><td><strong>00b48</strong></td><td>grammar table</td></tr><tr><td></td><td><strong>010a7</strong></td><td>actions table</td></tr><tr><td></td><td><strong>01153</strong></td><td>preactions table</td></tr><tr><td></td><td><strong>01201</strong></td><td>adjectives table</td></tr><tr><td></td><td><strong>0124d</strong></td><td>dictionary</td></tr><tr><td>High</td><td><strong>01a0a</strong></td><td>Z-code</td></tr><tr><td></td><td><strong>05d56</strong></td><td>static strings</td></tr><tr><td></td><td><strong>06ae6</strong></td><td>end of file</td></tr></tbody></table></div>
+</section>
+
+<section class="clause-section is-topic" id="remarks">
+<h2 id="h-remarks">Remarks<a class="heading-anchor" href="#remarks" aria-label="Link to Remarks"></a></h2>
+<p>Inform never compiles any overlap between static and high memory
+   (it places all data tables in dynamic memory).  However, many
+   Infocom games group tables of static data just above the high
+   memory mark, before routines begin; some, such as 'Nord 'n'
+   Bert...', interleave static data between routines, so that static
+   memory actually overlaps code; and a few, such as 'Seastalker'
+   release 15, even contain routines placed below the high memory
+   mark.  (The original idea behind the high memory mark was that
+   everything below it should be stored in the interpreter's RAM, while
+   what was above could reasonably be kept in "virtual memory", i.e.,
+   loaded off disc as needed.)
+</p>
+<p>Note that the total of dynamic plus static memory must not exceed 64K.
+   (In fact, 64K minus 2 bytes.)  This is the most serious limitation
+   on the Z-machine.
+</p>
+</section>
+</main>
+<nav class="pager" aria-label="Previous and next section"><a class="pager-link pager-prev" rel="prev" href="overview.html"><span class="pager-kind">Previous</span><span class="pager-title">Overview</span></a><a class="pager-link pager-next" rel="next" href="sect02.html"><span class="pager-kind">Next</span><span class="pager-title">2. Numbers and arithmetic</span></a></nav>
+<footer class="site-footer">
+  <p>The Z-Machine Standards Document, version 1.1 &mdash; 24 February 2014.
+     Canonical copy at <a href="https://www.inform-fiction.org/zmachine/standards/current/">inform-fiction.org</a>.</p>
+</footer>
+</div>
+<aside class="outline" id="outline" aria-label="On this page" data-generated>
+<h2>On this page</h2>
+<ol>
+<li class="depth-2"><a href="#1.1" title="The memory map of the Z-machine is an array of bytes with "byte addresses" running from 0 upwards. This is divided into ">1.1</a></li>
+<li class="depth-3"><a href="#1.1.1" title="Dynamic memory can be read or written to (either directly, using loadb, loadw, storeb and storew, or indirectly with opc">1.1.1</a></li>
+<li class="depth-4"><a href="#1.1.1.1" title="By tradition, the first 64 bytes are known as the "header". The contents of this are given later but note that games are">1.1.1.1</a></li>
+<li class="depth-4"><a href="#1.1.1.2" title="It is legal for games to alter any of the tables stored in dynamic memory above the header, provided they leave the tabl">1.1.1.2</a></li>
+<li class="depth-3"><a href="#1.1.2" title="Static memory can be read using the opcodes loadb and loadw. It is illegal for a game to attempt to write to static memo">1.1.2</a></li>
+<li class="depth-3"><a href="#1.1.3" title="Except for its (possible) overlap with static memory, high memory cannot be directly accessed at all by a game program. ">1.1.3</a></li>
+<li class="depth-3"><a href="#1.1.4" title="The maximum permitted length of a story file depends on the Version, as follows: V1-3 V4-5 V6-8 128K 256K 512K">1.1.4</a></li>
+<li class="depth-2"><a href="#1.2" title="There are three kinds of address in the Z-machine, all of which can be stored in a 2-byte number: byte addresses, word a">1.2</a></li>
+<li class="depth-3"><a href="#1.2.1" title="A byte address specifies a byte in memory in the range 0 up to the last byte of static memory.">1.2.1</a></li>
+<li class="depth-3"><a href="#1.2.2" title="A word address specifies an even address in the bottom 128K of memory (by giving the address divided by 2). (Word addres">1.2.2</a></li>
+<li class="depth-3"><a href="#1.2.3" title="***[1.0] A packed address specifies where a routine or string begins in high memory. Given a packed address P, the formu">1.2.3</a></li>
+<li class="depth-3"><a href="#1.2.4" title="***[1.0] Throughout the specification, Versions 7 and 8 are identical to Version 5 except as stated at § 1.1.4 and § 1.2">1.2.4</a></li>
+<li class="depth-1"><a href="#remarks">Remarks</a></li>
+</ol>
+</aside>
+</div>
+<script src="assets/nav.js"></script>
+<script src="assets/zspec.js" defer></script>
+</body>
+</html>

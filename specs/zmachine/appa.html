@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Appendix A. Error messages and debugging — The Z-Machine Standards Document 1.1</title>
+<meta name="description" content="Appendix A. Error messages and debugging — section of the Z-Machine Standards Document, version 1.1.">
+<link rel="canonical" href="https://jeffnyman.github.io/z-machine-standard/appa.html">
+<meta name="theme-color" content="#0d63c9">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="The Z-Machine Standards Document 1.1">
+<meta property="og:title" content="Appendix A. Error messages and debugging — The Z-Machine Standards Document 1.1">
+<meta property="og:description" content="Appendix A. Error messages and debugging — section of the Z-Machine Standards Document, version 1.1.">
+<meta property="og:url" content="https://jeffnyman.github.io/z-machine-standard/appa.html">
+<link rel="stylesheet" href="assets/zspec.css">
+<script>/* Set the theme before first paint to avoid a flash. */
+(function(){try{var t=localStorage.getItem('zspec-theme');if(t==='dark'||t==='light')document.documentElement.dataset.theme=t;}catch(e){}})();
+</script>
+</head>
+<body>
+<a class="skip-link" href="#content">Skip to content</a>
+<header class="topbar">
+  <button class="icon-button nav-toggle" type="button" aria-expanded="false" aria-controls="sidebar" aria-label="Show contents">
+    <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 5h14M3 10h14M3 15h14"/></svg>
+  </button>
+  <a class="brand" href="index.html"><span class="brand-name">Z-Machine Standard</span><span class="brand-version">1.1</span></a>
+  <div class="topbar-actions">
+    <button class="search-trigger" type="button" data-search-open>
+      <svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="9" cy="9" r="6"/><path d="M13.5 13.5 18 18"/></svg>
+      <span>Search</span><kbd>/</kbd>
+    </button>
+    <button class="icon-button theme-toggle" type="button" aria-label="Switch colour theme">
+      <svg class="icon-sun" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="4"/><path d="M10 1v2M10 17v2M1 10h2M17 10h2M3.9 3.9l1.4 1.4M14.7 14.7l1.4 1.4M16.1 3.9l-1.4 1.4M5.3 14.7l-1.4 1.4"/></svg>
+      <svg class="icon-moon" viewBox="0 0 20 20" aria-hidden="true"><path d="M17 12.3A7.5 7.5 0 0 1 7.7 3a7.5 7.5 0 1 0 9.3 9.3z"/></svg>
+    </button>
+  </div>
+</header>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Specification contents">
+<!--nav:start-->
+<div class="nav-inner">
+<a class="nav-home" href="index.html">Contents</a>
+<ul class="nav-list">
+<li><a href="preface.html"><span class="nav-label">Preface</span></a></li>
+<li><a href="overview.html"><span class="nav-label">Overview</span></a></li>
+</ul>
+<h2 class="nav-group">Fundamentals</h2>
+<ul class="nav-list">
+<li><a href="sect01.html"><span class="nav-num">1</span><span class="nav-label">The memory map</span></a></li>
+<li><a href="sect02.html"><span class="nav-num">2</span><span class="nav-label">Numbers and arithmetic</span></a></li>
+<li><a href="sect03.html"><span class="nav-num">3</span><span class="nav-label">Text and characters</span></a></li>
+<li><a href="sect04.html"><span class="nav-num">4</span><span class="nav-label">Instruction encoding</span></a></li>
+<li><a href="sect05.html"><span class="nav-num">5</span><span class="nav-label">Routine encoding</span></a></li>
+<li><a href="sect06.html"><span class="nav-num">6</span><span class="nav-label">The game state</span></a></li>
+</ul>
+<h2 class="nav-group">Input/Output</h2>
+<ul class="nav-list">
+<li><a href="sect07.html"><span class="nav-num">7</span><span class="nav-label">Output streams</span></a></li>
+<li><a href="sect08.html"><span class="nav-num">8</span><span class="nav-label">The screen model</span></a></li>
+<li><a href="sect09.html"><span class="nav-num">9</span><span class="nav-label">Sound effects</span></a></li>
+<li><a href="sect10.html"><span class="nav-num">10</span><span class="nav-label">Input streams</span></a></li>
+</ul>
+<h2 class="nav-group">Tables</h2>
+<ul class="nav-list">
+<li><a href="sect11.html"><span class="nav-num">11</span><span class="nav-label">The header</span></a></li>
+<li><a href="sect12.html"><span class="nav-num">12</span><span class="nav-label">The object table</span></a></li>
+<li><a href="sect13.html"><span class="nav-num">13</span><span class="nav-label">Dictionary and lexing</span></a></li>
+</ul>
+<h2 class="nav-group">Instruction Set</h2>
+<ul class="nav-list">
+<li><a href="sect14.html"><span class="nav-num">14</span><span class="nav-label">Table of opcodes</span></a></li>
+<li><a href="sect15.html"><span class="nav-num">15</span><span class="nav-label">Dictionary of opcodes</span></a></li>
+</ul>
+<h2 class="nav-group">An Unusual Font</h2>
+<ul class="nav-list">
+<li><a href="sect16.html"><span class="nav-num">16</span><span class="nav-label">Font 3</span></a></li>
+</ul>
+<h2 class="nav-group">Appendices</h2>
+<ul class="nav-list">
+<li class="is-current"><a href="appa.html" aria-current="page"><span class="nav-num">A</span><span class="nav-label">Error messages and debugging</span></a></li>
+<li><a href="appb.html"><span class="nav-num">B</span><span class="nav-label">Header conventions</span></a></li>
+<li><a href="appc.html"><span class="nav-num">C</span><span class="nav-label">Resources available</span></a></li>
+<li><a href="appd.html"><span class="nav-num">D</span><span class="nav-label">History</span></a></li>
+<li><a href="appe.html"><span class="nav-num">E</span><span class="nav-label">Statistics</span></a></li>
+<li><a href="appf.html"><span class="nav-num">F</span><span class="nav-label">Canonical story files</span></a></li>
+</ul>
+<h2 class="nav-group">Related standards</h2>
+<p class="nav-note">Mirrored in this repository</p>
+<ul class="nav-list">
+<li><a href="quetzal.html"><span class="nav-label">Quetzal</span></a></li>
+<li><a href="blorb.html"><span class="nav-label">Blorb</span></a></li>
+</ul>
+</div>
+<!--nav:end-->
+</nav>
+<div class="main-column">
+<main class="content" id="content">
+<div class="page-head">
+<img class="page-icon" src="images/iconaa.gif" alt="" width="82" height="86" loading="lazy" decoding="async">
+<h1>Appendix A. Error messages and debugging</h1>
+</div>
+<div class="intro">
+<p>Older interpreters, such as <strong>ITF</strong>, are extremely curt when an error condition
+   is reached (for example, an illegal opcode).  It was assumed that
+   Infocom's shipped story files were bug-free, which is mostly true,
+   so that errors could only arise through a bug elsewhere in the
+   interpreter.
+</p>
+<p>In debugging Inform games, though, many error conditions can arise and it is
+   extremely helpful to report these as fully as possible.  These include:
+</p>
+<ol>
+  <li>An illegal opcode being hit;</li>
+  <li>A call to what can't be a routine (because the initial byte is not
+      between 0 and 15);
+  </li>
+  <li>A jump or call to an address beyond the size of the story file;</li>
+  <li>An attempt to <strong>print_obj</strong>, or otherwise access, an object
+      which doesn't exist, such as object number 0.
+  </li>
+  <li>An attempt to write to, or get the property length of, a
+      nonexistent property.
+  </li>
+  <li>An attempt to access an attribute outside the range 0 to 31
+      or 0 to 47 (depending on Version).  (But note that Infocom's 'Sherlock'
+      contains a bug causing it to try setting or clearing attribute number
+      48.)
+  </li>
+  <li>Division by zero.
+      The player sometimes then has the annoying task of working out
+      where the error took place in source code.  Providing a stack back-trace
+      would be a help.
+  </li>
+</ol>
+<p>As mentioned in <strong>§</strong> 3, it's helpful to screen out any illegal ZSCII
+   characters between 0 and 31 which are accidentally printed: crashes
+   can be very mysterious when they cause interpreters to send control
+   codes to the terminal.
+</p>
+<p>In addition, an interpreter might provide options for keeping track of
+   maximum stack usage and the typical number of opcodes executed between
+   each read from the keyboard.  (But watching these is a time-wasting
+   activity, so they should be options.)
+</p>
+<p>Finally, infinite loops fairly often happen, as in any programming
+   language.  On a system without pre-emptive multi-tasking, this may lock
+   up the whole machine, as the usual way that porters implement multi-tasking
+   is to return control to the host operating system only when the keyboard
+   is read.  This can be avoided by providing a point in the code which
+   could return control to the OS from time to time (say, every 2000
+   instructions).
+</p>
+<p>A number of post-Infocom games have been released which contain
+   errors, most often trying to perform illegal operations on object 0.
+   Many interpreters silently ignored these errors, which can make it 
+   very difficult to notice and track down bugs.
+</p>
+<p>It is desirable for modern interpreters to be able to notify players
+   about these bugs, but this can also ruin gameplay. It is highly recommended, 
+   then, that interpreters have four levels of error checking, selectable by
+   the user (through a command-line or menu option, or similar):
+</p>
+<ul>
+  <li>Never report the bug.</li>
+  <li>Report the first instance of each type of error.</li>
+  <li>Report every error.</li>
+  <li>Treat every error as fatal and end the game.</li>
+</ul>
+</div>
+</main>
+<nav class="pager" aria-label="Previous and next section"><a class="pager-link pager-prev" rel="prev" href="sect16.html"><span class="pager-kind">Previous</span><span class="pager-title">16. Font 3</span></a><a class="pager-link pager-next" rel="next" href="appb.html"><span class="pager-kind">Next</span><span class="pager-title">B. Header conventions</span></a></nav>
+<footer class="site-footer">
+  <p>The Z-Machine Standards Document, version 1.1 &mdash; 24 February 2014.
+     Canonical copy at <a href="https://www.inform-fiction.org/zmachine/standards/current/">inform-fiction.org</a>.</p>
+</footer>
+</div>
+</div>
+<script src="assets/nav.js"></script>
+<script src="assets/zspec.js" defer></script>
+</body>
+</html>

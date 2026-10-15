@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>16. Font 3 and character graphics — The Z-Machine Standards Document 1.1</title>
+<meta name="description" content="16. Font 3 and character graphics — section of the Z-Machine Standards Document, version 1.1.">
+<link rel="canonical" href="https://jeffnyman.github.io/z-machine-standard/sect16.html">
+<meta name="theme-color" content="#0d63c9">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="The Z-Machine Standards Document 1.1">
+<meta property="og:title" content="16. Font 3 and character graphics — The Z-Machine Standards Document 1.1">
+<meta property="og:description" content="16. Font 3 and character graphics — section of the Z-Machine Standards Document, version 1.1.">
+<meta property="og:url" content="https://jeffnyman.github.io/z-machine-standard/sect16.html">
+<link rel="stylesheet" href="assets/zspec.css">
+<script>/* Set the theme before first paint to avoid a flash. */
+(function(){try{var t=localStorage.getItem('zspec-theme');if(t==='dark'||t==='light')document.documentElement.dataset.theme=t;}catch(e){}})();
+</script>
+</head>
+<body>
+<a class="skip-link" href="#content">Skip to content</a>
+<header class="topbar">
+  <button class="icon-button nav-toggle" type="button" aria-expanded="false" aria-controls="sidebar" aria-label="Show contents">
+    <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 5h14M3 10h14M3 15h14"/></svg>
+  </button>
+  <a class="brand" href="index.html"><span class="brand-name">Z-Machine Standard</span><span class="brand-version">1.1</span></a>
+  <div class="topbar-actions">
+    <button class="search-trigger" type="button" data-search-open>
+      <svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="9" cy="9" r="6"/><path d="M13.5 13.5 18 18"/></svg>
+      <span>Search</span><kbd>/</kbd>
+    </button>
+    <button class="icon-button theme-toggle" type="button" aria-label="Switch colour theme">
+      <svg class="icon-sun" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="4"/><path d="M10 1v2M10 17v2M1 10h2M17 10h2M3.9 3.9l1.4 1.4M14.7 14.7l1.4 1.4M16.1 3.9l-1.4 1.4M5.3 14.7l-1.4 1.4"/></svg>
+      <svg class="icon-moon" viewBox="0 0 20 20" aria-hidden="true"><path d="M17 12.3A7.5 7.5 0 0 1 7.7 3a7.5 7.5 0 1 0 9.3 9.3z"/></svg>
+    </button>
+  </div>
+</header>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Specification contents">
+<!--nav:start-->
+<div class="nav-inner">
+<a class="nav-home" href="index.html">Contents</a>
+<ul class="nav-list">
+<li><a href="preface.html"><span class="nav-label">Preface</span></a></li>
+<li><a href="overview.html"><span class="nav-label">Overview</span></a></li>
+</ul>
+<h2 class="nav-group">Fundamentals</h2>
+<ul class="nav-list">
+<li><a href="sect01.html"><span class="nav-num">1</span><span class="nav-label">The memory map</span></a></li>
+<li><a href="sect02.html"><span class="nav-num">2</span><span class="nav-label">Numbers and arithmetic</span></a></li>
+<li><a href="sect03.html"><span class="nav-num">3</span><span class="nav-label">Text and characters</span></a></li>
+<li><a href="sect04.html"><span class="nav-num">4</span><span class="nav-label">Instruction encoding</span></a></li>
+<li><a href="sect05.html"><span class="nav-num">5</span><span class="nav-label">Routine encoding</span></a></li>
+<li><a href="sect06.html"><span class="nav-num">6</span><span class="nav-label">The game state</span></a></li>
+</ul>
+<h2 class="nav-group">Input/Output</h2>
+<ul class="nav-list">
+<li><a href="sect07.html"><span class="nav-num">7</span><span class="nav-label">Output streams</span></a></li>
+<li><a href="sect08.html"><span class="nav-num">8</span><span class="nav-label">The screen model</span></a></li>
+<li><a href="sect09.html"><span class="nav-num">9</span><span class="nav-label">Sound effects</span></a></li>
+<li><a href="sect10.html"><span class="nav-num">10</span><span class="nav-label">Input streams</span></a></li>
+</ul>
+<h2 class="nav-group">Tables</h2>
+<ul class="nav-list">
+<li><a href="sect11.html"><span class="nav-num">11</span><span class="nav-label">The header</span></a></li>
+<li><a href="sect12.html"><span class="nav-num">12</span><span class="nav-label">The object table</span></a></li>
+<li><a href="sect13.html"><span class="nav-num">13</span><span class="nav-label">Dictionary and lexing</span></a></li>
+</ul>
+<h2 class="nav-group">Instruction Set</h2>
+<ul class="nav-list">
+<li><a href="sect14.html"><span class="nav-num">14</span><span class="nav-label">Table of opcodes</span></a></li>
+<li><a href="sect15.html"><span class="nav-num">15</span><span class="nav-label">Dictionary of opcodes</span></a></li>
+</ul>
+<h2 class="nav-group">An Unusual Font</h2>
+<ul class="nav-list">
+<li class="is-current"><a href="sect16.html" aria-current="page"><span class="nav-num">16</span><span class="nav-label">Font 3</span></a></li>
+</ul>
+<h2 class="nav-group">Appendices</h2>
+<ul class="nav-list">
+<li><a href="appa.html"><span class="nav-num">A</span><span class="nav-label">Error messages and debugging</span></a></li>
+<li><a href="appb.html"><span class="nav-num">B</span><span class="nav-label">Header conventions</span></a></li>
+<li><a href="appc.html"><span class="nav-num">C</span><span class="nav-label">Resources available</span></a></li>
+<li><a href="appd.html"><span class="nav-num">D</span><span class="nav-label">History</span></a></li>
+<li><a href="appe.html"><span class="nav-num">E</span><span class="nav-label">Statistics</span></a></li>
+<li><a href="appf.html"><span class="nav-num">F</span><span class="nav-label">Canonical story files</span></a></li>
+</ul>
+<h2 class="nav-group">Related standards</h2>
+<p class="nav-note">Mirrored in this repository</p>
+<ul class="nav-list">
+<li><a href="quetzal.html"><span class="nav-label">Quetzal</span></a></li>
+<li><a href="blorb.html"><span class="nav-label">Blorb</span></a></li>
+</ul>
+</div>
+<!--nav:end-->
+</nav>
+<div class="main-column">
+<main class="content" id="content">
+<div class="page-head">
+<img class="page-icon" src="images/icon16.gif" alt="" width="82" height="86" loading="lazy" decoding="async">
+<h1>16. Font 3 and character graphics</h1>
+</div>
+<section class="clause-section is-clause" id="16.1">
+<p><a class="clause-num" href="#16.1">16.1</a><button class="copy-link" type="button" data-anchor="16.1" aria-label="Copy link to 16.1" title="Copy link"></button> The following table of 8x8 bitmaps gives a suitable appearance
+   for font 3.  The font must have a fixed pitch and characters must be printed
+   immediately next to each other in all four directions.
+</p>
+<pre>
+ 32( ):  76543210   33(!):  76543210   34("):  76543210   35(#):  76543210
+        0                  0                  0                  0       #
+        1                  1                  1                  1      # 
+        2                  2  #               2    #             2     #  
+        3                  3 ##               3    ##            3    #   
+        4                  4#######           4#######           4   #    
+        5                  5 ##               5    ##            5  #     
+        6                  6  #               6    #             6 #      
+        7                  7                  7                  7#       
+ 36($):  76543210   37(%):  76543210   38(&amp;):  76543210   39('):  76543210
+        0#                 0                  0                  0        
+        1 #                1                  1                  1        
+        2  #               2                  2                  2        
+        3   #              3                  3                  3########
+        4    #             4                  4########          4        
+        5     #            5                  5                  5        
+        6      #           6                  6                  6        
+        7       #          7                  7                  7        
+ 40(():  76543210   41()):  76543210   42(*):  76543210   43(+):  76543210
+        0    #             0   #              0    #             0        
+        1    #             1   #              1    #             1        
+        2    #             2   #              2    #             2        
+        3    #             3   #              3########          3        
+        4    #             4   #              4                  4########
+        5    #             5   #              5                  5    #   
+        6    #             6   #              6                  6    #   
+        7    #             7   #              7                  7    #   
+ 44(,):  76543210   45(-):  76543210   46(.):  76543210   47(/):  76543210
+        0    #             0   #              0   #              0        
+        1    #             1   #              1   #              1        
+        2    #             2   #              2   #              2        
+        3    #             3   #              3   #              3   #####
+        4    ####          4####              4   #####          4   #    
+        5    #             5   #              5                  5   #    
+        6    #             6   #              6                  6   #    
+        7    #             7   #              7                  7   #    
+</pre>
+<pre>
+ 48(0):  76543210   49(1):  76543210   50(2):  76543210   51(3):  76543210
+        0                  0    #             0   #              0#       
+        1                  1    #             1   #              1 #      
+        2                  2    #             2   #              2  #     
+        3#####             3    #             3   #              3   #####
+        4    #             4#####             4   #####          4   #    
+        5    #             5                  5  #               5   #    
+        6    #             6                  6 #                6   #    
+        7    #             7                  7#                 7   #    
+ 52(4):  76543210   53(5):  76543210   54(6):  76543210   55(7):  76543210
+        0       #          0    #             0########          0########
+        1      #           1    #             1########          1########
+        2     #            2    #             2########          2########
+        3#####             3    #             3########          3########
+        4    #             4#####             4########          4########
+        5    #             5     #            5########          5        
+        6    #             6      #           6########          6        
+        7    #             7       #          7########          7        
+ 56(8):  76543210   57(9):  76543210   58(:):  76543210   59(;):  76543210
+        0                  0#####             0   #####          0    #   
+        1                  1#####             1   #####          1    #   
+        2                  2#####             2   #####          2    #   
+        3########          3#####             3   #####          3########
+        4########          4#####             4   #####          4########
+        5########          5#####             5   #####          5########
+        6########          6#####             6   #####          6########
+        7########          7#####             7   #####          7########
+ 60(&lt;):  76543210   61(=):  76543210   62(&gt;):  76543210   63(?):  76543210
+        0########          0#####             0   #####          0   #####
+        1########          1#####             1   #####          1   #####
+        2########          2#####             2   #####          2   #####
+        3########          3#####             3   #####          3   #####
+        4########          4########          4########          4   #####
+        5    #             5#####             5   #####          5        
+        6    #             6#####             6   #####          6        
+        7    #             7#####             7   #####          7        
+ 64(@):  76543210   65(A):  76543210   66(B):  76543210   67(C):  76543210
+        0                  0                  0#####             0   #####
+        1                  1                  1#####             1   #####
+        2                  2                  2#####             2   #####
+        3   #####          3#####             3#####             3   #####
+        4   #####          4#####             4#####             4   #####
+        5   #####          5#####             5                  5  #     
+        6   #####          6#####             6                  6 #      
+        7   #####          7#####             7                  7#       
+</pre>
+<pre>
+ 68(D):  76543210   69(E):  76543210   70(F):  76543210   71(G):  76543210
+        0#                 0       #          0#####             0       #
+        1 #                1      #           1#####             1        
+        2  #               2     #            2#####             2        
+        3   #####          3#####             3#####             3        
+        4   #####          4#####             4#####             4        
+        5   #####          5#####             5     #            5        
+        6   #####          6#####             6      #           6        
+        7   #####          7#####             7       #          7        
+ 72(H):  76543210   73(I):  76543210   74(J):  76543210   75(K):  76543210
+        0                  0                  0#                 0########
+        1                  1                  1                  1        
+        2                  2                  2                  2        
+        3                  3                  3                  3        
+        4                  4                  4                  4        
+        5                  5                  5                  5        
+        6                  6                  6                  6        
+        7       #          7#                 7                  7        
+ 76(L):  76543210   77(M):  76543210   78(N):  76543210   79(O):  76543210
+        0                  0#                 0       #          0        
+        1                  1#                 1       #          1########
+        2                  2#                 2       #          2        
+        3                  3#                 3       #          3        
+        4                  4#                 4       #          4        
+        5                  5#                 5       #          5        
+        6                  6#                 6       #          6########
+        7########          7#                 7       #          7        
+ 80(P):  76543210   81(Q):  76543210   82(R):  76543210   83(S):  76543210
+        0                  0                  0                  0        
+        1########          1########          1########          1########
+        2#                 2##                2###               2####    
+        3#                 3##                3###               3####    
+        4#                 4##                4###               4####    
+        5#                 5##                5###               5####    
+        6########          6########          6########          6########
+        7                  7                  7                  7        
+ 84(T):  76543210   85(U):  76543210   86(V):  76543210   87(W):  76543210
+        0                  0                  0                  0        
+        1########          1########          1########          1########
+        2#####             2######            2#######           2########
+        3#####             3######            3#######           3########
+        4#####             4######            4#######           4########
+        5#####             5######            5#######           5########
+        6########          6########          6########          6########
+        7                  7                  7                  7        
+</pre>
+<pre>
+ 88(X):  76543210   89(Y):  76543210   90(Z):  76543210   91([):  76543210
+        0                  0                  0#      #          0    #   
+        1       #          1#                 1 #    #           1    #   
+        2       #          2#                 2  #  #            2    #   
+        3       #          3#                 3   ##             3    #   
+        4       #          4#                 4   ##             4########
+        5       #          5#                 5  #  #            5    #   
+        6       #          6#                 6 #    #           6    #   
+        7                  7                  7#      #          7    #   
+ 92(\):  76543210   93(]):  76543210   94(^):  76543210   95(_):  76543210
+        0   ##             0   ##             0   ##             0########
+        1  ####            1   ##             1  ####            1#      #
+        2## ## ##          2   ##             2## ## ##          2#      #
+        3   ##             3   ##             3   ##             3#      #
+        4   ##             4## ## ##          4## ## ##          4#      #
+        5   ##             5  ####            5  ####            5#      #
+        6   ##             6   ##             6   ##             6#      #
+        7                  7                  7                  7########
+ 96('):  76543210   97(a):  76543210   98(b):  76543210   99(c):  76543210
+        0  ####            0##   #            0 ##               0   #    
+        1 ##  ##           1# # #             1 # #              1   ##   
+        2     ##           2#  #              2 #  #             2   # #  
+        3    ##            3##                3 ###              3#  #  # 
+        4   ##             4# #               4 #  #             4 # #    
+        5                  5#  #              5 # #              5  ##    
+        6   ##             6#                 6 ##               6   #    
+        7                  7                  7                  7        
+100(d):  76543210  101(e):  76543210  102(f):  76543210  103(g):  76543210
+        0#     #           0#     #           0#  # #            0#     # 
+        1##   ##           1##   ##           1# # #             1 #   #  
+        2# # # #           2# # # #           2## #              2  # #   
+        3#  #  #           3#  #  #           3# #               3   #    
+        4# # # #           4#     #           4##                4  # #   
+        5##   ##           5#     #           5#                 5 #   #  
+        6#     #           6#     #           6#                 6#     # 
+        7                  7                  7                  7        
+104(h):  76543210  105(i):  76543210  106(j):  76543210  107(k):  76543210
+        0##    #           0   #              0   #              0   #    
+        1# #   #           1   #              1  ###             1   #    
+        2## #  #           2   #              2 # # #            2   #    
+        3# # # #           3   #              3#  #  #           3  ###   
+        4#  # ##           4   #              4 # # #            4 # # #  
+        5#   # #           5   #              5  ###             5#  #  # 
+        6#    ##           6   #              6   #              6#  #  # 
+        7                  7                  7                  7        
+</pre>
+<pre>
+108(l):  76543210  109(m):  76543210  110(n):  76543210  111(o):  76543210
+        0   #              0##   ##           0#  #              0##   #  
+        1   ##             1# # # #           1 # #              1# # ##  
+        2   # #            2#  #  #           2  ###             2## # #  
+        3   #  #           3# # # #           3   # #            3# # #   
+        4   #              4##   ##           4   #  #           4#  #    
+        5   #              5#     #           5   #              5#       
+        6   #              6#     #           6   #              6#       
+        7                  7                  7                  7        
+112(p):  76543210  113(q):  76543210  114(r):  76543210  115(s):  76543210
+        0#                 0 #                0 ##               0 #      
+        1#                 1 #                1 # #              1 #   #  
+        2#                 2 #                2 #  #             2 #  ##  
+        3#  #              3 ####             3 # #              3 # # #  
+        4# # #             4 #   #            4 ##               4 ##  #  
+        5##   #            5 #   #            5 # #              5 #   #  
+        6#     #           6 #   #            6 #  #             6     #  
+        7                  7                  7                  7        
+116(t):  76543210  117(u):  76543210  118(v):  76543210  119(w):  76543210
+        0   #              0 ##               0   #              0 ##     
+        1  ###             1 # #              1# ### #           1 # #    
+        2 # # #            2 #  #             2 # # #            2 #  #   
+        3#  #  #           3 #   #            3   #              3 # #    
+        4   #              4 #   #            4   #              4 ##     
+        5   #              5 #   #            5   #              5 #      
+        6   #              6 #   #            6   #              6 #      
+        7                  7                  7                  7        
+120(x):  76543210  121(y):  76543210  122(z):  76543210  123({):  76543210
+        0#  #  #           0###               0   #              0###  ###
+        1 # # #            1## #              1  # #             1##    ##
+        2  ###             2# # #             2 #   #            2  #  #  
+        3   #              3#  # #            3  # #             3###  ###
+        4   #              4#  ## #           4   #              4###  ###
+        5   #              5#  # ##           5  # #             5###  ###
+        6   #              6#  #  #           6 #   #            6###  ###
+        7                  7                  7                  7########
+124( ):  76543210  125(}):  76543210  126(~):  76543210
+        0###  ###          0###  ###          0##    ##
+        1###  ###          1##    ##          1#  ##  #
+        2###  ###          2  #  #            2#####  #
+        3###  ###          3###  ###          3####  ##
+        4  #  #            4  #  #            4###  ###
+        5##    ##          5##    ##          5########
+        6###  ###          6###  ###          6###  ###
+        7########          7########          7########
+</pre>
+</section>
+
+<section class="clause-section is-topic" id="remarks">
+<h2 id="h-remarks">Remarks<a class="heading-anchor" href="#remarks" aria-label="Link to Remarks"></a></h2>
+<p>Two different versions of font 3 were supplied by Infocom, which we shall
+   call the Amiga and PC forms (the Atari form is the same as for the PC).  The
+   arrow shape differed slightly and so did the rune alphabet.  Each was an attempt
+   to map the late Anglian ("futhorc") runic alphabet, which has 33
+   characters, onto our Latin alphabet.  The drawings above are from the Amiga
+   set.
+</p>
+<p>Most of the mappings are straightforward (e.g., Latin A maps to Anglian a),
+   except that: Latin C is mapped to Anglian eo; K to "other k" (previously a
+   z sound); Q to Anglian k (the same rune as c); V to ea; X to z and Z to oe. 
+   The PC runes differ as follows: G has an ornamental circle making it more
+   look like "other z"; K maps to Anglian k (or c); Q is an Anglian ea (which
+   resembles the late Anglian q); V is an oe; X is an "other k" and Z is a
+   symbol Infocom seem to have invented themselves.  (Though less well drawn
+   the PC runes arguably have a better sound-mapping.)
+</p>
+<p>The font behaviour of 'Beyond Zork', which does have bit 3 of 'Flags 2'
+   set, is rather complicated and depends on the interpreter number it
+   finds in the header (see <b>S</b> 11).  Specifically:
+</p>
+<ol>
+  <li>(a Digital terminal) 'BZ' asks whether the player has a VT220
+      terminal (a model capable of character graphics) and uses font 3 if
+      and only if the answer is yes.  (An in-house convenience:
+      Infocom used a Digital mainframe.)
+  </li>
+  <li>(Apple IIe) 'BZ' never uses font 3.</li>
+  <li>(Macintosh) 'BZ' always uses font 3.</li>
+  <li>(Amiga) 'BZ' always uses font 3.</li>
+  <li>(Atari ST) 'BZ' always uses font 3.</li>
+  <li>(MSDOS) 'BZ' uses font 3 if it finds bit 3 of 'Flags 2' set
+      (indicating that a graphical screen mode is in use) and otherwise
+      uses IBM PC graphics codes.  These need to be converted back into
+      ASCII.  The conversion process used by the <strong>Zip</strong> interpreter is
+      as follows:
+<pre>
+ 179   becomes   a vertical stroke (ASCII 124)
+ 186             a hash (ASCII 35)
+ 196             a minus sign (ASCII 45)
+ 205             an equals sign (ASCII 61)
+ all others in the range 179 to 218 become a plus sign (ASCII 43)
+</pre>
+  </li>
+
+  <li>(Commodore 128) 'BZ' always uses font 3.</li>
+  <li>(Commodore 64) 'BZ' always uses font 3.</li>
+  <li>(Apple IIc) 'BZ' uses Apple character graphics (possibly
+      "Mousetext"), but has problems when the units used are not $1\times 1$.
+  </li>
+  <li>(Apple IIgs) 'BZ' always uses font 3.</li>
+  <li>(Tandy) 'BZ' crashes on the public interpreters.</li>
+</ol>
+<p>A similarly tangled process is used in 'Journey'.  It is
+   obviously highly unsatisfactory to have to make the decision in
+   the above way, which is why <strong>set_font</strong> is now required to return
+   0 indicating non-availability of a font.
+</p>
+<p>Stefan Jokisch suggests that Infocom originally intended the
+   graphics bit as a way to develop Version 5 to allow a graphical
+   version in parallel with the normal text one.  For instance, when
+   the Infocom MSDOS interpreter starts up, it looks at the graphics
+   flag and:
+</p>
+<p>if clear, it sets the font width/height to 1/1 (so that screen
+   units are character positions);
+</p>
+<p>if set, it enters MGCA, a graphical screen mode and sets the font
+   width/height to 8/8 (so that screen units are pixels).
+</p>
+<p>The "COLOR" command in 'BZ' (typed at the keyboard) also behaves
+   differently depending on the interpreter number, which is legal behaviour
+   and has no impact on the specification.
+</p>
+</section>
+</main>
+<nav class="pager" aria-label="Previous and next section"><a class="pager-link pager-prev" rel="prev" href="sect15.html"><span class="pager-kind">Previous</span><span class="pager-title">15. Dictionary of opcodes</span></a><a class="pager-link pager-next" rel="next" href="appa.html"><span class="pager-kind">Next</span><span class="pager-title">A. Error messages and debugging</span></a></nav>
+<footer class="site-footer">
+  <p>The Z-Machine Standards Document, version 1.1 &mdash; 24 February 2014.
+     Canonical copy at <a href="https://www.inform-fiction.org/zmachine/standards/current/">inform-fiction.org</a>.</p>
+</footer>
+</div>
+</div>
+<script src="assets/nav.js"></script>
+<script src="assets/zspec.js" defer></script>
+</body>
+</html>

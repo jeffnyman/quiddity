@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>6. The game state: storage and routine calls — The Z-Machine Standards Document 1.1</title>
+<meta name="description" content="6. The game state: storage and routine calls — section of the Z-Machine Standards Document, version 1.1.">
+<link rel="canonical" href="https://jeffnyman.github.io/z-machine-standard/sect06.html">
+<meta name="theme-color" content="#0d63c9">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="The Z-Machine Standards Document 1.1">
+<meta property="og:title" content="6. The game state: storage and routine calls — The Z-Machine Standards Document 1.1">
+<meta property="og:description" content="6. The game state: storage and routine calls — section of the Z-Machine Standards Document, version 1.1.">
+<meta property="og:url" content="https://jeffnyman.github.io/z-machine-standard/sect06.html">
+<link rel="stylesheet" href="assets/zspec.css">
+<script>/* Set the theme before first paint to avoid a flash. */
+(function(){try{var t=localStorage.getItem('zspec-theme');if(t==='dark'||t==='light')document.documentElement.dataset.theme=t;}catch(e){}})();
+</script>
+</head>
+<body>
+<a class="skip-link" href="#content">Skip to content</a>
+<header class="topbar">
+  <button class="icon-button nav-toggle" type="button" aria-expanded="false" aria-controls="sidebar" aria-label="Show contents">
+    <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 5h14M3 10h14M3 15h14"/></svg>
+  </button>
+  <a class="brand" href="index.html"><span class="brand-name">Z-Machine Standard</span><span class="brand-version">1.1</span></a>
+  <div class="topbar-actions">
+    <button class="search-trigger" type="button" data-search-open>
+      <svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="9" cy="9" r="6"/><path d="M13.5 13.5 18 18"/></svg>
+      <span>Search</span><kbd>/</kbd>
+    </button>
+    <button class="icon-button theme-toggle" type="button" aria-label="Switch colour theme">
+      <svg class="icon-sun" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="4"/><path d="M10 1v2M10 17v2M1 10h2M17 10h2M3.9 3.9l1.4 1.4M14.7 14.7l1.4 1.4M16.1 3.9l-1.4 1.4M5.3 14.7l-1.4 1.4"/></svg>
+      <svg class="icon-moon" viewBox="0 0 20 20" aria-hidden="true"><path d="M17 12.3A7.5 7.5 0 0 1 7.7 3a7.5 7.5 0 1 0 9.3 9.3z"/></svg>
+    </button>
+  </div>
+</header>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Specification contents">
+<!--nav:start-->
+<div class="nav-inner">
+<a class="nav-home" href="index.html">Contents</a>
+<ul class="nav-list">
+<li><a href="preface.html"><span class="nav-label">Preface</span></a></li>
+<li><a href="overview.html"><span class="nav-label">Overview</span></a></li>
+</ul>
+<h2 class="nav-group">Fundamentals</h2>
+<ul class="nav-list">
+<li><a href="sect01.html"><span class="nav-num">1</span><span class="nav-label">The memory map</span></a></li>
+<li><a href="sect02.html"><span class="nav-num">2</span><span class="nav-label">Numbers and arithmetic</span></a></li>
+<li><a href="sect03.html"><span class="nav-num">3</span><span class="nav-label">Text and characters</span></a></li>
+<li><a href="sect04.html"><span class="nav-num">4</span><span class="nav-label">Instruction encoding</span></a></li>
+<li><a href="sect05.html"><span class="nav-num">5</span><span class="nav-label">Routine encoding</span></a></li>
+<li class="is-current"><a href="sect06.html" aria-current="page"><span class="nav-num">6</span><span class="nav-label">The game state</span></a></li>
+</ul>
+<h2 class="nav-group">Input/Output</h2>
+<ul class="nav-list">
+<li><a href="sect07.html"><span class="nav-num">7</span><span class="nav-label">Output streams</span></a></li>
+<li><a href="sect08.html"><span class="nav-num">8</span><span class="nav-label">The screen model</span></a></li>
+<li><a href="sect09.html"><span class="nav-num">9</span><span class="nav-label">Sound effects</span></a></li>
+<li><a href="sect10.html"><span class="nav-num">10</span><span class="nav-label">Input streams</span></a></li>
+</ul>
+<h2 class="nav-group">Tables</h2>
+<ul class="nav-list">
+<li><a href="sect11.html"><span class="nav-num">11</span><span class="nav-label">The header</span></a></li>
+<li><a href="sect12.html"><span class="nav-num">12</span><span class="nav-label">The object table</span></a></li>
+<li><a href="sect13.html"><span class="nav-num">13</span><span class="nav-label">Dictionary and lexing</span></a></li>
+</ul>
+<h2 class="nav-group">Instruction Set</h2>
+<ul class="nav-list">
+<li><a href="sect14.html"><span class="nav-num">14</span><span class="nav-label">Table of opcodes</span></a></li>
+<li><a href="sect15.html"><span class="nav-num">15</span><span class="nav-label">Dictionary of opcodes</span></a></li>
+</ul>
+<h2 class="nav-group">An Unusual Font</h2>
+<ul class="nav-list">
+<li><a href="sect16.html"><span class="nav-num">16</span><span class="nav-label">Font 3</span></a></li>
+</ul>
+<h2 class="nav-group">Appendices</h2>
+<ul class="nav-list">
+<li><a href="appa.html"><span class="nav-num">A</span><span class="nav-label">Error messages and debugging</span></a></li>
+<li><a href="appb.html"><span class="nav-num">B</span><span class="nav-label">Header conventions</span></a></li>
+<li><a href="appc.html"><span class="nav-num">C</span><span class="nav-label">Resources available</span></a></li>
+<li><a href="appd.html"><span class="nav-num">D</span><span class="nav-label">History</span></a></li>
+<li><a href="appe.html"><span class="nav-num">E</span><span class="nav-label">Statistics</span></a></li>
+<li><a href="appf.html"><span class="nav-num">F</span><span class="nav-label">Canonical story files</span></a></li>
+</ul>
+<h2 class="nav-group">Related standards</h2>
+<p class="nav-note">Mirrored in this repository</p>
+<ul class="nav-list">
+<li><a href="quetzal.html"><span class="nav-label">Quetzal</span></a></li>
+<li><a href="blorb.html"><span class="nav-label">Blorb</span></a></li>
+</ul>
+</div>
+<!--nav:end-->
+</nav>
+<div class="main-column">
+<main class="content" id="content">
+<div class="page-head">
+<img class="page-icon" src="images/icon06.gif" alt="" width="82" height="86" loading="lazy" decoding="async">
+<h1>6. The game state: storage and routine calls</h1>
+</div>
+<section class="clause-section is-clause" id="6.1">
+<p><a class="clause-num" href="#6.1">6.1</a><button class="copy-link" type="button" data-anchor="6.1" aria-label="Copy link to 6.1" title="Copy link"></button> The "state of play" is defined as the following: the contents
+   of dynamic memory; the contents of the stack; the value of the program
+   counter (PC), and the "routine call state" (that is, the chain of routines
+   which have called each other in sequence, and the values of their local
+   variables).  Note that the routine call state, the stack and the PC
+   must be stored outside the Z-machine memory map, in the interpreter's
+   private memory.
+</p>
+<aside class="editor-note" data-generated>
+<p class="note-head">
+<span class="note-tag">Editor&rsquo;s note</span>
+<span class="note-title">Why the stack and call state live outside the memory map</span>
+</p>
+<p>The last sentence is a design constraint, not an implementation hint. Dynamic
+   memory is the only part of the state a story file can address directly, and
+   the stack and call chain are deliberately kept out of it &mdash; a game
+   cannot read its own return addresses, corrupt its own frame, or compute a
+   pointer into the call stack.</p>
+<p>It also means "save the state of play" is not "dump memory". Four separate
+   things have to be captured: dynamic memory, the stack, the program counter,
+   and the call chain with every routine's locals.
+   <a href="quetzal.html">Quetzal</a> exists because that is more than one
+   obvious format can express.</p>
+<p class="note-by">&mdash; Jeff Nyman</p>
+</aside>
+</section>
+
+<section class="clause-section is-clause" id="6.1.1">
+<p><a class="clause-num" href="#6.1.1">6.1.1</a><button class="copy-link" type="button" data-anchor="6.1.1" aria-label="Copy link to 6.1.1" title="Copy link"></button>  The entire state of play must be stored when the game is saved.</p>
+</section>
+
+<section class="clause-section is-clause" id="6.1.1.1">
+<p><a class="clause-num" href="#6.1.1.1">6.1.1.1</a><button class="copy-link" type="button" data-anchor="6.1.1.1" aria-label="Copy link to 6.1.1.1" title="Copy link"></button>  The format of a saved game file is not specified.</p>
+</section>
+
+<section class="clause-section is-clause" id="6.1.1.2">
+<p><a class="clause-num" href="#6.1.1.2">6.1.1.2</a><button class="copy-link" type="button" data-anchor="6.1.1.2" aria-label="Copy link to 6.1.1.2" title="Copy link"></button> An internal saved game for "undo" purposes (if there is one) is
+   not part of the state of play.  This is important: if a saved game file also
+   contained the internal saved game at the time of saving, it would be
+   impossible to undo the act of restoration.  It also prevents internal
+   saved games from growing larger and larger as they include their
+   predecessors.
+</p>
+</section>
+
+<section class="clause-section is-clause" id="6.1.1.3">
+<p><a class="clause-num" href="#6.1.1.3">6.1.1.3</a><button class="copy-link" type="button" data-anchor="6.1.1.3" aria-label="Copy link to 6.1.1.3" title="Copy link"></button> It is illegal to save the game (either with <a href="sect15.html#save">
+   <strong>save</strong></a> or <a href="sect15.html#save_undo">
+   <strong>save_undo</strong></a>) during an "interrupt routine"
+   (one coming about through timed input, sound effect termination or
+   newline interrupts).  Therefore saved games need not store information
+   capable of restoring such a position.
+</p>
+</section>
+
+<section class="clause-section is-clause" id="6.1.2">
+<p><a class="clause-num" href="#6.1.2">6.1.2</a><button class="copy-link" type="button" data-anchor="6.1.2" aria-label="Copy link to 6.1.2" title="Copy link"></button> On a "restore" or "undo" (which restores a game saved into
+   internal memory), the entire state of play is written back except that
+   'Flags 2' in the header is preserved.  (This information includes whether
+   the game is being transcribed to printer and whether a fixed-pitch
+   font is being used.)
+</p>
+<aside class="editor-note" data-generated>
+<p class="note-head">
+<span class="note-tag">Editor&rsquo;s note</span>
+<span class="note-title">Flags 2 survives a restore, and that is deliberate</span>
+</p>
+<p>Restoring overwrites everything <em>except</em> Flags&nbsp;2. The reason is
+   that its bits describe the state of the player's session rather than the
+   story's: whether a transcript is being written, whether a fixed-pitch font is
+   in force.</p>
+<p>Those belong to the person playing now, not to whoever saved the file
+   possibly on another machine months ago. An interpreter that restores Flags 2
+   along with everything else will silently switch the player's transcript on or
+   off. The same applies to "restart" (<a href="#6.1.3">&#167;6.1.3</a>), and
+   the Rst-marked header fields in
+   <a href="sect11.html">&#167;11</a> must be re-initialised too.</p>
+<p class="note-by">&mdash; Jeff Nyman</p>
+</aside>
+</section>
+
+<section class="clause-section is-clause" id="6.1.2.1">
+<p><a class="clause-num" href="#6.1.2.1">6.1.2.1</a><button class="copy-link" type="button" data-anchor="6.1.2.1" aria-label="Copy link to 6.1.2.1" title="Copy link"></button> Before a "restore", an interpreter should check that the
+   file to be used has been saved from the same game currently being played.
+   (See remark below.)
+</p>
+</section>
+
+<section class="clause-section is-clause" id="6.1.2.2">
+<p><a class="clause-num" href="#6.1.2.2">6.1.2.2</a><button class="copy-link" type="button" data-anchor="6.1.2.2" aria-label="Copy link to 6.1.2.2" title="Copy link"></button> After a "restore" or "undo", an interpreter should reset
+   the header values marked <strong>Rst</strong> in the header table of 
+   <a href="sect11.html"><strong>§</strong> 11</a>.  (It should
+   not be assumed that the game was saved by the same interpreter.)
+</p>
+</section>
+
+<section class="clause-section is-clause" id="6.1.3">
+<p><a class="clause-num" href="#6.1.3">6.1.3</a><button class="copy-link" type="button" data-anchor="6.1.3" aria-label="Copy link to 6.1.3" title="Copy link"></button> A "restart" is similar: the entire state is restored from the
+   original story file, and the stack is emptied; but 'Flags 2' is
+   preserved; and the interpreter should reset the <strong>Rst</strong> parts of the header.
+</p>
+</section>
+
+<section class="clause-section is-clause" id="6.1.4">
+<p><a class="clause-num" href="#6.1.4">6.1.4</a><button class="copy-link" type="button" data-anchor="6.1.4" aria-label="Copy link to 6.1.4" title="Copy link"></button> In Versions 5 and later, an interpreter unable to save the game
+   state into internal memory (for "undo" purposes) must clear bit 4 of
+   'Flags 2' in the header.
+</p>
+</section>
+
+<section class="clause-section is-clause" id="6.2">
+<p><a class="clause-num" href="#6.2">6.2</a><button class="copy-link" type="button" data-anchor="6.2" aria-label="Copy link to 6.2" title="Copy link"></button> Global variables (variable numbers <strong>$10</strong> to <strong>$ff</strong>) are stored
+   in a table in the Z-machine's dynamic memory, at a byte address given in
+   word 6 of the header.  The table consists of 240 2-byte words and the
+   initial values of the global variables are the values initially contained in
+   the table.  (It is legal for a program to alter the table's contents
+   directly in play, though not for it to change the table's address.)
+</p>
+</section>
+
+<section class="clause-section is-clause" id="6.3">
+<p><a class="clause-num" href="#6.3">6.3</a><button class="copy-link" type="button" data-anchor="6.3" aria-label="Copy link to 6.3" title="Copy link"></button> Writing to the stack pointer (variable number <strong>$00</strong>) pushes a
+   value onto the stack; reading from it pulls a value off.  Stack entries
+   are 2-byte words as usual.
+</p>
+</section>
+
+<section class="clause-section is-clause" id="6.3.1">
+<p><a class="clause-num" href="#6.3.1">6.3.1</a><button class="copy-link" type="button" data-anchor="6.3.1" aria-label="Copy link to 6.3.1" title="Copy link"></button> The stack is considered as empty at the start of each routine:
+   it is illegal to pull values from it unless values have first been pushed
+   on.
+</p>
+<aside class="editor-note" data-generated>
+<p class="note-head">
+<span class="note-tag">Editor&rsquo;s note</span>
+<span class="note-title">Each routine gets its own view of the stack</span>
+</p>
+<p>This clause and <a href="#6.3.2">&#167;6.3.2</a> together mean the stack is
+   not one flat pile that any routine may rummage through. A routine starts
+   seeing an empty stack and cannot reach past the point where its own frame
+   began, even though the caller's values are physically below.</p>
+<p>So an over-enthusiastic <code>pull</code> is an <em>error</em>, not a way to
+   read the caller's data, and anything a routine leaves on the stack is
+   discarded when it returns rather than becoming the caller's problem. If your
+   implementation is a single array with one pointer, you need to record the
+   frame base on entry and refuse to pop below it.</p>
+<p class="note-by">&mdash; Jeff Nyman</p>
+</aside>
+</section>
+
+<section class="clause-section is-clause" id="6.3.2">
+<p><a class="clause-num" href="#6.3.2">6.3.2</a><button class="copy-link" type="button" data-anchor="6.3.2" aria-label="Copy link to 6.3.2" title="Copy link"></button> The stack is left empty at the end of each routine: when a
+   return occurs, any values pushed during the routine are thrown away.
+</p>
+</section>
+
+<section class="clause-section is-clause" id="6.3.3">
+<p><a class="clause-num" href="#6.3.3">6.3.3</a><button class="copy-link" type="button" data-anchor="6.3.3" aria-label="Copy link to 6.3.3" title="Copy link"></button> The absolute minimum standard for stack size is defined as:</p>
+<p>let the 'usage' of a routine call be 4 plus the number of local
+   variables it has.  During a game the total of the usages for each
+   routine in the recursive chain of routines being called, plus the
+   game's own stack usage, can be assumed to never reach 1024.
+</p>
+<p>However, more recent games have required a much larger stack
+   size than this allows for. It is advised that interpreters allow for these games
+   by having a larger stack size if at all possible.
+</p>
+<p>Two examples of modern interpreters with increased stack size are 
+   <strong>Windows Frotz</strong>, with 32768,
+   and <strong>nfrotz</strong> with 61440.
+</p>
+</section>
+
+<section class="clause-section is-clause" id="6.3.4">
+<p><a class="clause-num" href="#6.3.4">6.3.4</a><button class="copy-link" type="button" data-anchor="6.3.4" aria-label="Copy link to 6.3.4" title="Copy link"></button> In the seven opcodes that take indirect variable references 
+   <a href="sect15.html#inc">(<strong>inc</strong></a>,
+   <a href="sect15.html#dec"><strong>dec</strong></a>, 
+   <a href="sect15.html#inc_chk"><strong>inc_chk</strong></a>, 
+   <a href="sect15.html#dec_chk"><strong>dec_chk</strong></a>,
+   <a href="sect15.html#load"><strong>load</strong></a>, 
+   <a href="sect15.html#store"><strong>store</strong></a>, 
+   <a href="sect15.html#pull"><strong>pull</strong>)</a>, 
+   an indirect reference to the stack pointer does not push or pull the top 
+   item of the stack - it is read or written in place.
+</p>
+<aside class="editor-note" data-generated>
+<p class="note-head">
+<span class="note-tag">Editor&rsquo;s note</span>
+<span class="note-title">The subtlest rule in the instruction set</span>
+</p>
+<p>Everywhere else, variable <code>$00</code> means "push" when written and
+   "pop" when read (<a href="#6.3">&#167;6.3</a>). For these seven opcodes it
+   does not. They take a variable <em>number</em> as an operand &mdash; a
+   reference rather than a value (<a href="sect04.html#4.2.3">&#167;4.2.3</a>)
+   &mdash; and when that number is 0 the top of the stack is read or written
+   <strong>in place</strong>, leaving the depth unchanged.</p>
+<pre>@inc sp     top of stack += 1, depth unchanged
+@load sp    reads the top WITHOUT removing it</pre>
+<p>Treat those as an ordinary pop-modify-push and the depth still comes out
+   right, so simple cases appear to work. The divergence only shows once the
+   value underneath matters, by which point execution is far away from the
+   instruction that caused it. This is worth writing a test for rather than
+   reasoning about.</p>
+<p class="note-by">&mdash; Jeff Nyman</p>
+</aside>
+</section>
+
+<section class="clause-section is-clause" id="6.4">
+<p><a class="clause-num" href="#6.4">6.4</a><button class="copy-link" type="button" data-anchor="6.4" aria-label="Copy link to 6.4" title="Copy link"></button> Routine calls occur in the following circumstances: when one
+   of the <strong>call...</strong> opcodes is executed; in Versions 4 and later, when
+   timed keyboard input is being monitored; in Versions 5 and later,
+   when a sound effect finishes; in Version 6, when the game begins
+   (to call the "main" routine); in Version 6, when a "newline
+   interrupt" occurs.
+</p>
+</section>
+
+<section class="clause-section is-clause" id="6.4.1">
+<p><a class="clause-num" href="#6.4.1">6.4.1</a><button class="copy-link" type="button" data-anchor="6.4.1" aria-label="Copy link to 6.4.1" title="Copy link"></button> A routine call may have any number of arguments, from 0 to
+   3 (in Versions 1 to 3) or 0 to 7 (Versions 4 and later).  All
+   routines return a value (though sometimes this value is thrown away
+   afterward: for example by opcodes in the form <strong>call_vn*</strong>).
+</p>
+</section>
+
+<section class="clause-section is-clause" id="6.4.2">
+<p><a class="clause-num" href="#6.4.2">6.4.2</a><button class="copy-link" type="button" data-anchor="6.4.2" aria-label="Copy link to 6.4.2" title="Copy link"></button> Routine calls preserve local variables and the stack
+   (except when the return value is stored in a local variable or onto
+   the top of the stack).
+</p>
+</section>
+
+<section class="clause-section is-clause" id="6.4.3">
+<p><a class="clause-num" href="#6.4.3">6.4.3</a><button class="copy-link" type="button" data-anchor="6.4.3" aria-label="Copy link to 6.4.3" title="Copy link"></button> A routine call to packed address 0 is legal: it does nothing
+   and returns false (0).  Otherwise it is illegal to call a packed
+   address where no routine is present.
+</p>
+<aside class="editor-note" data-generated>
+<p class="note-head">
+<span class="note-tag">Editor&rsquo;s note</span>
+<span class="note-title">Calling address 0 is legal and does nothing</span>
+</p>
+<p>Not an error case to guard against &mdash; a feature to implement. A call to
+   packed address 0 returns false immediately without executing anything, which
+   lets a game store "no routine here" in a property or array and call it
+   unconditionally rather than testing first.</p>
+<p>Inform relies on this, so an interpreter that faults on a call to 0 will fail
+   on ordinary games. Note the asymmetry: <em>only</em> 0 is special; any other
+   packed address with no routine at it is illegal.</p>
+<p class="note-by">&mdash; Jeff Nyman</p>
+</aside>
+</section>
+
+<section class="clause-section is-clause" id="6.4.4">
+<p><a class="clause-num" href="#6.4.4">6.4.4</a><button class="copy-link" type="button" data-anchor="6.4.4" aria-label="Copy link to 6.4.4" title="Copy link"></button> When a routine is called, its local variables are created
+   with initial values taken from the routine header (Versions 1 to
+   4) or with initial value 0 (Versions 5 and later).  Next, the
+   arguments are written into the local variables (argument 1 into
+   local 1 and so on).
+</p>
+<aside class="editor-note" data-generated>
+<p class="note-head">
+<span class="note-tag">Editor&rsquo;s note</span>
+<span class="note-title">This version difference moves the first instruction</span>
+</p>
+<p>The consequence is bigger than the initial values. Because Versions 1 to 4
+   store those values in the routine header, the header's <em>length</em>
+   differs by version (<a href="sect05.html#5.2.1">&#167;5.2.1</a>):</p>
+<pre>Versions 1-4   1 byte count + 2 bytes per local
+Versions 5+    1 byte count, and nothing else</pre>
+<p>A routine with 5 locals therefore begins executing 11 bytes in under Version
+   4 and 1 byte in under Version 5. Get it wrong and the interpreter starts
+   executing initial values as though they were opcodes, which fails
+   immediately but with an error pointing nowhere near the real cause.</p>
+<p>Note also the order in this clause: locals are initialised <em>first</em>,
+   then arguments are written over the top of them. So an argument that is
+   supplied always wins, and a default from the header only survives where no
+   argument was passed.</p>
+<p class="note-by">&mdash; Jeff Nyman</p>
+</aside>
+</section>
+
+<section class="clause-section is-clause" id="6.4.4.1">
+<p><a class="clause-num" href="#6.4.4.1">6.4.4.1</a><button class="copy-link" type="button" data-anchor="6.4.4.1" aria-label="Copy link to 6.4.4.1" title="Copy link"></button> It is legal for there to be more arguments than local
+   variables (any spare arguments are thrown away) or for there to
+   be fewer.
+</p>
+<aside class="editor-note" data-generated>
+<p class="note-head">
+<span class="note-tag">Editor&rsquo;s note</span>
+<span class="note-title">Argument and local counts need not agree</span>
+</p>
+<p>Both mismatches are legal and neither is an error. Extra arguments are
+   discarded; missing ones leave the local at whatever
+   <a href="#6.4.4">&#167;6.4.4</a> initialised it to &mdash; the header default
+   under Versions 1 to 4, or 0 from Version 5.</p>
+<p>This is how optional arguments work, and it is why
+   <a href="sect15.html#check_arg_count">check_arg_count</a> exists: reading the
+   local cannot tell you whether the caller supplied it or you are looking at
+   the default.</p>
+<p class="note-by">&mdash; Jeff Nyman</p>
+</aside>
+</section>
+
+<section class="clause-section is-clause" id="6.4.5">
+<p><a class="clause-num" href="#6.4.5">6.4.5</a><button class="copy-link" type="button" data-anchor="6.4.5" aria-label="Copy link to 6.4.5" title="Copy link"></button> The return value of a routine can be any Z-machine number.
+   Returning 'false' means returning 0; returning 'true' means
+   returning 1.
+</p>
+</section>
+
+<section class="clause-section is-clause" id="6.5">
+<p><a class="clause-num" href="#6.5">6.5</a><button class="copy-link" type="button" data-anchor="6.5" aria-label="Copy link to 6.5" title="Copy link"></button> A "stack frame" is an index to the routine call state
+   (that is, the call-stack of return addresses from routines currently
+   running, and values of local variables within them).  This index
+   is a Z-machine number.  The interpreter must be able to produce the
+   current value and to set a value further down the call-stack than
+   the current one, effectively throwing away its recent history
+   (see <a href="sect15.html#catch"><strong>catch</strong></a> and 
+   <a href="sect15.html#throw"><strong>throw</strong></a>).
+</p>
+</section>
+
+<section class="clause-section is-clause" id="6.6">
+<p><a class="clause-num" href="#6.6">6.6</a><button class="copy-link" type="button" data-anchor="6.6" aria-label="Copy link to 6.6" title="Copy link"></button> In Version 6, the Z-machine understands a third kind of stack: a
+   "user stack", which is a table of words in dynamic memory.  The first word
+   in this table always holds the number of spare slots on the stack (so the
+   initial value is the capacity of the stack).  The Z-machine makes no
+   check on stack under-flow (i.e., pulling more values than were pushed)
+   which would over-run the length of the table if the program allowed it
+   to happen.
+</p>
+<aside class="editor-note" data-generated>
+<p class="note-head">
+<span class="note-tag">Editor&rsquo;s note</span>
+<span class="note-title">A user stack counts space left, not items used</span>
+</p>
+<p>Easy to read past: the first word holds the number of <strong>spare
+   slots</strong>, so it starts at the stack's capacity and counts
+   <em>down</em> as values are pushed. It is not a count of items and not a
+   pointer.</p>
+<p>A table of 10 words therefore begins holding 9, with 9 usable slots after the
+   count itself. And the clause is explicit that nothing checks under-flow:
+   pulling more than was pushed will walk the count back up past its starting
+   value and write over whatever follows the table in dynamic memory.</p>
+<p class="note-by">&mdash; Jeff Nyman</p>
+</aside>
+</section>
+
+<section class="clause-section is-topic" id="remarks">
+<h2 id="h-remarks">Remarks<a class="heading-anchor" href="#remarks" aria-label="Link to Remarks"></a></h2>
+<p>Some interpreters store the whole of dynamic memory to disc as part of their
+   saved game files, which can make them as much as 45K or so long.  A player
+   making a serious attack on a game may end up wasting a whole megabyte, more
+   than convenient without a hard disc.  A technique invented by Bryan
+   Scattergood, taken up by most modern interpreters, greatly reduces file size
+   by only saving bytes of dynamic memory which differ from the initial
+   state of the game.
+</p>
+<p>It is unspecified how an interpreter should decide whether a saved game file
+   belongs to the game currently being played.  It is normal to insist that the
+   release numbers, serial codes and checksums all match.  The <strong>Pinfocom</strong>
+   interpreter deliberately checks only the release number, so that saved games
+   can be exchanged between different editions of 'Seastalker' (presumably
+   compiled to handle the sonarscope differently).
+</p>
+<p>These issues are taken up in great detail in Martin Frost's 
+   <a href="quetzal.html"><strong>Quetzal</strong></a>
+   standard for saved game files, created to allow different interpreters
+   to exchange saved games.  This Standard doesn't require compliance with
+   <strong>Quetzal</strong>, but interpreter writers are urged to consider it: it can only
+   help authors if players can send them saved games where bugs seem to
+   have appeared.
+</p>
+<p>Given the existence of <strong>Quetzal</strong>, it is quite
+   possible that after loading, the game may be running on a different
+   interpreter to that on which the game started. As a result, it is strongly
+   advisable for games to recheck any interpreter capabilities (eg Standard version,
+   unicode support, etc) after loading.
+</p>
+<p>The stack is stored in the interpreter's own memory, not anywhere in the
+   Z-machine.  The game program has no direct access to the stack memory or
+   stack pointer; on some implementations the game's main stack is also used to
+   store the routine call state (i.e. the game stack and the call-stack are the
+   same) but this need not be true.
+</p>
+<p>The stack size specification guarantees in particular that if the game
+   itself never uses more than 32 stack entries at once then it can have
+   a recursive depth of at least 90 routine calls.  The author believes
+   that old Infocom games will all run with a stack size of 512 words.
+</p>
+<p>Note that the "state of play" does not include numerous input/output
+   settings (the current window, cursor position, splitness or otherwise,
+   which streams are selected, etc.): neither does it include the state
+   of the random-number generator.  (Games with elaborate status lines
+   must redraw them after a restore has taken place.)
+</p>
+<p><strong>Zip</strong> provides "undo" but most versions of the <strong>ITF</strong>
+   interpreter do not (and <strong>save_undo</strong> returns 0, unfortunately).
+   This is probably its greatest
+   failing.  Some Infocom-written interpreters will only provide "undo" to a
+   game which has bit 4 of 'Flags 2' set: but Inform 5.5 doesn't set this bit,
+   so modern interpreters should be more generous.
+</p>
+</section>
+</main>
+<nav class="pager" aria-label="Previous and next section"><a class="pager-link pager-prev" rel="prev" href="sect05.html"><span class="pager-kind">Previous</span><span class="pager-title">5. Routine encoding</span></a><a class="pager-link pager-next" rel="next" href="sect07.html"><span class="pager-kind">Next</span><span class="pager-title">7. Output streams</span></a></nav>
+<footer class="site-footer">
+  <p>The Z-Machine Standards Document, version 1.1 &mdash; 24 February 2014.
+     Canonical copy at <a href="https://www.inform-fiction.org/zmachine/standards/current/">inform-fiction.org</a>.</p>
+</footer>
+</div>
+<aside class="outline" id="outline" aria-label="On this page" data-generated>
+<h2>On this page</h2>
+<ol>
+<li class="depth-2"><a href="#6.1" title="The "state of play" is defined as the following: the contents of dynamic memory; the contents of the stack; the value of">6.1</a></li>
+<li class="depth-3"><a href="#6.1.1" title="The entire state of play must be stored when the game is saved.">6.1.1</a></li>
+<li class="depth-4"><a href="#6.1.1.1" title="The format of a saved game file is not specified.">6.1.1.1</a></li>
+<li class="depth-4"><a href="#6.1.1.2" title="An internal saved game for "undo" purposes (if there is one) is not part of the state of play. This is important: if a s">6.1.1.2</a></li>
+<li class="depth-4"><a href="#6.1.1.3" title="It is illegal to save the game (either with save or save_undo) during an "interrupt routine" (one coming about through t">6.1.1.3</a></li>
+<li class="depth-3"><a href="#6.1.2" title="On a "restore" or "undo" (which restores a game saved into internal memory), the entire state of play is written back ex">6.1.2</a></li>
+<li class="depth-4"><a href="#6.1.2.1" title="Before a "restore", an interpreter should check that the file to be used has been saved from the same game currently bei">6.1.2.1</a></li>
+<li class="depth-4"><a href="#6.1.2.2" title="After a "restore" or "undo", an interpreter should reset the header values marked Rst in the header table of § 11. (It s">6.1.2.2</a></li>
+<li class="depth-3"><a href="#6.1.3" title="A "restart" is similar: the entire state is restored from the original story file, and the stack is emptied; but 'Flags ">6.1.3</a></li>
+<li class="depth-3"><a href="#6.1.4" title="In Versions 5 and later, an interpreter unable to save the game state into internal memory (for "undo" purposes) must cl">6.1.4</a></li>
+<li class="depth-2"><a href="#6.2" title="Global variables (variable numbers $10 to $ff) are stored in a table in the Z-machine's dynamic memory, at a byte addres">6.2</a></li>
+<li class="depth-2"><a href="#6.3" title="Writing to the stack pointer (variable number $00) pushes a value onto the stack; reading from it pulls a value off. Sta">6.3</a></li>
+<li class="depth-3"><a href="#6.3.1" title="The stack is considered as empty at the start of each routine: it is illegal to pull values from it unless values have f">6.3.1</a></li>
+<li class="depth-3"><a href="#6.3.2" title="The stack is left empty at the end of each routine: when a return occurs, any values pushed during the routine are throw">6.3.2</a></li>
+<li class="depth-3"><a href="#6.3.3" title="The absolute minimum standard for stack size is defined as:let the 'usage' of a routine call be 4 plus the number of loc">6.3.3</a></li>
+<li class="depth-3"><a href="#6.3.4" title="In the seven opcodes that take indirect variable references (inc, dec, inc_chk, dec_chk, load, store, pull), an indirect">6.3.4</a></li>
+<li class="depth-2"><a href="#6.4" title="Routine calls occur in the following circumstances: when one of the call... opcodes is executed; in Versions 4 and later">6.4</a></li>
+<li class="depth-3"><a href="#6.4.1" title="A routine call may have any number of arguments, from 0 to 3 (in Versions 1 to 3) or 0 to 7 (Versions 4 and later). All ">6.4.1</a></li>
+<li class="depth-3"><a href="#6.4.2" title="Routine calls preserve local variables and the stack (except when the return value is stored in a local variable or onto">6.4.2</a></li>
+<li class="depth-3"><a href="#6.4.3" title="A routine call to packed address 0 is legal: it does nothing and returns false (0). Otherwise it is illegal to call a pa">6.4.3</a></li>
+<li class="depth-3"><a href="#6.4.4" title="When a routine is called, its local variables are created with initial values taken from the routine header (Versions 1 ">6.4.4</a></li>
+<li class="depth-4"><a href="#6.4.4.1" title="It is legal for there to be more arguments than local variables (any spare arguments are thrown away) or for there to be">6.4.4.1</a></li>
+<li class="depth-3"><a href="#6.4.5" title="The return value of a routine can be any Z-machine number. Returning 'false' means returning 0; returning 'true' means r">6.4.5</a></li>
+<li class="depth-2"><a href="#6.5" title="A "stack frame" is an index to the routine call state (that is, the call-stack of return addresses from routines current">6.5</a></li>
+<li class="depth-2"><a href="#6.6" title="In Version 6, the Z-machine understands a third kind of stack: a "user stack", which is a table of words in dynamic memo">6.6</a></li>
+<li class="depth-1"><a href="#remarks">Remarks</a></li>
+</ol>
+</aside>
+</div>
+<script src="assets/nav.js"></script>
+<script src="assets/zspec.js" defer></script>
+</body>
+</html>

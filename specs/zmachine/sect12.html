@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>12. The object table — The Z-Machine Standards Document 1.1</title>
+<meta name="description" content="12. The object table — section of the Z-Machine Standards Document, version 1.1.">
+<link rel="canonical" href="https://jeffnyman.github.io/z-machine-standard/sect12.html">
+<meta name="theme-color" content="#0d63c9">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="The Z-Machine Standards Document 1.1">
+<meta property="og:title" content="12. The object table — The Z-Machine Standards Document 1.1">
+<meta property="og:description" content="12. The object table — section of the Z-Machine Standards Document, version 1.1.">
+<meta property="og:url" content="https://jeffnyman.github.io/z-machine-standard/sect12.html">
+<link rel="stylesheet" href="assets/zspec.css">
+<script>/* Set the theme before first paint to avoid a flash. */
+(function(){try{var t=localStorage.getItem('zspec-theme');if(t==='dark'||t==='light')document.documentElement.dataset.theme=t;}catch(e){}})();
+</script>
+</head>
+<body>
+<a class="skip-link" href="#content">Skip to content</a>
+<header class="topbar">
+  <button class="icon-button nav-toggle" type="button" aria-expanded="false" aria-controls="sidebar" aria-label="Show contents">
+    <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 5h14M3 10h14M3 15h14"/></svg>
+  </button>
+  <a class="brand" href="index.html"><span class="brand-name">Z-Machine Standard</span><span class="brand-version">1.1</span></a>
+  <div class="topbar-actions">
+    <button class="search-trigger" type="button" data-search-open>
+      <svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="9" cy="9" r="6"/><path d="M13.5 13.5 18 18"/></svg>
+      <span>Search</span><kbd>/</kbd>
+    </button>
+    <button class="icon-button theme-toggle" type="button" aria-label="Switch colour theme">
+      <svg class="icon-sun" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="4"/><path d="M10 1v2M10 17v2M1 10h2M17 10h2M3.9 3.9l1.4 1.4M14.7 14.7l1.4 1.4M16.1 3.9l-1.4 1.4M5.3 14.7l-1.4 1.4"/></svg>
+      <svg class="icon-moon" viewBox="0 0 20 20" aria-hidden="true"><path d="M17 12.3A7.5 7.5 0 0 1 7.7 3a7.5 7.5 0 1 0 9.3 9.3z"/></svg>
+    </button>
+  </div>
+</header>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Specification contents">
+<!--nav:start-->
+<div class="nav-inner">
+<a class="nav-home" href="index.html">Contents</a>
+<ul class="nav-list">
+<li><a href="preface.html"><span class="nav-label">Preface</span></a></li>
+<li><a href="overview.html"><span class="nav-label">Overview</span></a></li>
+</ul>
+<h2 class="nav-group">Fundamentals</h2>
+<ul class="nav-list">
+<li><a href="sect01.html"><span class="nav-num">1</span><span class="nav-label">The memory map</span></a></li>
+<li><a href="sect02.html"><span class="nav-num">2</span><span class="nav-label">Numbers and arithmetic</span></a></li>
+<li><a href="sect03.html"><span class="nav-num">3</span><span class="nav-label">Text and characters</span></a></li>
+<li><a href="sect04.html"><span class="nav-num">4</span><span class="nav-label">Instruction encoding</span></a></li>
+<li><a href="sect05.html"><span class="nav-num">5</span><span class="nav-label">Routine encoding</span></a></li>
+<li><a href="sect06.html"><span class="nav-num">6</span><span class="nav-label">The game state</span></a></li>
+</ul>
+<h2 class="nav-group">Input/Output</h2>
+<ul class="nav-list">
+<li><a href="sect07.html"><span class="nav-num">7</span><span class="nav-label">Output streams</span></a></li>
+<li><a href="sect08.html"><span class="nav-num">8</span><span class="nav-label">The screen model</span></a></li>
+<li><a href="sect09.html"><span class="nav-num">9</span><span class="nav-label">Sound effects</span></a></li>
+<li><a href="sect10.html"><span class="nav-num">10</span><span class="nav-label">Input streams</span></a></li>
+</ul>
+<h2 class="nav-group">Tables</h2>
+<ul class="nav-list">
+<li><a href="sect11.html"><span class="nav-num">11</span><span class="nav-label">The header</span></a></li>
+<li class="is-current"><a href="sect12.html" aria-current="page"><span class="nav-num">12</span><span class="nav-label">The object table</span></a></li>
+<li><a href="sect13.html"><span class="nav-num">13</span><span class="nav-label">Dictionary and lexing</span></a></li>
+</ul>
+<h2 class="nav-group">Instruction Set</h2>
+<ul class="nav-list">
+<li><a href="sect14.html"><span class="nav-num">14</span><span class="nav-label">Table of opcodes</span></a></li>
+<li><a href="sect15.html"><span class="nav-num">15</span><span class="nav-label">Dictionary of opcodes</span></a></li>
+</ul>
+<h2 class="nav-group">An Unusual Font</h2>
+<ul class="nav-list">
+<li><a href="sect16.html"><span class="nav-num">16</span><span class="nav-label">Font 3</span></a></li>
+</ul>
+<h2 class="nav-group">Appendices</h2>
+<ul class="nav-list">
+<li><a href="appa.html"><span class="nav-num">A</span><span class="nav-label">Error messages and debugging</span></a></li>
+<li><a href="appb.html"><span class="nav-num">B</span><span class="nav-label">Header conventions</span></a></li>
+<li><a href="appc.html"><span class="nav-num">C</span><span class="nav-label">Resources available</span></a></li>
+<li><a href="appd.html"><span class="nav-num">D</span><span class="nav-label">History</span></a></li>
+<li><a href="appe.html"><span class="nav-num">E</span><span class="nav-label">Statistics</span></a></li>
+<li><a href="appf.html"><span class="nav-num">F</span><span class="nav-label">Canonical story files</span></a></li>
+</ul>
+<h2 class="nav-group">Related standards</h2>
+<p class="nav-note">Mirrored in this repository</p>
+<ul class="nav-list">
+<li><a href="quetzal.html"><span class="nav-label">Quetzal</span></a></li>
+<li><a href="blorb.html"><span class="nav-label">Blorb</span></a></li>
+</ul>
+</div>
+<!--nav:end-->
+</nav>
+<div class="main-column">
+<main class="content" id="content">
+<div class="page-head">
+<img class="page-icon" src="images/icon12.gif" alt="" width="82" height="86" loading="lazy" decoding="async">
+<h1>12. The object table</h1>
+</div>
+<section class="clause-section is-clause" id="12.1">
+<p><a class="clause-num" href="#12.1">12.1</a><button class="copy-link" type="button" data-anchor="12.1" aria-label="Copy link to 12.1" title="Copy link"></button> The object table is held in dynamic memory and its byte address
+   is stored in the word at <strong>$0a</strong> in the header.  (Recall that objects
+   have flags attached called attributes, numbered from 0 upward, and
+   variables attached called properties, numbered from 1 upward.  An
+   object need not provide every property.)
+</p>
+</section>
+
+<section class="clause-section is-clause" id="12.2">
+<p><a class="clause-num" href="#12.2">12.2</a><button class="copy-link" type="button" data-anchor="12.2" aria-label="Copy link to 12.2" title="Copy link"></button> The table begins with a block known as the property defaults table.
+   This contains 31 words in Versions 1 to 3 and 63 in Versions 4 and later.
+   When the game attempts to read the value of property n for an object
+   which does not provide property n, the n-th entry in this table
+   is the resulting value.
+</p>
+</section>
+
+<section class="clause-section is-clause" id="12.3">
+<p><a class="clause-num" href="#12.3">12.3</a><button class="copy-link" type="button" data-anchor="12.3" aria-label="Copy link to 12.3" title="Copy link"></button> Next is the object tree.  Objects are numbered consecutively from
+   1 upward, with object number 0 being used to mean "nothing" (though
+   there is formally no such object).  The table consists of a list of
+   entries, one for each object.
+</p>
+</section>
+
+<section class="clause-section is-clause" id="12.3.1">
+<p><a class="clause-num" href="#12.3.1">12.3.1</a><button class="copy-link" type="button" data-anchor="12.3.1" aria-label="Copy link to 12.3.1" title="Copy link"></button> In Versions 1 to 3, there are at most 255 objects, each having
+   a 9-byte entry as follows:
+</p>
+<pre>
+   the 32 attribute flags     parent     sibling     child   properties
+   ---32 bits in 4 bytes---   ---3 bytes------------------  ---2 bytes--
+</pre>
+<p><strong>parent</strong>, <strong>sibling</strong> and <strong>child</strong> must all hold valid object numbers.
+   The <strong>properties</strong> pointer is the byte address of the list of
+   properties attached to the object.  Attributes 0 to 31 are flags
+   (at any given time, they are either on (1) or off (0)) and are stored topmost
+   bit first: e.g., attribute 0 is stored in bit 7 of the first byte,
+   attribute 31 is stored in bit 0 of the fourth.
+</p>
+</section>
+
+<section class="clause-section is-clause" id="12.3.2">
+<p><a class="clause-num" href="#12.3.2">12.3.2</a><button class="copy-link" type="button" data-anchor="12.3.2" aria-label="Copy link to 12.3.2" title="Copy link"></button> In Version 4 and later, there are at most 65535 objects, each
+   having a 14-byte entry as follows:
+</p>
+<pre>
+    the 48 attribute flags     parent    sibling   child     properties
+   ---48 bits in 6 bytes---   ---3 words, i.e. 6 bytes----  ---2 bytes--
+</pre>
+</section>
+
+<section class="clause-section is-clause" id="12.4">
+<p><a class="clause-num" href="#12.4">12.4</a><button class="copy-link" type="button" data-anchor="12.4" aria-label="Copy link to 12.4" title="Copy link"></button> Each object has its own property table.  Each of these can be
+   anywhere in dynamic memory (indeed, a game can legally change an object's
+   properties table address in play, provided the new address points to
+   another valid properties table).
+   The header of a property table is as follows:
+</p>
+<pre>
+   text-length     text of short name of object
+  -----byte----   --some even number of bytes---
+</pre>
+<p>where the <strong>text-length</strong>
+   is the number of 2-byte words making up the text,
+   which is stored in the usual format.  (This means that an object's short
+   name is limited to 765 Z-characters.)  After the header, the properties
+   are listed in descending numerical order.  (This order is essential and
+   is not a matter of convention.)
+</p>
+</section>
+
+<section class="clause-section is-clause" id="12.4.1">
+<p><a class="clause-num" href="#12.4.1">12.4.1</a><button class="copy-link" type="button" data-anchor="12.4.1" aria-label="Copy link to 12.4.1" title="Copy link"></button> In Versions 1 to 3, each property is stored as a block</p>
+<pre>
+   size byte     the actual property data
+                ---between 1 and 8 bytes--
+</pre>
+<p>where the <strong>size byte</strong> is arranged as 32 times the number of data bytes
+   minus one, plus the property number. A property list is terminated by
+   a size byte of 0.  (It is otherwise illegal for a size byte to be a
+   multiple of 32.)
+</p>
+</section>
+
+<section class="clause-section is-clause" id="12.4.2">
+<p><a class="clause-num" href="#12.4.2">12.4.2</a><button class="copy-link" type="button" data-anchor="12.4.2" aria-label="Copy link to 12.4.2" title="Copy link"></button> In Versions 4 and later, a property block instead has the form</p>
+<pre>
+   size and number       the actual property data
+  --1 or 2 bytes---     --between 1 and 64 bytes--
+</pre>
+<p>The property number occupies the bottom 6 bits of the first size byte.</p>
+</section>
+
+<section class="clause-section is-clause" id="12.4.2.1">
+<p><a class="clause-num" href="#12.4.2.1">12.4.2.1</a><button class="copy-link" type="button" data-anchor="12.4.2.1" aria-label="Copy link to 12.4.2.1" title="Copy link"></button> If the top bit (bit 7) of the first size byte is set, then there are
+   two size-and-number bytes as follows.  In the first byte, bits 0 to
+   5 contain the property number; bit 6 is undetermined (it is clear in
+   all Infocom or Inform story files); bit 7 is set.  In the second byte,
+   bits 0 to 5 contain the property data length, counting in bytes;
+   bit 6 is undetermined (it is set in Infocom story files, but clear
+   in Inform ones); bit 7 is always set.
+</p>
+</section>
+
+<section class="clause-section is-clause has-marker is-v1-0" id="12.4.2.1.1">
+<p><a class="clause-num" href="#12.4.2.1.1">12.4.2.1.1</a><button class="copy-link" type="button" data-anchor="12.4.2.1.1" aria-label="Copy link to 12.4.2.1.1" title="Copy link"></button> <strong class="spec-marker spec-marker--v1-0">***[1.0]</strong>
+   A value of 0 as property data length (in the second
+   byte) should be interpreted as a length of 64.  (Inform can compile
+   such properties.)
+</p>
+</section>
+
+<section class="clause-section is-clause" id="12.4.2.2">
+<p><a class="clause-num" href="#12.4.2.2">12.4.2.2</a><button class="copy-link" type="button" data-anchor="12.4.2.2" aria-label="Copy link to 12.4.2.2" title="Copy link"></button> If the top bit (bit 7) of the first size byte is clear, then there is
+   only one size-and-number byte.  Bits 0 to 5 contain the property number;
+   bit 6 is either clear to indicate a property data length of 1, or
+   set to indicate a length of 2; bit 7 is clear.
+</p>
+</section>
+
+<section class="clause-section is-clause" id="12.5">
+<p><a class="clause-num" href="#12.5">12.5</a><button class="copy-link" type="button" data-anchor="12.5" aria-label="Copy link to 12.5" title="Copy link"></button> It is the game's responsibility to keep the object tree
+   well-founded: the interpreter is not required to check.
+   "Well-founded" means the following:
+</p>
+<p><strong>(a)</strong> An object with a sibling also has a parent.</p>
+<p><strong>(b)</strong> An object is the parent of exactly those objects
+   in the sibling list of its child.
+</p>
+<p><strong>(c)</strong> Each object can be given a level n, such that
+   parentless objects have level 0 and all children of a level
+   n object have level n+1.
+</p>
+</section>
+
+<section class="clause-section is-topic" id="remarks">
+<h2 id="h-remarks">Remarks<a class="heading-anchor" href="#remarks" aria-label="Link to Remarks"></a></h2>
+<p>The largest valid object number is not directly stored anywhere
+   in the Z-machine.  Utility programs like <strong>Infodump</strong> deduce this
+   number by assuming that, initially, the object entries end where
+   the first property table begins.
+</p>
+<p>Infocom's 'Sherlock' contains a bug making it try to set and
+   clear attribute 48.
+</p>
+<p>The reason why the second property size byte needs to have top bit
+   set is that the size field must be parsable either forwards or
+   backwards -- the Z-machine needs to be able to reconstruct the
+   length of a property given only the address of the first byte
+   of its data.  (There are very many (e.g. 2000) property entries
+   in a story file, so optimising size into one byte most of the
+   time is worthwhile.)
+</p>
+<p>Bit 6 in the second byte is presently wasted, which is a pity as
+   it could be used to allow up to 128 bytes of property data.  But such
+   a change would cause Infocom's story files to fail (since they
+   set this bit, unlike Inform story files).
+</p>
+<p>Inform can only construct well-founded object trees as the initial game
+   state, but it is easy to compile sequences of code like "move red box to
+   blue box" followed by "move blue box to red box" which leave the object
+   tree in an ill-founded state.  (The Inform library protects the standard
+   object-movement verbs against this.)
+</p>
+</section>
+</main>
+<nav class="pager" aria-label="Previous and next section"><a class="pager-link pager-prev" rel="prev" href="sect11.html"><span class="pager-kind">Previous</span><span class="pager-title">11. The header</span></a><a class="pager-link pager-next" rel="next" href="sect13.html"><span class="pager-kind">Next</span><span class="pager-title">13. Dictionary and lexing</span></a></nav>
+<footer class="site-footer">
+  <p>The Z-Machine Standards Document, version 1.1 &mdash; 24 February 2014.
+     Canonical copy at <a href="https://www.inform-fiction.org/zmachine/standards/current/">inform-fiction.org</a>.</p>
+</footer>
+</div>
+<aside class="outline" id="outline" aria-label="On this page" data-generated>
+<h2>On this page</h2>
+<ol>
+<li class="depth-2"><a href="#12.1" title="The object table is held in dynamic memory and its byte address is stored in the word at $0a in the header. (Recall that">12.1</a></li>
+<li class="depth-2"><a href="#12.2" title="The table begins with a block known as the property defaults table. This contains 31 words in Versions 1 to 3 and 63 in ">12.2</a></li>
+<li class="depth-2"><a href="#12.3" title="Next is the object tree. Objects are numbered consecutively from 1 upward, with object number 0 being used to mean "noth">12.3</a></li>
+<li class="depth-3"><a href="#12.3.1" title="In Versions 1 to 3, there are at most 255 objects, each having a 9-byte entry as follows: the 32 attribute flags parent ">12.3.1</a></li>
+<li class="depth-3"><a href="#12.3.2" title="In Version 4 and later, there are at most 65535 objects, each having a 14-byte entry as follows: the 48 attribute flags ">12.3.2</a></li>
+<li class="depth-2"><a href="#12.4" title="Each object has its own property table. Each of these can be anywhere in dynamic memory (indeed, a game can legally chan">12.4</a></li>
+<li class="depth-3"><a href="#12.4.1" title="In Versions 1 to 3, each property is stored as a block size byte the actual property data ---between 1 and 8 bytes-- whe">12.4.1</a></li>
+<li class="depth-3"><a href="#12.4.2" title="In Versions 4 and later, a property block instead has the form size and number the actual property data --1 or 2 bytes--">12.4.2</a></li>
+<li class="depth-4"><a href="#12.4.2.1" title="If the top bit (bit 7) of the first size byte is set, then there are two size-and-number bytes as follows. In the first ">12.4.2.1</a></li>
+<li class="depth-4"><a href="#12.4.2.1.1" title="***[1.0] A value of 0 as property data length (in the second byte) should be interpreted as a length of 64. (Inform can ">12.4.2.1.1</a></li>
+<li class="depth-4"><a href="#12.4.2.2" title="If the top bit (bit 7) of the first size byte is clear, then there is only one size-and-number byte. Bits 0 to 5 contain">12.4.2.2</a></li>
+<li class="depth-2"><a href="#12.5" title="It is the game's responsibility to keep the object tree well-founded: the interpreter is not required to check. "Well-fo">12.5</a></li>
+<li class="depth-1"><a href="#remarks">Remarks</a></li>
+</ol>
+</aside>
+</div>
+<script src="assets/nav.js"></script>
+<script src="assets/zspec.js" defer></script>
+</body>
+</html>

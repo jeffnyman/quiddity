@@ -1,0 +1,38 @@
+#
+# Build output
+#
+
+build/
+
+#
+# Personal CMake presets
+#
+# This will ignore any local developer overrides, custom toolchain
+# paths, or machine-specific build directory layouts.
+#
+
+CMakeUserPresets.json
+
+#
+# Editor helpers
+#
+# Ignore the contents of .vscode rather than the directory itself.
+# Git does not descend into an ignored directory, so `.vscode/`
+# would make the negations below unreachable. The goal is to track
+# the shared build/debug/IntelliSense config, ignore everything else
+# (personal settings, extension recommendations, etc.)
+#
+
+.vscode/*
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/c_cpp_properties.json
+
+#
+# Operating system metadata
+#
+
+**/.directory
+**/.DS_Store
+**/desktop.ini
+**/Thumbs.db

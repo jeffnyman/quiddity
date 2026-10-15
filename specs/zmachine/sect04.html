@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>4. How instructions are encoded — The Z-Machine Standards Document 1.1</title>
+<meta name="description" content="4. How instructions are encoded — section of the Z-Machine Standards Document, version 1.1.">
+<link rel="canonical" href="https://jeffnyman.github.io/z-machine-standard/sect04.html">
+<meta name="theme-color" content="#0d63c9">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="The Z-Machine Standards Document 1.1">
+<meta property="og:title" content="4. How instructions are encoded — The Z-Machine Standards Document 1.1">
+<meta property="og:description" content="4. How instructions are encoded — section of the Z-Machine Standards Document, version 1.1.">
+<meta property="og:url" content="https://jeffnyman.github.io/z-machine-standard/sect04.html">
+<link rel="stylesheet" href="assets/zspec.css">
+<script>/* Set the theme before first paint to avoid a flash. */
+(function(){try{var t=localStorage.getItem('zspec-theme');if(t==='dark'||t==='light')document.documentElement.dataset.theme=t;}catch(e){}})();
+</script>
+</head>
+<body>
+<a class="skip-link" href="#content">Skip to content</a>
+<header class="topbar">
+  <button class="icon-button nav-toggle" type="button" aria-expanded="false" aria-controls="sidebar" aria-label="Show contents">
+    <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 5h14M3 10h14M3 15h14"/></svg>
+  </button>
+  <a class="brand" href="index.html"><span class="brand-name">Z-Machine Standard</span><span class="brand-version">1.1</span></a>
+  <div class="topbar-actions">
+    <button class="search-trigger" type="button" data-search-open>
+      <svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="9" cy="9" r="6"/><path d="M13.5 13.5 18 18"/></svg>
+      <span>Search</span><kbd>/</kbd>
+    </button>
+    <button class="icon-button theme-toggle" type="button" aria-label="Switch colour theme">
+      <svg class="icon-sun" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="4"/><path d="M10 1v2M10 17v2M1 10h2M17 10h2M3.9 3.9l1.4 1.4M14.7 14.7l1.4 1.4M16.1 3.9l-1.4 1.4M5.3 14.7l-1.4 1.4"/></svg>
+      <svg class="icon-moon" viewBox="0 0 20 20" aria-hidden="true"><path d="M17 12.3A7.5 7.5 0 0 1 7.7 3a7.5 7.5 0 1 0 9.3 9.3z"/></svg>
+    </button>
+  </div>
+</header>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Specification contents">
+<!--nav:start-->
+<div class="nav-inner">
+<a class="nav-home" href="index.html">Contents</a>
+<ul class="nav-list">
+<li><a href="preface.html"><span class="nav-label">Preface</span></a></li>
+<li><a href="overview.html"><span class="nav-label">Overview</span></a></li>
+</ul>
+<h2 class="nav-group">Fundamentals</h2>
+<ul class="nav-list">
+<li><a href="sect01.html"><span class="nav-num">1</span><span class="nav-label">The memory map</span></a></li>
+<li><a href="sect02.html"><span class="nav-num">2</span><span class="nav-label">Numbers and arithmetic</span></a></li>
+<li><a href="sect03.html"><span class="nav-num">3</span><span class="nav-label">Text and characters</span></a></li>
+<li class="is-current"><a href="sect04.html" aria-current="page"><span class="nav-num">4</span><span class="nav-label">Instruction encoding</span></a></li>
+<li><a href="sect05.html"><span class="nav-num">5</span><span class="nav-label">Routine encoding</span></a></li>
+<li><a href="sect06.html"><span class="nav-num">6</span><span class="nav-label">The game state</span></a></li>
+</ul>
+<h2 class="nav-group">Input/Output</h2>
+<ul class="nav-list">
+<li><a href="sect07.html"><span class="nav-num">7</span><span class="nav-label">Output streams</span></a></li>
+<li><a href="sect08.html"><span class="nav-num">8</span><span class="nav-label">The screen model</span></a></li>
+<li><a href="sect09.html"><span class="nav-num">9</span><span class="nav-label">Sound effects</span></a></li>
+<li><a href="sect10.html"><span class="nav-num">10</span><span class="nav-label">Input streams</span></a></li>
+</ul>
+<h2 class="nav-group">Tables</h2>
+<ul class="nav-list">
+<li><a href="sect11.html"><span class="nav-num">11</span><span class="nav-label">The header</span></a></li>
+<li><a href="sect12.html"><span class="nav-num">12</span><span class="nav-label">The object table</span></a></li>
+<li><a href="sect13.html"><span class="nav-num">13</span><span class="nav-label">Dictionary and lexing</span></a></li>
+</ul>
+<h2 class="nav-group">Instruction Set</h2>
+<ul class="nav-list">
+<li><a href="sect14.html"><span class="nav-num">14</span><span class="nav-label">Table of opcodes</span></a></li>
+<li><a href="sect15.html"><span class="nav-num">15</span><span class="nav-label">Dictionary of opcodes</span></a></li>
+</ul>
+<h2 class="nav-group">An Unusual Font</h2>
+<ul class="nav-list">
+<li><a href="sect16.html"><span class="nav-num">16</span><span class="nav-label">Font 3</span></a></li>
+</ul>
+<h2 class="nav-group">Appendices</h2>
+<ul class="nav-list">
+<li><a href="appa.html"><span class="nav-num">A</span><span class="nav-label">Error messages and debugging</span></a></li>
+<li><a href="appb.html"><span class="nav-num">B</span><span class="nav-label">Header conventions</span></a></li>
+<li><a href="appc.html"><span class="nav-num">C</span><span class="nav-label">Resources available</span></a></li>
+<li><a href="appd.html"><span class="nav-num">D</span><span class="nav-label">History</span></a></li>
+<li><a href="appe.html"><span class="nav-num">E</span><span class="nav-label">Statistics</span></a></li>
+<li><a href="appf.html"><span class="nav-num">F</span><span class="nav-label">Canonical story files</span></a></li>
+</ul>
+<h2 class="nav-group">Related standards</h2>
+<p class="nav-note">Mirrored in this repository</p>
+<ul class="nav-list">
+<li><a href="quetzal.html"><span class="nav-label">Quetzal</span></a></li>
+<li><a href="blorb.html"><span class="nav-label">Blorb</span></a></li>
+</ul>
+</div>
+<!--nav:end-->
+</nav>
+<div class="main-column">
+<main class="content" id="content">
+<div class="page-head">
+<img class="page-icon" src="images/icon04.gif" alt="" width="82" height="86" loading="lazy" decoding="async">
+<h1>4. How instructions are encoded</h1>
+</div>
+<div class="intro">
+<blockquote>
+  <p>We do but teach bloody instructions</p>
+  <p>Which, being taught, return to plague th' inventor</p>
+  <p>Shakespeare, <strong>Macbeth</strong></p>
+</blockquote>
+</div>
+
+<section class="clause-section is-clause" id="4.1">
+<p><a class="clause-num" href="#4.1">4.1</a><button class="copy-link" type="button" data-anchor="4.1" aria-label="Copy link to 4.1" title="Copy link"></button> A single Z-machine instruction consists of the following
+   sections (and in the order shown):
+</p>
+<pre>
+  Opcode               1 or 2 bytes
+  (Types of operands)  1 or 2 bytes: 4 or 8 2-bit fields
+  Operands             Between 0 and 8 of these: each 1 or 2 bytes
+  (Store variable)     1 byte
+  (Branch offset)      1 or 2 bytes
+  (Text to print)      An encoded string (of unlimited length)
+</pre>
+<p>Bracketed sections are not present in all opcodes.  (A few opcodes
+   take both "store" and "branch".)
+</p>
+<aside class="editor-note" data-generated>
+<p class="note-head">
+<span class="note-tag">Editor&rsquo;s note</span>
+<span class="note-title">The order of the parts is the decoding algorithm</span>
+</p>
+<p>This table is not just a description; read top to bottom it is the procedure
+   for decoding an instruction, and each step depends on the one before it.</p>
+<p>Read the opcode byte and work out the <em>form</em>
+   (<a href="#4.3">&#167;4.3</a>). The form tells you the operand
+   <em>count</em>, and the count plus form tell you where the operand
+   <em>types</em> come from (<a href="#4.4">&#167;4.4</a>). Only once you know
+   the types do you know how many bytes the operands occupy, and therefore
+   where the store byte and branch data begin.</p>
+<p>So you cannot skip an instruction without decoding most of it. There is no
+   length field.</p>
+<p class="note-by">&mdash; Jeff Nyman</p>
+</aside>
+</section>
+
+<section class="clause-section is-clause" id="4.2">
+<p><a class="clause-num" href="#4.2">4.2</a><button class="copy-link" type="button" data-anchor="4.2" aria-label="Copy link to 4.2" title="Copy link"></button> There are four 'types' of operand.  These are often specified
+   by a number stored in 2 binary digits:
+</p>
+<pre>
+  $$00    Large constant (0 to 65535)    2 bytes
+  $$01    Small constant (0 to 255)      1 byte
+  $$10    Variable                       1 byte
+  $$11    Omitted altogether             0 bytes
+</pre>
+</section>
+
+<section class="clause-section is-clause" id="4.2.1">
+<p><a class="clause-num" href="#4.2.1">4.2.1</a><button class="copy-link" type="button" data-anchor="4.2.1" aria-label="Copy link to 4.2.1" title="Copy link"></button> Large constants, like all 2-byte words of data in the Z-machine,
+   are stored with most significant byte first (e.g. <strong>$2478</strong> is stored as
+   <strong>$24</strong> followed by <strong>$78</strong>).  A 'large constant' may in fact be a small
+   number.
+</p>
+</section>
+
+<section class="clause-section is-clause" id="4.2.2">
+<p><a class="clause-num" href="#4.2.2">4.2.2</a><button class="copy-link" type="button" data-anchor="4.2.2" aria-label="Copy link to 4.2.2" title="Copy link"></button> Variable number <strong>$00</strong> refers to the top of the stack,
+   <strong>$01</strong> to <strong>$0f</strong> mean the local variables of the current routine
+   and <strong>$10</strong> to <strong>$ff</strong> mean the global variables.  It is illegal to
+   refer to local variables which do not exist for the current routine
+   (there may even be none).
+</p>
+<aside class="editor-note" data-generated>
+<p class="note-head">
+<span class="note-tag">Editor&rsquo;s note</span>
+<span class="note-title">Fifteen locals, 240 globals, and one stack</span>
+</p>
+<p>The single byte covers all three: <code>$00</code> is the stack,
+   <code>$01</code>&ndash;<code>$0f</code> the locals, and
+   <code>$10</code>&ndash;<code>$ff</code> the globals. That caps a routine at
+   <strong>15 locals</strong> and the story at <strong>240 globals</strong>.</p>
+<p>The same numbering is used by the store byte
+   (<a href="#4.6">&#167;4.6</a>), so "store to <code>$00</code>" means push.
+   Beware that for seven opcodes this is <em>not</em> a push or a pop &mdash;
+   see <a href="sect06.html#6.3.4">&#167;6.3.4</a>, which is the subtlest trap
+   in the instruction set.</p>
+<p class="note-by">&mdash; Jeff Nyman</p>
+</aside>
+</section>
+
+<section class="clause-section is-clause" id="4.2.3">
+<p><a class="clause-num" href="#4.2.3">4.2.3</a><button class="copy-link" type="button" data-anchor="4.2.3" aria-label="Copy link to 4.2.3" title="Copy link"></button> The type 'Variable' really means "variable by value".  Some
+   instructions take as an operand a "variable by reference": for instance,
+   <a href="sect15.html#inc"><strong>inc</strong></a> has one operand, the 
+   reference number of a variable to increment. This operand usually has type 
+   'Small constant' (and Inform automatically assembles a line like 
+   <strong>@inc turns</strong> by writing the operand <strong>turns</strong> as
+   a small constant with value the reference number of the variable 
+   <strong>turns</strong>).
+</p>
+</section>
+
+<section class="clause-section is-clause" id="4.3">
+<p><a class="clause-num" href="#4.3">4.3</a><button class="copy-link" type="button" data-anchor="4.3" aria-label="Copy link to 4.3" title="Copy link"></button> Each instruction has a form (long, short, extended or variable)
+   and an operand count (0OP, 1OP, 2OP or VAR).
+   If the top two bits of the opcode are <strong>$$11</strong> the form is variable;
+   if <strong>$$10</strong>, the form is short.  If the opcode is 190 (<strong>$BE</strong> in hexadecimal)
+   and the version is 5 or later, the form is "extended".  Otherwise, the
+   form is "long".
+</p>
+<aside class="editor-note" data-generated>
+<p class="note-head">
+<span class="note-tag">Editor&rsquo;s note</span>
+<span class="note-title">$be must be tested before the general rule, not after</span>
+</p>
+<p>Read as an ordered list of tests, this clause is a trap. <code>$be</code> is
+   <code>$$10111110</code>, so its top two bits are <code>$$10</code> &mdash; the
+   general rule would classify it as <em>short</em> form. The extended check has
+   to come first:</p>
+<pre>if (version &gt;= 5 &amp;&amp; op == 0xbe)  extended
+else if (top two bits == 0b11)   variable
+else if (top two bits == 0b10)   short
+else                             long</pre>
+<p>Get the order wrong and every extended opcode in a Version 5 story decodes as
+   a 0OP short instruction, which usually means execution runs off into
+   nonsense somewhere far from the actual mistake.</p>
+<p class="note-by">&mdash; Jeff Nyman</p>
+</aside>
+</section>
+
+<section class="clause-section is-clause" id="4.3.1">
+<p><a class="clause-num" href="#4.3.1">4.3.1</a><button class="copy-link" type="button" data-anchor="4.3.1" aria-label="Copy link to 4.3.1" title="Copy link"></button> In short form, bits 4 and 5 of the opcode byte give an operand
+   type as above.  If this is <strong>$11</strong> then the operand count is
+   0OP; otherwise, 1OP.  In either case the opcode number is
+   given in the bottom 4 bits.
+</p>
+</section>
+
+<section class="clause-section is-clause" id="4.3.2">
+<p><a class="clause-num" href="#4.3.2">4.3.2</a><button class="copy-link" type="button" data-anchor="4.3.2" aria-label="Copy link to 4.3.2" title="Copy link"></button> In long form the operand count is always 2OP.  The opcode number
+   is given in the bottom 5 bits.
+</p>
+</section>
+
+<section class="clause-section is-clause" id="4.3.3">
+<p><a class="clause-num" href="#4.3.3">4.3.3</a><button class="copy-link" type="button" data-anchor="4.3.3" aria-label="Copy link to 4.3.3" title="Copy link"></button> In variable form, if bit 5 is 0 then the count is 2OP;
+   if it is 1, then the count is VAR.  The opcode number is given
+   in the bottom 5 bits.
+</p>
+</section>
+
+<section class="clause-section is-clause" id="4.3.4">
+<p><a class="clause-num" href="#4.3.4">4.3.4</a><button class="copy-link" type="button" data-anchor="4.3.4" aria-label="Copy link to 4.3.4" title="Copy link"></button> In extended form, the operand count is VAR.  The opcode number
+   is given in a second opcode byte.
+</p>
+</section>
+
+<section class="clause-section is-clause" id="4.4">
+<p><a class="clause-num" href="#4.4">4.4</a><button class="copy-link" type="button" data-anchor="4.4" aria-label="Copy link to 4.4" title="Copy link"></button> Next, the types of the operands are specified.</p>
+</section>
+
+<section class="clause-section is-clause" id="4.4.1">
+<p><a class="clause-num" href="#4.4.1">4.4.1</a><button class="copy-link" type="button" data-anchor="4.4.1" aria-label="Copy link to 4.4.1" title="Copy link"></button>  In short form, bits 4 and 5 of the opcode give the type.</p>
+</section>
+
+<section class="clause-section is-clause" id="4.4.2">
+<p><a class="clause-num" href="#4.4.2">4.4.2</a><button class="copy-link" type="button" data-anchor="4.4.2" aria-label="Copy link to 4.4.2" title="Copy link"></button> In long form, bit 6 of the opcode gives the type of
+   the first operand, bit 5 of the second.  A value of 0 means a small
+   constant and 1 means a variable.  (If a 2OP instruction needs a
+   large constant as operand, then it should be assembled in variable
+   rather than long form.)
+</p>
+<aside class="editor-note" data-generated>
+<p class="note-head">
+<span class="note-tag">Editor&rsquo;s note</span>
+<span class="note-title">Long form cannot hold a large constant</span>
+</p>
+<p>In long form each operand gets a single type bit &mdash; 0 for small
+   constant, 1 for variable. There is no bit pattern left for a large constant,
+   which is why the parenthesis at the end of this clause matters: a 2OP
+   instruction needing a 16-bit constant must be assembled in
+   <em>variable</em> form instead.</p>
+<p>That is the reason the same 2OP opcode shows up in two encodings, and why
+   the disassembly table lists <code>$c0</code>&ndash;<code>$df</code> as
+   "variable&nbsp;2OP". The opcode number is the same; only the packaging
+   differs.</p>
+<p class="note-by">&mdash; Jeff Nyman</p>
+</aside>
+</section>
+
+<section class="clause-section is-clause" id="4.4.3">
+<p><a class="clause-num" href="#4.4.3">4.4.3</a><button class="copy-link" type="button" data-anchor="4.4.3" aria-label="Copy link to 4.4.3" title="Copy link"></button> In variable or extended forms, a byte of 4 operand types is
+   given next.  This contains 4 2-bit fields: bits 6 and 7 are the first
+   field, bits 0 and 1 the fourth.  The values are operand types as above.
+   Once one type has been given as 'omitted', all subsequent ones must
+   be.  Example: <strong>$$00101111</strong> means large constant followed by variable
+   (and no third or fourth opcode).
+</p>
+<aside class="editor-note" data-generated>
+<p class="note-head">
+<span class="note-tag">Editor&rsquo;s note</span>
+<span class="note-title">Reading the operand-type byte</span>
+</p>
+<p>The fields run left to right, two bits each, from the top of the byte. Taking
+   the clause's own example, <code>$$00101111</code>:</p>
+<pre>00  10  11  11
+│   │   └───┴── omitted
+│   └────────── variable
+└────────────── large constant</pre>
+<p>Once a field says "omitted", every later field must too &mdash; so you can
+   stop at the first <code>$$11</code>. Note that a byte of
+   <code>$$11111111</code> is entirely legitimate and means an instruction with
+   no operands at all.</p>
+<p class="note-by">&mdash; Jeff Nyman</p>
+</aside>
+</section>
+
+<section class="clause-section is-clause" id="4.4.3.1">
+<p><a class="clause-num" href="#4.4.3.1">4.4.3.1</a><button class="copy-link" type="button" data-anchor="4.4.3.1" aria-label="Copy link to 4.4.3.1" title="Copy link"></button> In the special case of the "double variable" VAR opcodes
+   <a href="sect15.html#call_vs2"><strong>call_vs2</strong></a> and 
+   <a href="sect15.html#call_vn2"><strong>call_vn2</strong></a> (opcode 
+   numbers 12 and 26), a second byte of types is given, containing the types 
+   for the next four operands.
+</p>
+</section>
+
+<section class="clause-section is-clause" id="4.5">
+<p><a class="clause-num" href="#4.5">4.5</a><button class="copy-link" type="button" data-anchor="4.5" aria-label="Copy link to 4.5" title="Copy link"></button> The operands are given next.  Operand counts of 0OP, 1OP or 2OP
+   require 0, 1 or 2 operands to be given, respectively.  If the count is VAR,
+   there must be as many operands as there were types other than 'omitted'.
+</p>
+</section>
+
+<section class="clause-section is-clause" id="4.5.1">
+<p><a class="clause-num" href="#4.5.1">4.5.1</a><button class="copy-link" type="button" data-anchor="4.5.1" aria-label="Copy link to 4.5.1" title="Copy link"></button> Note that only <a href="sect15.html#call_vs2"><strong>call_vs2</strong></a> and 
+   <a href="sect15.html#call_vn2"><strong>call_vn2</strong></a> can have more than 4
+   operands, and no instruction can have more than 8.
+</p>
+</section>
+
+<section class="clause-section is-clause" id="4.5.2">
+<p><a class="clause-num" href="#4.5.2">4.5.2</a><button class="copy-link" type="button" data-anchor="4.5.2" aria-label="Copy link to 4.5.2" title="Copy link"></button> Opcode operands are always evaluated from first to last - this order is
+   important when the stack pointer appears as an argument. Thus</p>
+<pre>@sub sp sp -&gt; i;</pre>
+<p>subtracts the second-from-top stack item from the topmost
+   stack item.
+</p>
+<aside class="editor-note" data-generated>
+<p class="note-head">
+<span class="note-tag">Editor&rsquo;s note</span>
+<span class="note-title">Why evaluation order is worth stating</span>
+</p>
+<p>It matters only because the stack is one of the things an operand can name,
+   and reading it changes it. In <code>@sub sp sp -&gt; i</code> both operands
+   are the same byte value, but the first pops the top of the stack and the
+   second pops what is now on top.</p>
+<p>Left to right is therefore the difference between <em>top &minus;
+   second</em> and <em>second &minus; top</em>. An interpreter that gathers
+   operands in any other order will be wrong only for stack operands, which
+   makes it an unpleasant bug to find.</p>
+<p class="note-by">&mdash; Jeff Nyman</p>
+</aside>
+</section>
+
+<section class="clause-section is-clause" id="4.6">
+<p><a class="clause-num" href="#4.6">4.6</a><button class="copy-link" type="button" data-anchor="4.6" aria-label="Copy link to 4.6" title="Copy link"></button> "Store" instructions return a value: e.g., 
+   <a href="sect15.html#mul"><strong>mul</strong></a> multiplies
+   its two operands together.  Such instructions must be followed by a
+   single byte giving the variable number of where to put the result.
+</p>
+</section>
+
+<section class="clause-section is-clause" id="4.7">
+<p><a class="clause-num" href="#4.7">4.7</a><button class="copy-link" type="button" data-anchor="4.7" aria-label="Copy link to 4.7" title="Copy link"></button> Instructions which test a condition are called "branch"
+   instructions.  The branch information is stored in one or two bytes,
+   indicating what to do with the result of the test.  If bit 7 of
+   the first byte is 0, a branch occurs when the condition was false;
+   if 1, then branch is on true.  If bit 6 is set, then the branch
+   occupies 1 byte only, and the "offset" is in the range 0 to 63,
+   given in the bottom 6 bits.  If bit 6 is clear, then the offset is
+   a signed 14-bit number given in bits 0 to 5 of the first byte
+   followed by all 8 of the second.
+</p>
+<aside class="editor-note" data-generated>
+<p class="note-head">
+<span class="note-tag">Editor&rsquo;s note</span>
+<span class="note-title">The two branch forms differ by more than length</span>
+</p>
+<p>Bit 7 is the sense of the test: 1 branches when the condition is true, 0 when
+   it is false. Bit 6 then chooses the size &mdash; but the two sizes are not
+   the same kind of number.</p>
+<pre>bit 6 set    6-bit offset, 0 to 63     UNSIGNED
+bit 6 clear  14-bit offset            SIGNED</pre>
+<p>The short form can only jump <em>forward</em>. Any backward branch &mdash;
+   every loop &mdash; needs the two-byte form. Sign-extending the 14-bit value
+   from bit 13 is easy to forget, and the failure is a wild jump rather than a
+   clean error.</p>
+<p class="note-by">&mdash; Jeff Nyman</p>
+</aside>
+</section>
+
+<section class="clause-section is-clause" id="4.7.1">
+<p><a class="clause-num" href="#4.7.1">4.7.1</a><button class="copy-link" type="button" data-anchor="4.7.1" aria-label="Copy link to 4.7.1" title="Copy link"></button> An offset of 0 means "return false from the current
+   routine", and 1 means "return true from the current routine".
+</p>
+</section>
+
+<section class="clause-section is-clause" id="4.7.2">
+<p><a class="clause-num" href="#4.7.2">4.7.2</a><button class="copy-link" type="button" data-anchor="4.7.2" aria-label="Copy link to 4.7.2" title="Copy link"></button> Otherwise, a branch moves execution to the instruction at
+   address
+</p>
+<pre>
+  Address after branch data + Offset - 2.
+</pre>
+<aside class="editor-note" data-generated>
+<p class="note-head">
+<span class="note-tag">Editor&rsquo;s note</span>
+<span class="note-title">Where the minus two comes from</span>
+</p>
+<p>The offset is measured from the byte <em>after</em> the branch data, less
+   two. The two is not arbitrary: offsets 0 and 1 are already spoken for by
+   <a href="#4.7.1">&#167;4.7.1</a>, so the arithmetic shifts everything down to
+   keep them free.</p>
+<p>The useful consequence is that offset 2 means <em>no jump at all</em>:</p>
+<pre>target = (address after branch data) + 2 - 2
+       =  address after branch data          → falls through</pre>
+<p>So 0 returns false, 1 returns true, 2 continues to the next instruction, and
+   3 upward are real forward jumps. When a branch appears to land one or two
+   bytes off, this is almost always why.</p>
+<p class="note-by">&mdash; Jeff Nyman</p>
+</aside>
+</section>
+
+<section class="clause-section is-clause" id="4.8">
+<p><a class="clause-num" href="#4.8">4.8</a><button class="copy-link" type="button" data-anchor="4.8" aria-label="Copy link to 4.8" title="Copy link"></button> Two opcodes, <a href="sect15.html#print"><strong>print</strong></a> and 
+   <a href="sect15.html#print_ret"><strong>print_ret</strong></a>, are followed 
+   by a text string.  This is stored according to the usual rules: in particular
+   execution continues after the last 2-byte word of text (the one with top bit 
+   set).
+</p>
+</section>
+
+<section class="clause-section is-topic" id="remarks">
+<h2 id="h-remarks">Remarks<a class="heading-anchor" href="#remarks" aria-label="Link to Remarks"></a></h2>
+<p>Some opcodes have type VAR only because the available codes for
+   the other types had run out; <a href="sect15.html#print_char"><strong>print_char</strong></a>, 
+   for instance. Others, especially <a href="sect15.html#call"><strong>call</strong></a>, 
+   need the flexibility to have between 1 and 4 operands.
+</p>
+<p>The Inform assembler can assemble branches in either form, though
+   the programmer should always use long form unless there's a good
+   reason.  Inform automatically optimises branch statements so as to
+   force as many of them as possible into short form.  (This optimisation
+   will happen to branches written by hand in assembler as well as
+   to branches compiled by Inform.)
+</p>
+<p>The disassembler <strong>Txd</strong> numbers locals from 0 to 14 and globals from
+   0 to 239 in its output (corresponding to variable numbers 1 to 15, and
+   16 to 255, respectively).
+</p>
+<p>The branch formula is sensible because in the natural implementation,
+   the program counter is at the address after the branch data when the branch
+   takes place: thus it can be regarded as
+</p>
+<pre>
+  PC = PC + Offset - 2.
+</pre>
+<p>If the rule were simply "add the offset" then, since the offset couldn't
+   be 0 or 1 (because of the return-false and return-true values), we would
+   never be able to skip past a 1-byte instruction (say, a 0OP like 
+   <a href="sect15.html#quit"><strong>quit</strong></a>), or specify the 
+   branch "don't branch at all" (sometimes useful to ignore the result of 
+   the test altogether).  Subtracting 2 means that the only effects we can't 
+   achieve are
+</p>
+<pre>
+  PC = PC - 1     and     PC = PC - 2
+</pre>
+<p>and we would never want these anyway, since they would put the program
+   counter somewhere back inside the same instruction, with horrid
+   consequences.
+</p>
+</section>
+
+<section class="clause-section is-topic" id="disassembly">
+<h2 id="h-disassembly">On disassembly<a class="heading-anchor" href="#disassembly" aria-label="Link to On disassembly"></a></h2>
+<p>Briefly, the first byte of an instruction can be decoded
+   using the following table:
+</p>
+<pre>
+  $00 -- $1f  long      2OP     small constant, small constant
+  $20 -- $3f  long      2OP     small constant, variable
+  $40 -- $5f  long      2OP     variable, small constant
+  $60 -- $7f  long      2OP     variable, variable
+  $80 -- $8f  short     1OP     large constant
+  $90 -- $9f  short     1OP     small constant
+  $a0 -- $af  short     1OP     variable
+  $b0 -- $bf  short     0OP
+  except $be  extended opcode given in next byte
+  $c0 -- $df  variable  2OP     (operand types in next byte)
+  $e0 -- $ff  variable  VAR     (operand types in next byte(s))
+</pre>
+<p>Here is an example disassembly:</p>
+<pre>
+  @inc_chk c 0 label;    05 02 00 d4
+      long form; count 2OP; opcode number 5; operands:
+          02     small constant (referring to variable c)
+          00     small constant 0
+      branch if true: 1-byte offset, 20 (since label is
+      18 bytes forward from here).
+  @print "Hello.^";      b2 11 aa 46 34 16 45 9c a5 
+      short form; count 0OP.
+      literal string, Z-chars: 4 13 10  17 17 20  5 18 5  7 5 5.
+  @mul 1000 c -&gt; sp;     d6 2f 03 e8 02 00
+      variable form; count 2OP; opcode number 22; operands:
+          03 e8  long constant (1000 decimal)
+          02     variable c
+      store result to stack pointer (var number 00).
+  @call_1n Message;      8f 01 56
+      short form; count 1OP; opcode number 15; operand:
+          01 56  long constant (packed address of routine)
+  .label;
+</pre>
+</section>
+</main>
+<nav class="pager" aria-label="Previous and next section"><a class="pager-link pager-prev" rel="prev" href="sect03.html"><span class="pager-kind">Previous</span><span class="pager-title">3. Text and characters</span></a><a class="pager-link pager-next" rel="next" href="sect05.html"><span class="pager-kind">Next</span><span class="pager-title">5. Routine encoding</span></a></nav>
+<footer class="site-footer">
+  <p>The Z-Machine Standards Document, version 1.1 &mdash; 24 February 2014.
+     Canonical copy at <a href="https://www.inform-fiction.org/zmachine/standards/current/">inform-fiction.org</a>.</p>
+</footer>
+</div>
+<aside class="outline" id="outline" aria-label="On this page" data-generated>
+<h2>On this page</h2>
+<ol>
+<li class="depth-2"><a href="#4.1" title="A single Z-machine instruction consists of the following sections (and in the order shown): Opcode 1 or 2 bytes (Types o">4.1</a></li>
+<li class="depth-2"><a href="#4.2" title="There are four 'types' of operand. These are often specified by a number stored in 2 binary digits: $$00 Large constant ">4.2</a></li>
+<li class="depth-3"><a href="#4.2.1" title="Large constants, like all 2-byte words of data in the Z-machine, are stored with most significant byte first (e.g. $2478">4.2.1</a></li>
+<li class="depth-3"><a href="#4.2.2" title="Variable number $00 refers to the top of the stack, $01 to $0f mean the local variables of the current routine and $10 t">4.2.2</a></li>
+<li class="depth-3"><a href="#4.2.3" title="The type 'Variable' really means "variable by value". Some instructions take as an operand a "variable by reference": fo">4.2.3</a></li>
+<li class="depth-2"><a href="#4.3" title="Each instruction has a form (long, short, extended or variable) and an operand count (0OP, 1OP, 2OP or VAR). If the top ">4.3</a></li>
+<li class="depth-3"><a href="#4.3.1" title="In short form, bits 4 and 5 of the opcode byte give an operand type as above. If this is $11 then the operand count is 0">4.3.1</a></li>
+<li class="depth-3"><a href="#4.3.2" title="In long form the operand count is always 2OP. The opcode number is given in the bottom 5 bits.">4.3.2</a></li>
+<li class="depth-3"><a href="#4.3.3" title="In variable form, if bit 5 is 0 then the count is 2OP; if it is 1, then the count is VAR. The opcode number is given in ">4.3.3</a></li>
+<li class="depth-3"><a href="#4.3.4" title="In extended form, the operand count is VAR. The opcode number is given in a second opcode byte.">4.3.4</a></li>
+<li class="depth-2"><a href="#4.4" title="Next, the types of the operands are specified.">4.4</a></li>
+<li class="depth-3"><a href="#4.4.1" title="In short form, bits 4 and 5 of the opcode give the type.">4.4.1</a></li>
+<li class="depth-3"><a href="#4.4.2" title="In long form, bit 6 of the opcode gives the type of the first operand, bit 5 of the second. A value of 0 means a small c">4.4.2</a></li>
+<li class="depth-3"><a href="#4.4.3" title="In variable or extended forms, a byte of 4 operand types is given next. This contains 4 2-bit fields: bits 6 and 7 are t">4.4.3</a></li>
+<li class="depth-4"><a href="#4.4.3.1" title="In the special case of the "double variable" VAR opcodes call_vs2 and call_vn2 (opcode numbers 12 and 26), a second byte">4.4.3.1</a></li>
+<li class="depth-2"><a href="#4.5" title="The operands are given next. Operand counts of 0OP, 1OP or 2OP require 0, 1 or 2 operands to be given, respectively. If ">4.5</a></li>
+<li class="depth-3"><a href="#4.5.1" title="Note that only call_vs2 and call_vn2 can have more than 4 operands, and no instruction can have more than 8.">4.5.1</a></li>
+<li class="depth-3"><a href="#4.5.2" title="Opcode operands are always evaluated from first to last - this order is important when the stack pointer appears as an a">4.5.2</a></li>
+<li class="depth-2"><a href="#4.6" title=""Store" instructions return a value: e.g., mul multiplies its two operands together. Such instructions must be followed ">4.6</a></li>
+<li class="depth-2"><a href="#4.7" title="Instructions which test a condition are called "branch" instructions. The branch information is stored in one or two byt">4.7</a></li>
+<li class="depth-3"><a href="#4.7.1" title="An offset of 0 means "return false from the current routine", and 1 means "return true from the current routine".">4.7.1</a></li>
+<li class="depth-3"><a href="#4.7.2" title="Otherwise, a branch moves execution to the instruction at address Address after branch data + Offset - 2.">4.7.2</a></li>
+<li class="depth-2"><a href="#4.8" title="Two opcodes, print and print_ret, are followed by a text string. This is stored according to the usual rules: in particu">4.8</a></li>
+<li class="depth-1"><a href="#remarks">Remarks</a></li>
+<li class="depth-1"><a href="#disassembly">On disassembly</a></li>
+</ol>
+</aside>
+</div>
+<script src="assets/nav.js"></script>
+<script src="assets/zspec.js" defer></script>
+</body>
+</html>

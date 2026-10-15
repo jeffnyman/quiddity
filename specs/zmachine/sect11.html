@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>11. The format of the header — The Z-Machine Standards Document 1.1</title>
+<meta name="description" content="11. The format of the header — section of the Z-Machine Standards Document, version 1.1.">
+<link rel="canonical" href="https://jeffnyman.github.io/z-machine-standard/sect11.html">
+<meta name="theme-color" content="#0d63c9">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="The Z-Machine Standards Document 1.1">
+<meta property="og:title" content="11. The format of the header — The Z-Machine Standards Document 1.1">
+<meta property="og:description" content="11. The format of the header — section of the Z-Machine Standards Document, version 1.1.">
+<meta property="og:url" content="https://jeffnyman.github.io/z-machine-standard/sect11.html">
+<link rel="stylesheet" href="assets/zspec.css">
+<script>/* Set the theme before first paint to avoid a flash. */
+(function(){try{var t=localStorage.getItem('zspec-theme');if(t==='dark'||t==='light')document.documentElement.dataset.theme=t;}catch(e){}})();
+</script>
+</head>
+<body>
+<a class="skip-link" href="#content">Skip to content</a>
+<header class="topbar">
+  <button class="icon-button nav-toggle" type="button" aria-expanded="false" aria-controls="sidebar" aria-label="Show contents">
+    <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 5h14M3 10h14M3 15h14"/></svg>
+  </button>
+  <a class="brand" href="index.html"><span class="brand-name">Z-Machine Standard</span><span class="brand-version">1.1</span></a>
+  <div class="topbar-actions">
+    <button class="search-trigger" type="button" data-search-open>
+      <svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="9" cy="9" r="6"/><path d="M13.5 13.5 18 18"/></svg>
+      <span>Search</span><kbd>/</kbd>
+    </button>
+    <button class="icon-button theme-toggle" type="button" aria-label="Switch colour theme">
+      <svg class="icon-sun" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="4"/><path d="M10 1v2M10 17v2M1 10h2M17 10h2M3.9 3.9l1.4 1.4M14.7 14.7l1.4 1.4M16.1 3.9l-1.4 1.4M5.3 14.7l-1.4 1.4"/></svg>
+      <svg class="icon-moon" viewBox="0 0 20 20" aria-hidden="true"><path d="M17 12.3A7.5 7.5 0 0 1 7.7 3a7.5 7.5 0 1 0 9.3 9.3z"/></svg>
+    </button>
+  </div>
+</header>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Specification contents">
+<!--nav:start-->
+<div class="nav-inner">
+<a class="nav-home" href="index.html">Contents</a>
+<ul class="nav-list">
+<li><a href="preface.html"><span class="nav-label">Preface</span></a></li>
+<li><a href="overview.html"><span class="nav-label">Overview</span></a></li>
+</ul>
+<h2 class="nav-group">Fundamentals</h2>
+<ul class="nav-list">
+<li><a href="sect01.html"><span class="nav-num">1</span><span class="nav-label">The memory map</span></a></li>
+<li><a href="sect02.html"><span class="nav-num">2</span><span class="nav-label">Numbers and arithmetic</span></a></li>
+<li><a href="sect03.html"><span class="nav-num">3</span><span class="nav-label">Text and characters</span></a></li>
+<li><a href="sect04.html"><span class="nav-num">4</span><span class="nav-label">Instruction encoding</span></a></li>
+<li><a href="sect05.html"><span class="nav-num">5</span><span class="nav-label">Routine encoding</span></a></li>
+<li><a href="sect06.html"><span class="nav-num">6</span><span class="nav-label">The game state</span></a></li>
+</ul>
+<h2 class="nav-group">Input/Output</h2>
+<ul class="nav-list">
+<li><a href="sect07.html"><span class="nav-num">7</span><span class="nav-label">Output streams</span></a></li>
+<li><a href="sect08.html"><span class="nav-num">8</span><span class="nav-label">The screen model</span></a></li>
+<li><a href="sect09.html"><span class="nav-num">9</span><span class="nav-label">Sound effects</span></a></li>
+<li><a href="sect10.html"><span class="nav-num">10</span><span class="nav-label">Input streams</span></a></li>
+</ul>
+<h2 class="nav-group">Tables</h2>
+<ul class="nav-list">
+<li class="is-current"><a href="sect11.html" aria-current="page"><span class="nav-num">11</span><span class="nav-label">The header</span></a></li>
+<li><a href="sect12.html"><span class="nav-num">12</span><span class="nav-label">The object table</span></a></li>
+<li><a href="sect13.html"><span class="nav-num">13</span><span class="nav-label">Dictionary and lexing</span></a></li>
+</ul>
+<h2 class="nav-group">Instruction Set</h2>
+<ul class="nav-list">
+<li><a href="sect14.html"><span class="nav-num">14</span><span class="nav-label">Table of opcodes</span></a></li>
+<li><a href="sect15.html"><span class="nav-num">15</span><span class="nav-label">Dictionary of opcodes</span></a></li>
+</ul>
+<h2 class="nav-group">An Unusual Font</h2>
+<ul class="nav-list">
+<li><a href="sect16.html"><span class="nav-num">16</span><span class="nav-label">Font 3</span></a></li>
+</ul>
+<h2 class="nav-group">Appendices</h2>
+<ul class="nav-list">
+<li><a href="appa.html"><span class="nav-num">A</span><span class="nav-label">Error messages and debugging</span></a></li>
+<li><a href="appb.html"><span class="nav-num">B</span><span class="nav-label">Header conventions</span></a></li>
+<li><a href="appc.html"><span class="nav-num">C</span><span class="nav-label">Resources available</span></a></li>
+<li><a href="appd.html"><span class="nav-num">D</span><span class="nav-label">History</span></a></li>
+<li><a href="appe.html"><span class="nav-num">E</span><span class="nav-label">Statistics</span></a></li>
+<li><a href="appf.html"><span class="nav-num">F</span><span class="nav-label">Canonical story files</span></a></li>
+</ul>
+<h2 class="nav-group">Related standards</h2>
+<p class="nav-note">Mirrored in this repository</p>
+<ul class="nav-list">
+<li><a href="quetzal.html"><span class="nav-label">Quetzal</span></a></li>
+<li><a href="blorb.html"><span class="nav-label">Blorb</span></a></li>
+</ul>
+</div>
+<!--nav:end-->
+</nav>
+<div class="main-column">
+<main class="content" id="content">
+<div class="page-head">
+<img class="page-icon" src="images/icon11.gif" alt="" width="82" height="86" loading="lazy" decoding="async">
+<h1>11. The format of the header</h1>
+</div>
+<section class="clause-section is-clause" id="11.1">
+<p><a class="clause-num" href="#11.1">11.1</a><button class="copy-link" type="button" data-anchor="11.1" aria-label="Copy link to 11.1" title="Copy link"></button> The header table summarises locations in the Z-machine's
+   header.
+   "Hex" means the address, in hexadecimal;
+   "Len" means the length in bytes;
+   "V" the earliest Version to which the rule is applicable;
+   "Dyn" means that the byte or bit may legally be changed by the game
+   during play; 
+   "Int" means that the interpreter may change it; 
+   "Rst" means that the interpreter must set it correctly after loading the game,
+   after a restore or after a restart;
+   "Con" means that the field is meaningful only by convention (since existing Infocom and Inform games write them), and the interpreter need not know about their contents.
+</p>
+<div class="table-scroll" tabindex="0" role="region" aria-label="Header format"><table><caption><strong>Header format</strong></caption><thead><tr><th scope="col">Hex</th><th scope="col">Len</th><th scope="col">V</th><th scope="col">Dyn</th><th scope="col">Int</th><th scope="col">Rst</th><th scope="col">Con</th><th scope="col">Contents</th></tr></thead><tbody><tr><td>0</td><td>1</td><td>1</td><td></td><td></td><td></td><td></td><td>Version number (1 to 8)</td></tr><tr><td>1</td><td>1</td><td>3</td><td></td><td></td><td></td><td></td><td><em>Flags 1 (see <a href="sect11.html#11.1.4"><strong>§</strong> 11.1.4</a>)</em></td></tr><tr><td>2</td><td>2</td><td>1</td><td></td><td></td><td></td><td>*</td><td>Release number (word)</td></tr><tr><td>4</td><td>2</td><td>1</td><td></td><td></td><td></td><td></td><td>Base of high memory (byte address)</td></tr><tr><td>6</td><td>2</td><td>1</td><td></td><td></td><td></td><td></td><td>Initial value of program counter (byte address)</td></tr><tr><td></td><td>2</td><td>6</td><td></td><td></td><td></td><td></td><td>Packed address of initial "main" routine</td></tr><tr><td>8</td><td>2</td><td>1</td><td></td><td></td><td></td><td></td><td>Location of dictionary (byte address)</td></tr><tr><td>A</td><td>2</td><td>1</td><td></td><td></td><td></td><td></td><td>Location of object table (byte address)</td></tr><tr><td>C</td><td>2</td><td>1</td><td></td><td></td><td></td><td></td><td>Location of global variables table (byte address)</td></tr><tr><td>E</td><td>2</td><td>1</td><td></td><td></td><td></td><td></td><td>Base of static memory (byte address)</td></tr><tr><td>10</td><td>2</td><td>1</td><td></td><td></td><td></td><td></td><td>Flags 2 (see <a href="sect11.html#11.1.2"><strong>§</strong> 11.1.2</a>)</td></tr><tr><td>12</td><td>6</td><td>2</td><td></td><td></td><td></td><td>*</td><td>Serial code (six characters of ASCII)</td></tr><tr><td></td><td></td><td>3</td><td></td><td></td><td></td><td>*</td><td>Serial number (ASCII for the compilation date in the form YYMMDD)</td></tr><tr><td>18</td><td>2</td><td>2</td><td></td><td></td><td></td><td></td><td>Location of abbreviations table (byte address)</td></tr><tr><td>1A</td><td>2</td><td>3+</td><td></td><td></td><td></td><td></td><td>Length of file (see note)</td></tr><tr><td>1C</td><td>2</td><td>3+</td><td></td><td></td><td></td><td></td><td>Checksum of file</td></tr><tr><td>1E</td><td>1</td><td>4</td><td></td><td>*</td><td>*</td><td></td><td>Interpreter number</td></tr><tr><td>1F</td><td>1</td><td>4</td><td></td><td>*</td><td>*</td><td></td><td>Interpreter version</td></tr><tr><td>20</td><td>1</td><td>4</td><td></td><td>*</td><td>*</td><td></td><td>Screen height (lines)</td></tr><tr><td>21</td><td>1</td><td>4</td><td></td><td>*</td><td>*</td><td></td><td>Screen width (characters)</td></tr><tr><td>22</td><td>2</td><td>5</td><td></td><td>*</td><td>*</td><td></td><td>Screen width in units</td></tr><tr><td>24</td><td>2</td><td>5</td><td></td><td>*</td><td>*</td><td></td><td>Screen height in units</td></tr><tr><td>26</td><td>1</td><td>5</td><td></td><td>*</td><td>*</td><td></td><td>Font width in units (defined as width of a '0')</td></tr><tr><td></td><td></td><td>6</td><td></td><td>*</td><td>*</td><td></td><td>Font height in units</td></tr><tr><td>27</td><td>1</td><td>5</td><td></td><td>*</td><td>*</td><td></td><td>Font height in units</td></tr><tr><td></td><td></td><td>6</td><td></td><td>*</td><td>*</td><td></td><td>Font width in units (defined as width of a '0')</td></tr><tr><td>28</td><td>2</td><td>6</td><td></td><td></td><td></td><td></td><td>Routines offset (divided by 8)</td></tr><tr><td>2A</td><td>2</td><td>6</td><td></td><td></td><td></td><td></td><td>Static strings offset (divided by 8)</td></tr><tr><td>2C</td><td>2</td><td>5</td><td></td><td>*</td><td>*</td><td></td><td>Default background colour</td></tr><tr><td>2D</td><td>2</td><td>5</td><td></td><td>*</td><td>*</td><td></td><td>Default foreground colour</td></tr><tr><td>2E</td><td>2</td><td>5</td><td></td><td></td><td></td><td></td><td>Address of terminating characters table (bytes)</td></tr><tr><td>30</td><td>2</td><td>6</td><td></td><td>*</td><td></td><td></td><td>Total width in pixels of text sent to output stream 3</td></tr><tr><td>32</td><td>2</td><td>1</td><td></td><td>*</td><td>*</td><td></td><td>Standard revision number</td></tr><tr><td>34</td><td>2</td><td>5</td><td></td><td></td><td></td><td></td><td>Alphabet table address (bytes), or 0 for default</td></tr><tr><td>36</td><td>2</td><td>5</td><td></td><td></td><td></td><td></td><td>Header extension table address (bytes)</td></tr><tr><td>38</td><td>8</td><td>6</td><td></td><td>*</td><td></td><td>*</td><td>Infocom used this as 8 bytes of ASCII: the player's user-name on their own mainframe, useful to identify which person played a saved-game (however, the bytes are all 0 in shipped story files)</td></tr><tr><td>3C</td><td>4</td><td></td><td></td><td></td><td></td><td>*</td><td>Inform 6 stores 4 bytes of ASCII here, giving the version of Inform used to compile the file: for instance, "6.11".</td></tr></tbody></table></div>
+<p>Some early Version 3 files do not contain length and checksum
+   data, hence the notation <strong>3+</strong>.
+</p>
+</section>
+
+<section class="clause-section is-clause" id="11.1.1">
+<p><a class="clause-num" href="#11.1.1">11.1.1</a><button class="copy-link" type="button" data-anchor="11.1.1" aria-label="Copy link to 11.1.1" title="Copy link"></button> It is illegal for a game to alter those
+   fields not marked as "Dyn".  An interpreter is therefore free to
+   store values of such fields in its own variables.
+</p>
+</section>
+
+<section class="clause-section is-clause" id="11.1.2">
+<p><a class="clause-num" href="#11.1.2">11.1.2</a><button class="copy-link" type="button" data-anchor="11.1.2" aria-label="Copy link to 11.1.2" title="Copy link"></button> Flags 2:</p>
+<div class="table-scroll" tabindex="0" role="region" aria-label="Table"><table><thead><tr><th scope="col">Bit</th><th scope="col">V</th><th scope="col">Dyn</th><th scope="col">Int</th><th scope="col">Rst</th><th scope="col">Con</th><th scope="col">Contents</th></tr></thead><tbody><tr><td>0</td><td><em>1</em></td><td>*</td><td>*</td><td>*</td><td></td><td>Set when transcripting is on</td></tr><tr><td>1</td><td><em>3</em></td><td>*</td><td></td><td>*</td><td></td><td>Game sets to force printing in fixed-pitch font</td></tr><tr><td>2</td><td><em>6</em></td><td>*</td><td>*</td><td></td><td></td><td>Int sets to request screen redraw: game clears when it complies with this.</td></tr><tr><td>3</td><td><em>5</em></td><td></td><td>*</td><td>*</td><td></td><td>If set, game wants to use pictures</td></tr><tr><td>4</td><td><em>3</em></td><td></td><td></td><td></td><td>*</td><td>Set in the Amiga version of The Lurking Horror so presumably to do with sound effects?</td></tr><tr><td></td><td><em>5</em></td><td></td><td>*</td><td>*</td><td></td><td>If set, game wants to use the UNDO opcodes</td></tr><tr><td>5</td><td><em>5</em></td><td></td><td>*</td><td>*</td><td></td><td>If set, game wants to use a mouse</td></tr><tr><td>6</td><td><em>5</em></td><td></td><td></td><td></td><td></td><td>If set, game wants to use colours</td></tr><tr><td>7</td><td><em>5</em></td><td></td><td>*</td><td>*</td><td></td><td>If set, game wants to use sound effects</td></tr><tr><td>8</td><td><em>6</em></td><td></td><td>*</td><td>*</td><td></td><td>If set, game wants to use menus</td></tr><tr><td>10</td><td>?</td><td>?</td><td>*</td><td></td><td>*</td><td>Possibly set by interpreter to indicate an error with the printer during transcription</td></tr><tr><td></td><td></td><td></td><td></td><td></td><td></td><td>(For bits 3,4,5,7 and 8, Int clears again if it cannot provide the requested effect.)</td></tr></tbody></table></div>
+<p>Those fields marked as "Con" are of uncertain function, and interpreters are not required to pay attention to them.</p>
+<p>"Bit 0" refers to bit 0 of the second byte, "Bit 8" refers to bit 0 of the first byte.</p>
+</section>
+
+<section class="clause-section is-clause" id="11.1.2.1">
+<p><a class="clause-num" href="#11.1.2.1">11.1.2.1</a><button class="copy-link" type="button" data-anchor="11.1.2.1" aria-label="Copy link to 11.1.2.1" title="Copy link"></button> The state of the transcription bit (bit 0 of Flags 2) can
+   be changed directly by the game to turn transcribing on or off
+   (see <strong>§</strong> 7.3, <strong>§</strong> 7.4).  The interpreter must also alter it if
+   stream 2 is turned on or off, to ensure that the bit always
+   reflects the true state of transcribing.  Note that the
+   interpreter ensures that its value survives a restart or restore.
+</p>
+</section>
+
+<section class="clause-section is-clause" id="11.1.3">
+<p><a class="clause-num" href="#11.1.3">11.1.3</a><button class="copy-link" type="button" data-anchor="11.1.3" aria-label="Copy link to 11.1.3" title="Copy link"></button> Infocom used the interpreter numbers:</p>
+<pre>
+   1   DECSystem-20     5   Atari ST           9   Apple IIc
+   2   Apple IIe        6   IBM PC            10   Apple IIgs
+   3   Macintosh        7   Commodore 128     11   Tandy Color
+   4   Amiga            8   Commodore 64
+</pre>
+<p>(The DECSystem-20 was Infocom's own in-house mainframe.)  An interpreter
+   should choose the interpreter number most suitable for the machine it
+   will run on.  In Versions up to 5, the main consideration is that the
+   behaviour of 'Beyond Zork' depends on the interpreter number (in terms
+   of its usage of the character graphics font).  In Version 6, the
+   decision is more serious, as existing Infocom story files depend
+   on interpreter number in many ways: moreover, some story files
+   expect to be run only on the interpreters for a particular machine.
+   (There are, for instance, specifically Amiga versions.)
+</p>
+</section>
+
+<section class="clause-section is-clause" id="11.1.3.1">
+<p><a class="clause-num" href="#11.1.3.1">11.1.3.1</a><button class="copy-link" type="button" data-anchor="11.1.3.1" aria-label="Copy link to 11.1.3.1" title="Copy link"></button> Interpreter versions are conventionally ASCII codes for
+   upper-case letters in Versions 4 and 5 (note that Infocom's Version 6
+   interpreters just store numbers here).
+</p>
+<p>Modern games are strongly discouraged from testing the interpreter number or interpreter version
+   header information for any game-changing behaviour. It is rarely meaningful, and a Standard interpreter
+   provides many better ways to query the interpreter for information.
+</p>
+</section>
+
+<section class="clause-section is-clause" id="11.1.4">
+<p><a class="clause-num" href="#11.1.4">11.1.4</a><button class="copy-link" type="button" data-anchor="11.1.4" aria-label="Copy link to 11.1.4" title="Copy link"></button> Flags 1:</p>
+<div class="table-scroll" tabindex="0" role="region" aria-label="Versions 1 to 3"><table class="left"><caption><strong>Versions 1 to 3</strong></caption><thead><tr><th scope="col">Bit</th><th scope="col">V</th><th scope="col">Dyn</th><th scope="col">Int</th><th scope="col">Rst</th><th scope="col">Con</th><th scope="col">Contents</th></tr></thead><tbody><tr><td>1</td><td>1</td><td></td><td></td><td></td><td></td><td>Status line type: 0=score/turns, 1=hours:mins</td></tr><tr><td>2</td><td>1</td><td></td><td></td><td></td><td></td><td>Story file split across two discs?</td></tr><tr><td>3</td><td>3</td><td></td><td>*</td><td></td><td>*</td><td>The legendary "Tandy" bit (see <a href="sect11.html#remarks">Remarks</a>)</td></tr><tr><td>4</td><td>1</td><td></td><td>*</td><td>*</td><td></td><td>Status line not available?</td></tr><tr><td>5</td><td>3</td><td></td><td>*</td><td>*</td><td></td><td>Screen-splitting available?</td></tr><tr><td>6</td><td>?</td><td></td><td>*</td><td>*</td><td></td><td>Is a variable-pitch font the default?</td></tr></tbody></table></div>
+<div class="table-scroll" tabindex="0" role="region" aria-label="from Version 4"><table><caption><strong>from Version 4</strong></caption><thead><tr><th scope="col">Bit</th><th scope="col">V</th><th scope="col">Dyn</th><th scope="col">Int</th><th scope="col">Rst</th><th scope="col">Con</th><th scope="col">Contents</th></tr></thead><tbody><tr><td>0</td><td>5</td><td></td><td>*</td><td>*</td><td></td><td>Colours available?</td></tr><tr><td>1</td><td>4</td><td></td><td></td><td></td><td>*</td><td>Status line type (see <a href="sect11.html#remarks">Remarks</a>)</td></tr><tr><td></td><td>6</td><td></td><td>*</td><td>*</td><td></td><td>Picture displaying available?</td></tr><tr><td>2</td><td>4</td><td></td><td>*</td><td>*</td><td></td><td>Boldface available?</td></tr><tr><td>3</td><td>4</td><td></td><td>*</td><td>*</td><td></td><td>Italic available?</td></tr><tr><td>4</td><td>4</td><td></td><td>*</td><td>*</td><td></td><td>Fixed-space style available?</td></tr><tr><td>5</td><td>6</td><td></td><td>*</td><td>*</td><td></td><td>Sound effects available?</td></tr><tr><td>7</td><td>4</td><td></td><td>*</td><td>*</td><td></td><td>Timed keyboard input available?</td></tr></tbody></table></div>
+<p>Those fields marked as "Con" are meaningful only by convention (since existing Infocom and Inform games write them), and the interpreter need not know about their state.</p>
+</section>
+
+<section class="clause-section is-clause has-marker is-v1-0" id="11.1.4.1">
+<p><a class="clause-num" href="#11.1.4.1">11.1.4.1</a><button class="copy-link" type="button" data-anchor="11.1.4.1" aria-label="Copy link to 11.1.4.1" title="Copy link"></button> <strong class="spec-marker spec-marker--v1-0">***[1.0]</strong>
+   The use of bit 7 in 'Flags 1' to signal whether timed
+   input is available was new in the 1.0 document: see the preface.
+</p>
+</section>
+
+<section class="clause-section is-clause has-marker is-v1-0" id="11.1.5">
+<p><a class="clause-num" href="#11.1.5">11.1.5</a><button class="copy-link" type="button" data-anchor="11.1.5" aria-label="Copy link to 11.1.5" title="Copy link"></button> <strong class="spec-marker spec-marker--v1-0">***[1.0]</strong>
+   If an interpreter obeys Revision <strong>n.m</strong> of this document
+   <em>perfectly</em>, as far as anyone knows,
+   then byte <strong>$32</strong> should be written with
+   <strong>n</strong> and byte <strong>$33</strong> with <strong>m</strong>.
+   If it is an earlier (non-standard)
+   interpreter, it should leave these bytes as 0.
+</p>
+</section>
+
+<section class="clause-section is-clause" id="11.1.6">
+<p><a class="clause-num" href="#11.1.6">11.1.6</a><button class="copy-link" type="button" data-anchor="11.1.6" aria-label="Copy link to 11.1.6" title="Copy link"></button> The file length stored at <strong>$1a</strong> is actually divided by a constant,
+   depending on the Version, to make it fit into a header word.  This constant
+   is 2 for Versions 1 to 3, 4 for Versions 4 to 5 or 8 for Versions 6 and
+   later.
+</p>
+</section>
+
+<section class="clause-section is-clause" id="11.1.7">
+<p><a class="clause-num" href="#11.1.7">11.1.7</a><button class="copy-link" type="button" data-anchor="11.1.7" aria-label="Copy link to 11.1.7" title="Copy link"></button> The header extension table provides potentially unlimited
+   room for further header information.  It is a table of word entries,
+   in which the initial word contains the number of words of data to follow.
+</p>
+</section>
+
+<section class="clause-section is-clause" id="11.1.7.1">
+<p><a class="clause-num" href="#11.1.7.1">11.1.7.1</a><button class="copy-link" type="button" data-anchor="11.1.7.1" aria-label="Copy link to 11.1.7.1" title="Copy link"></button> If the interpreter needs to read a word which is beyond the
+   length of the extension table, or the extension table doesn't exist at
+   all, then the result is 0.
+</p>
+</section>
+
+<section class="clause-section is-clause" id="11.1.7.2">
+<p><a class="clause-num" href="#11.1.7.2">11.1.7.2</a><button class="copy-link" type="button" data-anchor="11.1.7.2" aria-label="Copy link to 11.1.7.2" title="Copy link"></button> If the interpreter needs to write a word which is beyond the
+   length of the extension table, or the extension table doesn't exist at
+   all, then the result is that nothing happens.
+</p>
+</section>
+
+<section class="clause-section is-clause" id="11.1.7.3">
+<p><a class="clause-num" href="#11.1.7.3">11.1.7.3</a><button class="copy-link" type="button" data-anchor="11.1.7.3" aria-label="Copy link to 11.1.7.3" title="Copy link"></button> <strong>***[1.0][1.1]</strong>
+   Words in the header extension table have been allocated
+   as follows:
+</p>
+<div class="table-scroll" tabindex="0" role="region" aria-label="Header extension format"><table><caption><strong>Header extension format</strong></caption><thead><tr><th scope="col">Word</th><th scope="col">V</th><th scope="col">Dyn</th><th scope="col">Int</th>
+      <th scope="col">Rst</th><th scope="col">Contents</th>
+  </tr></thead><tbody><tr><td>0</td><td>5</td><td></td><td></td><td></td><td>Number of further words in table</td></tr><tr><td>1</td><td>5</td><td></td><td>*</td><td></td><td>X-coordinate of mouse after a click</td></tr><tr><td>2</td><td>5</td><td></td><td>*</td><td></td><td>Y-coordinate of mouse after a click</td></tr><tr><td>3</td><td>5</td><td></td><td></td><td></td><td>Unicode translation table address (optional)</td></tr><tr><td>4</td><td>5</td><td></td><td></td><td></td><td><em>Flags 3:</em></td></tr><tr><td></td><td><em>6</em></td><td></td><td>*</td><td>*</td>
+      <td>0: If set, game wants to use transparency</td>
+  </tr><tr><td>5</td><td>5</td><td></td><td>*</td><td>*</td>
+      <td>True default foreground colour</td>
+  </tr><tr><td>6</td><td>5</td><td></td><td>*</td><td>*</td>
+      <td>True default background colour</td>
+  </tr></tbody></table></div>
+</section>
+
+<section class="clause-section is-clause has-marker is-v1-1" id="11.1.7.4">
+<p><a class="clause-num" href="#11.1.7.4">11.1.7.4</a><button class="copy-link" type="button" data-anchor="11.1.7.4" aria-label="Copy link to 11.1.7.4" title="Copy link"></button> <strong class="spec-marker spec-marker--v1-1">***[1.1]</strong>
+   The bits in Flags 3 are set by the game to request use of a feature. If the interpreter cannot
+   provide a feature, it must clear the relevant bit.
+</p>
+</section>
+
+<section class="clause-section is-clause has-marker is-v1-1" id="11.1.7.4.1">
+<p><a class="clause-num" href="#11.1.7.4.1">11.1.7.4.1</a><button class="copy-link" type="button" data-anchor="11.1.7.4.1" aria-label="Copy link to 11.1.7.4.1" title="Copy link"></button> <strong class="spec-marker spec-marker--v1-1">***[1.1]</strong>
+   All unused bits in Flags 3 must be cleared by the interpreter.</p>
+</section>
+
+<section class="clause-section is-topic" id="remarks">
+<h2 id="h-remarks">Remarks<a class="heading-anchor" href="#remarks" aria-label="Link to Remarks"></a></h2>
+<p>Some early Infocom games were sold by the Tandy Corporation, who
+   seem to have been sensitive souls.  'Zork I' pretends not to have sequels
+   if it finds the Tandy bit set.  And to quote Paul David Doherty:
+   </p>
+<blockquote>
+    In 'The Witness', the Tandy Flag can be set while playing the game,
+    by typing <strong>$DB</strong> and then <strong>$TA</strong>.
+    If it is set, some of the prose will be
+    less offensive. For example, "private dicks" become "private eyes",
+    "bastards" are only "idiots", and all references to "slanteyes" and
+    "necrophilia" are removed.
+   </blockquote>
+<p class="loose-text">
+   We live in an age of censorship.
+</p>
+<p>Inform v4+ games (except v6) carry the meaning of bit 1 of Flags 1 over from
+   the v3 games, using it to decide between 'time' and 'score' type status lines.
+   This is part of the standard Inform 6 library, and interpreters should ignore this
+   bit in versions 4 and later, except version 6.
+</p>
+<p>In the Infocom period, the larger Version 3 story files would
+   not entirely fit on a single Atari 800 disc (though they would fit
+   on a single Apple II, or a single PC disc).  Atari versions were
+   therefore made which were identical to the normal ones except for
+   having Flags 1 bit 2 set, and were divided into the resident part
+   on one disc and the rest on another.  (This discovery was announced
+   by Stefan Jokisch on 26 August 1997 and sees the end of one of the
+   very few Z-machine mysteries left when Standard 1.0 was first published.)
+</p>
+<p>See the "Infocom fact sheet" for numbers and letters of the known
+   interpreters shipped by Infocom.  Interpreter versions are conventionally
+   the upper case letters in sequence (A, B, C, ...).  At present most ports
+   of <strong>Zip</strong> use interpreter number 6, and most of <strong>ITF</strong> use number 2.
+</p>
+<p>The unusual behaviour of 'Beyond Zork' concerns its character graphics:
+   see the remarks to <strong>§</strong> 16.
+</p>
+<p>The Macintosh story file for 'Zork Zero' erroneously does not set
+   the pictures bit (Flags 2, bit 3).
+</p>
+<p>The bit in the header described as "requesting screen redraw" may be set by
+   modern interpreters after, for example, resizing the "screen"; games should
+   ideally redraw the screen if they see this bit set. This will usually mean
+   the game clears the screen contents and rearranges borders, etc, so the bit
+   should not be set except when necessary.
+</p>
+<p>The (Version 6) sound and picture bits in Flags 1 indicate general
+   availability of sound and graphics - ie whether the associated opcodes are
+   available and functional.
+</p>
+<p>The bits in Flags 2 should ideally be set reflecting current
+   availability, rather than general support. In other words, if no Blorb (or
+   other) resources for this story file have been found, or if the Blorb file
+   contains no graphics or no sound, the corresponding bits should be cleared.
+</p>
+<p>Also, it is recommended that interpreters that would prompt for an auxiliary
+   Blorb file should do so immediately on start up if any of the "game wants to
+   use sound/music/graphics" bits are set; this allows the bits to be cleared if
+   no file is forthcoming, before the game starts execution. The game can then
+   take appropriate action.
+</p>
+<p>In Versions 1 to 3, bits 0 and 7 of 'Flags 1' are unused. In later Versions, 
+   bits 0, 6 and 7 are unused.  In 'Flags 2', bits 9 and 11-15 are unused.  
+   Infocom used up almost the whole header: only the bytes at <strong>$32</strong>
+   and <strong>$33</strong> are unused in any Version, and those are now allocated for
+   standard interpreters to give their Revision numbers.
+</p>
+<p>For comment on interpreter numbers,
+   see <strong>§</strong> 11. Infocom's own interpreters
+   were generally rewritten for each of versions 3 to 6.  For instance,
+   interpreters known to have been shipped with the Macintosh gave version
+   letters B, C, G, I (Version 3), E, H, I (Version 4), A, B, C (Version 5) and
+   finally 6.1 for Version 6.  (Version 6 interpreters seem to have version
+   numbers rather than letters.)  See the "Infocom fact sheet" for fuller
+      details.
+</p>
+<p>Inform 6 story files are easily distinguished from all other story files
+   by their usage of the last four header bytes.  Inform 1 to 5 story files
+   are best distinguished from Infocom ones by the serial code date: anything
+   before 930000 is either an Infocom file, or a fake.
+   The decision of how to continue serial codes past the year 2079 is deferred 
+   to a future revision of this Standard.
+   Clearly there is no point going to any trouble to prevent fakes, but with
+   a little practice it's easy to tell whether Zilch or Inform compiled a
+   file from the style of code generated.
+</p>
+</section>
+</main>
+<nav class="pager" aria-label="Previous and next section"><a class="pager-link pager-prev" rel="prev" href="sect10.html"><span class="pager-kind">Previous</span><span class="pager-title">10. Input streams</span></a><a class="pager-link pager-next" rel="next" href="sect12.html"><span class="pager-kind">Next</span><span class="pager-title">12. The object table</span></a></nav>
+<footer class="site-footer">
+  <p>The Z-Machine Standards Document, version 1.1 &mdash; 24 February 2014.
+     Canonical copy at <a href="https://www.inform-fiction.org/zmachine/standards/current/">inform-fiction.org</a>.</p>
+</footer>
+</div>
+<aside class="outline" id="outline" aria-label="On this page" data-generated>
+<h2>On this page</h2>
+<ol>
+<li class="depth-2"><a href="#11.1" title="The header table summarises locations in the Z-machine's header. "Hex" means the address, in hexadecimal; "Len" means th">11.1</a></li>
+<li class="depth-3"><a href="#11.1.1" title="It is illegal for a game to alter those fields not marked as "Dyn". An interpreter is therefore free to store values of ">11.1.1</a></li>
+<li class="depth-3"><a href="#11.1.2" title="Flags 2: BitV DynIntRstConContents 01 * * * Set when transcripting is on 13 * * Game sets to force printing in fixed-pit">11.1.2</a></li>
+<li class="depth-4"><a href="#11.1.2.1" title="The state of the transcription bit (bit 0 of Flags 2) can be changed directly by the game to turn transcribing on or off">11.1.2.1</a></li>
+<li class="depth-3"><a href="#11.1.3" title="Infocom used the interpreter numbers: 1 DECSystem-20 5 Atari ST 9 Apple IIc 2 Apple IIe 6 IBM PC 10 Apple IIgs 3 Macinto">11.1.3</a></li>
+<li class="depth-4"><a href="#11.1.3.1" title="Interpreter versions are conventionally ASCII codes for upper-case letters in Versions 4 and 5 (note that Infocom's Vers">11.1.3.1</a></li>
+<li class="depth-3"><a href="#11.1.4" title="Flags 1: Versions 1 to 3 Bit V DynIntRstConContents 1 1 Status line type: 0=score/turns, 1=hours:mins 2 1 Story file spl">11.1.4</a></li>
+<li class="depth-4"><a href="#11.1.4.1" title="***[1.0] The use of bit 7 in 'Flags 1' to signal whether timed input is available was new in the 1.0 document: see the p">11.1.4.1</a></li>
+<li class="depth-3"><a href="#11.1.5" title="***[1.0] If an interpreter obeys Revision n.m of this document perfectly, as far as anyone knows, then byte $32 should b">11.1.5</a></li>
+<li class="depth-3"><a href="#11.1.6" title="The file length stored at $1a is actually divided by a constant, depending on the Version, to make it fit into a header ">11.1.6</a></li>
+<li class="depth-3"><a href="#11.1.7" title="The header extension table provides potentially unlimited room for further header information. It is a table of word ent">11.1.7</a></li>
+<li class="depth-4"><a href="#11.1.7.1" title="If the interpreter needs to read a word which is beyond the length of the extension table, or the extension table doesn'">11.1.7.1</a></li>
+<li class="depth-4"><a href="#11.1.7.2" title="If the interpreter needs to write a word which is beyond the length of the extension table, or the extension table doesn">11.1.7.2</a></li>
+<li class="depth-4"><a href="#11.1.7.3" title="***[1.0][1.1] Words in the header extension table have been allocated as follows: Header extension format Word V Dyn Int">11.1.7.3</a></li>
+<li class="depth-4"><a href="#11.1.7.4" title="***[1.1] The bits in Flags 3 are set by the game to request use of a feature. If the interpreter cannot provide a featur">11.1.7.4</a></li>
+<li class="depth-4"><a href="#11.1.7.4.1" title="***[1.1] All unused bits in Flags 3 must be cleared by the interpreter.">11.1.7.4.1</a></li>
+<li class="depth-1"><a href="#remarks">Remarks</a></li>
+</ol>
+</aside>
+</div>
+<script src="assets/nav.js"></script>
+<script src="assets/zspec.js" defer></script>
+</body>
+</html>

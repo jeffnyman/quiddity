@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Appendix E. Statistics — The Z-Machine Standards Document 1.1</title>
+<meta name="description" content="Appendix E. Statistics — section of the Z-Machine Standards Document, version 1.1.">
+<link rel="canonical" href="https://jeffnyman.github.io/z-machine-standard/appe.html">
+<meta name="theme-color" content="#0d63c9">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="The Z-Machine Standards Document 1.1">
+<meta property="og:title" content="Appendix E. Statistics — The Z-Machine Standards Document 1.1">
+<meta property="og:description" content="Appendix E. Statistics — section of the Z-Machine Standards Document, version 1.1.">
+<meta property="og:url" content="https://jeffnyman.github.io/z-machine-standard/appe.html">
+<link rel="stylesheet" href="assets/zspec.css">
+<script>/* Set the theme before first paint to avoid a flash. */
+(function(){try{var t=localStorage.getItem('zspec-theme');if(t==='dark'||t==='light')document.documentElement.dataset.theme=t;}catch(e){}})();
+</script>
+</head>
+<body>
+<a class="skip-link" href="#content">Skip to content</a>
+<header class="topbar">
+  <button class="icon-button nav-toggle" type="button" aria-expanded="false" aria-controls="sidebar" aria-label="Show contents">
+    <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 5h14M3 10h14M3 15h14"/></svg>
+  </button>
+  <a class="brand" href="index.html"><span class="brand-name">Z-Machine Standard</span><span class="brand-version">1.1</span></a>
+  <div class="topbar-actions">
+    <button class="search-trigger" type="button" data-search-open>
+      <svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="9" cy="9" r="6"/><path d="M13.5 13.5 18 18"/></svg>
+      <span>Search</span><kbd>/</kbd>
+    </button>
+    <button class="icon-button theme-toggle" type="button" aria-label="Switch colour theme">
+      <svg class="icon-sun" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="4"/><path d="M10 1v2M10 17v2M1 10h2M17 10h2M3.9 3.9l1.4 1.4M14.7 14.7l1.4 1.4M16.1 3.9l-1.4 1.4M5.3 14.7l-1.4 1.4"/></svg>
+      <svg class="icon-moon" viewBox="0 0 20 20" aria-hidden="true"><path d="M17 12.3A7.5 7.5 0 0 1 7.7 3a7.5 7.5 0 1 0 9.3 9.3z"/></svg>
+    </button>
+  </div>
+</header>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Specification contents">
+<!--nav:start-->
+<div class="nav-inner">
+<a class="nav-home" href="index.html">Contents</a>
+<ul class="nav-list">
+<li><a href="preface.html"><span class="nav-label">Preface</span></a></li>
+<li><a href="overview.html"><span class="nav-label">Overview</span></a></li>
+</ul>
+<h2 class="nav-group">Fundamentals</h2>
+<ul class="nav-list">
+<li><a href="sect01.html"><span class="nav-num">1</span><span class="nav-label">The memory map</span></a></li>
+<li><a href="sect02.html"><span class="nav-num">2</span><span class="nav-label">Numbers and arithmetic</span></a></li>
+<li><a href="sect03.html"><span class="nav-num">3</span><span class="nav-label">Text and characters</span></a></li>
+<li><a href="sect04.html"><span class="nav-num">4</span><span class="nav-label">Instruction encoding</span></a></li>
+<li><a href="sect05.html"><span class="nav-num">5</span><span class="nav-label">Routine encoding</span></a></li>
+<li><a href="sect06.html"><span class="nav-num">6</span><span class="nav-label">The game state</span></a></li>
+</ul>
+<h2 class="nav-group">Input/Output</h2>
+<ul class="nav-list">
+<li><a href="sect07.html"><span class="nav-num">7</span><span class="nav-label">Output streams</span></a></li>
+<li><a href="sect08.html"><span class="nav-num">8</span><span class="nav-label">The screen model</span></a></li>
+<li><a href="sect09.html"><span class="nav-num">9</span><span class="nav-label">Sound effects</span></a></li>
+<li><a href="sect10.html"><span class="nav-num">10</span><span class="nav-label">Input streams</span></a></li>
+</ul>
+<h2 class="nav-group">Tables</h2>
+<ul class="nav-list">
+<li><a href="sect11.html"><span class="nav-num">11</span><span class="nav-label">The header</span></a></li>
+<li><a href="sect12.html"><span class="nav-num">12</span><span class="nav-label">The object table</span></a></li>
+<li><a href="sect13.html"><span class="nav-num">13</span><span class="nav-label">Dictionary and lexing</span></a></li>
+</ul>
+<h2 class="nav-group">Instruction Set</h2>
+<ul class="nav-list">
+<li><a href="sect14.html"><span class="nav-num">14</span><span class="nav-label">Table of opcodes</span></a></li>
+<li><a href="sect15.html"><span class="nav-num">15</span><span class="nav-label">Dictionary of opcodes</span></a></li>
+</ul>
+<h2 class="nav-group">An Unusual Font</h2>
+<ul class="nav-list">
+<li><a href="sect16.html"><span class="nav-num">16</span><span class="nav-label">Font 3</span></a></li>
+</ul>
+<h2 class="nav-group">Appendices</h2>
+<ul class="nav-list">
+<li><a href="appa.html"><span class="nav-num">A</span><span class="nav-label">Error messages and debugging</span></a></li>
+<li><a href="appb.html"><span class="nav-num">B</span><span class="nav-label">Header conventions</span></a></li>
+<li><a href="appc.html"><span class="nav-num">C</span><span class="nav-label">Resources available</span></a></li>
+<li><a href="appd.html"><span class="nav-num">D</span><span class="nav-label">History</span></a></li>
+<li class="is-current"><a href="appe.html" aria-current="page"><span class="nav-num">E</span><span class="nav-label">Statistics</span></a></li>
+<li><a href="appf.html"><span class="nav-num">F</span><span class="nav-label">Canonical story files</span></a></li>
+</ul>
+<h2 class="nav-group">Related standards</h2>
+<p class="nav-note">Mirrored in this repository</p>
+<ul class="nav-list">
+<li><a href="quetzal.html"><span class="nav-label">Quetzal</span></a></li>
+<li><a href="blorb.html"><span class="nav-label">Blorb</span></a></li>
+</ul>
+</div>
+<!--nav:end-->
+</nav>
+<div class="main-column">
+<main class="content" id="content">
+<div class="page-head">
+<img class="page-icon" src="images/iconae.gif" alt="" width="82" height="86" loading="lazy" decoding="async">
+<h1>Appendix E. Statistics</h1>
+</div>
+<div class="intro">
+<blockquote>
+  <p>LORD DIMWIT FLATHEAD:  "It must have two hundred thousand rooms, four
+     million takeable objects, and understand a vocabulary of every single word
+     ever spoken in every language ever invented."
+  </p>
+  <p><strong>The New Zork Times (Winter 1984)</strong></p>
+</blockquote>
+<p>[Note: the information below has not been updated since the 20th June 1997 revision of
+   this document.]
+</p>
+<p>To give some idea of the sizes found in typical story files, here are a few
+   statistics, mostly gathered by Paul David Doherty, whose "Infocom fact
+   sheet" file is the definitive reference.
+</p>
+<p>(i) <em>Length</em></p>
+<p>The shortest files are those dating from the time of the 'Zork'
+   trilogy, at about 85K; middle-period Version 3 games are typically 105K,
+   and only the latest use the full memory map.  In Versions 4 and 5, only
+   'Trinity', 'A Mind Forever Voyaging' and 'Beyond Zork' use the full 256K.
+   'Border Zone' and 'Sherlock', for instance, are about 180K.  (The author's
+   short story 'Balances' is about 50K, an edition of 'Adventure' takes 80K,
+   and 'Curses' takes 256K (it's padded out to the maximum size with
+   background information; the actual game comprises only about 245K).  Under
+   Inform, the library occupies about 35K regardless of the size of game.)
+</p>
+<p>(ii) <em>Code size</em></p>
+<p>'Zork I' uses only about 5500 opcodes, but the number rises
+   steeply with later games; 'Hollywood Hijinx' has 10355 and, e.g.
+   'Moonmist' has 15900 (both these being Version 3).  Against this, 'A Mind
+   Forever Voyaging' has only 18700, and only 'Trinity' and 'Beyond Zork'
+   reach 32000 or so.  (Inform games are more efficiently compiled and make
+   better use of common code -- the library -- so perform much better here:
+   the old Version 3, release 10 of 'Curses' (128K long, and a larger game
+   than any Infocom Version 3 game) has only 6720 opcodes.)
+</p>
+<p>(iii) <em>Objects and rooms</em></p>
+<p>This varies greatly with the style of game.
+   'Zork I' has 110 rooms and 60 takeable objects, but several quite
+   complex games have as few as 30 rooms (the mysteries, or 'Hitch-hikers'). 
+   The average for Version 3 games is 69 rooms, 39 takeable objects.
+</p>
+<p>'A Mind Forever Voyaging' contains many rooms (178) but few objects (30). 
+   'Trinity', a more typical style of game, contains 134 rooms and 49
+   objects: the Version 5 'Curses' has a few more of each.  Of the Version 6
+   games, only 'Zork Zero' scores highly here, with 215 rooms and 106
+   objects.  The average for Version 4/5 games is 105 rooms and 54 objects.
+</p>
+<p>The total number of objects tends to be close to the limit of 255 in
+   Version 3 games.  'Curses' contains 508.
+</p>
+<p>(iv) <em>Dictionary</em></p>
+<p>Early games such as 'Zork I' know about 600 words, but
+   again this rises steeply to about 1000 even in Version 3.
+   Later games know 1569 ('Beyond Zork') to the record, 2120 ('Trinity').
+   (This is achieved by heroic inclusion of unlikely synonyms: e.g. the
+   Japanese lady with the umbrella can be called WOMAN, LADY, CRONE,
+   MADAM, MADAME, MATRON, DAME or FACE with any of the adjectives
+   OLD, AGED, ANCIENT, JAP, JAPANESE, ORIENTAL or YELLOW.)
+   Version 6 games have smaller dictionaries.  So has 'Curses', at 1364.
+</p>
+<p>(v) <em>Opcodes</em></p>
+<p>(a) Of the 1426854 opcodes in the shipped Infocom story files in Paul David
+   Doherty's collection, here are the top and bottom ten most popular.
+   (Leaving out those which never occur and so score 0:
+   <strong>nop</strong>, <strong>art_shift</strong>, <strong>piracy</strong> and the two post-Infocom opcodes,
+   <strong>print_unicode</strong> and <strong>check_unicode</strong>.)
+</p>
+<pre>
+    Top Ten Opcodes Chart          Bottom Ten Opcodes Chart
+    1.   je          195959        1.   print_form       2
+    2.   print       142755        2.   erase_picture    3
+    3.   jz          112016        3.   read_mouse       3
+    4.   call_vs     104075        4.   encode_text      7
+    5.   print_ret    80870        5.   make_menu        9
+    6.   store        71128        6.   not             14
+    7.   rtrue        66125        7.   scroll_window   16
+    8.   jump         56534        8.   pop_stack       17
+    9.   new_line     52553        9.   restore_undo    18
+    10.  test_attr    46627        10.  mouse_window    22
+</pre>
+<p>So about 2/3rds of all opcodes are those in the top ten; 1 in 8 opcodes is a
+   <strong>je</strong>, and only 1 in 710000 is a <strong>print_form</strong>.
+</p>
+<p>(b) An experiment (conducted with the help of Kevin Bracey) sheds some
+   light on the opcodes most frequently interpreted in typical play.  Two
+   very different games ('Zork I', Version 5 "solid gold" edition;
+   'Museum of Inform', a complex Inform example game) were played for
+   about 50000 cycles of the Z-machine (about 20 moves in 'Zork I', rather
+   less in the 'Museum').  The following table records all opcodes with
+   a frequency of at least 1% (i.e., 0.01):
+</p>
+<pre>
+    Zork I Solid Gold (Infocom)    Museum of Inform (Inform)
+    0.116110  loadb                0.104952  je
+    0.103990  storeb               0.101151  jz
+    0.101616  jz                   0.092727  jump
+    0.074979  dec_chk              0.080985  jg
+    0.066375  add                  0.079039  jl
+    0.066283  je                   0.070550  inc
+    0.060760  store                0.070139  store
+    0.053867  loadw                0.047058  loadw
+    0.038095  storew               0.034137  get_prop_addr
+    0.036428  mul                  0.024105  jin
+    0.032069  inc_chk              0.022734  rtrue
+    0.030243  jump                 0.021583  storew
+    0.029170  test_attr            0.020075  add
+    0.020634  call_vs              0.018485  call_vs
+    0.011184  get_sibling          0.016731  and
+                                   0.016082  loadb
+                                   0.012061  call_vn
+                                   0.011879  test_attr
+                                   0.011824  dec
+                                   0.011687  ret
+</pre>
+<p>Adventure games spend most of the time parsing, and the differences
+   between these tables reflect different parser designs (byte arrays
+   versus word arrays and arrays stored in properties) as well as
+   different compiler code generators (Inform does not use <strong>inc_chk</strong>
+   or <strong>dec_chk</strong>, so it uses <strong>inc</strong>, <strong>dec</strong>, <strong>jl</strong> and <strong>jg</strong> correspondingly
+   more).  In the case of 'Zork I', about a third of all opcodes are
+   branches: in the case of 'Museum', almost half.
+</p>
+</div>
+</main>
+<nav class="pager" aria-label="Previous and next section"><a class="pager-link pager-prev" rel="prev" href="appd.html"><span class="pager-kind">Previous</span><span class="pager-title">D. History</span></a><a class="pager-link pager-next" rel="next" href="appf.html"><span class="pager-kind">Next</span><span class="pager-title">F. Canonical story files</span></a></nav>
+<footer class="site-footer">
+  <p>The Z-Machine Standards Document, version 1.1 &mdash; 24 February 2014.
+     Canonical copy at <a href="https://www.inform-fiction.org/zmachine/standards/current/">inform-fiction.org</a>.</p>
+</footer>
+</div>
+</div>
+<script src="assets/nav.js"></script>
+<script src="assets/zspec.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,76 @@
+NOTICE
+======
+
+This repository publishes three interactive-fiction specifications that were
+written by other people. They are reproduced here verbatim, restyled for
+readability. No licence is asserted over any of them, and no claim of
+authorship is made. Each remains the work of its authors.
+
+If you are one of the authors or maintainers below and would prefer this
+mirror be changed or taken down, please open an issue and it will be done.
+
+
+The Z-Machine Standards Document, version 1.1 (24 February 2014)
+----------------------------------------------------------------
+Graham Nelson, with revisions by Kevin Bracey, Jason C. Penney and
+David Fillmore.
+
+  https://www.inform-fiction.org/zmachine/standards/current/
+
+The text is reproduced with corrections limited to clause numbering; every
+such correction is listed in the revision note at the foot of the preface,
+and in the "Defects found in the source" table in README.md. The pristine
+2014 files this edition is generated from are kept in source/.
+
+The section icons in images/ (icon01..icon16 and friends) and the memory-map
+diagram are from the same document.
+
+The Z and Q title letters that head the Standard and Quetzal were originally
+low-resolution GIFs. They have been redrawn for this edition as images/zlogo.svg
+and images/qlogo.svg, sharing one set of metrics with the B drawn for Blorb.
+Those three SVGs are original work. The GIFs they replace are kept, unused, in
+source/images/.
+
+
+Quetzal: a common format for saved games, version 1.4 (13 November 1997)
+------------------------------------------------------------------------
+Martin Frost. HTML typesetting by Graham Nelson.
+
+  https://inform-fiction.org/zmachine/standards/quetzal/index.html
+
+Reproduced verbatim as quetzal.html. Also includes images/qlogo.gif.
+
+
+Blorb: an IF resource collection format, version 2.0.4
+-------------------------------------------------------
+Andrew Plotkin.
+
+  https://www.eblong.com/zarf/blorb/blorb.html
+
+Reproduced verbatim as blorb.html.
+
+Blorb has never had a logo. The "B" shown at the top of that page
+(images/blogo.svg) was drawn for this edition so that Blorb has a title mark
+alongside the Z and Q of the other two documents. It is original work, not
+Andrew Plotkin's, and is not official Blorb branding.
+
+
+The Bocfel Adaptive Palette Chunk (the 'BPal' extension to Blorb)
+-----------------------------------------------------------------
+Chris Spiegel, documented alongside snavig, the tool that writes it.
+
+  https://github.com/cspiegel/snavig/blob/master/Blorb.md
+
+Reproduced verbatim as the addendum at blorb.html#bpal, under the MIT licence
+snavig carries. It is an unofficial extension: Andrew Plotkin has not adopted
+it, and it is not part of Blorb. It is set apart on the page and marked as
+such. The Markdown original is kept in source/bpal-original.md.
+
+
+What in this repository is not third-party
+------------------------------------------
+The generator in tools/, the stylesheet and scripts in assets/, the editor's
+notes in content/, the workflow in .github/, the three title letters
+(images/zlogo.svg, images/qlogo.svg, images/blogo.svg), and README.md
+are original work and are offered under the MIT licence in LICENSE. That licence covers those files only. It does not, and
+cannot, apply to the specification texts above.

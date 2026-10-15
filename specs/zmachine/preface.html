@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Preface — The Z-Machine Standards Document 1.1</title>
+<meta name="description" content="Preface — section of the Z-Machine Standards Document, version 1.1.">
+<link rel="canonical" href="https://jeffnyman.github.io/z-machine-standard/preface.html">
+<meta name="theme-color" content="#0d63c9">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="The Z-Machine Standards Document 1.1">
+<meta property="og:title" content="Preface — The Z-Machine Standards Document 1.1">
+<meta property="og:description" content="Preface — section of the Z-Machine Standards Document, version 1.1.">
+<meta property="og:url" content="https://jeffnyman.github.io/z-machine-standard/preface.html">
+<link rel="stylesheet" href="assets/zspec.css">
+<script>/* Set the theme before first paint to avoid a flash. */
+(function(){try{var t=localStorage.getItem('zspec-theme');if(t==='dark'||t==='light')document.documentElement.dataset.theme=t;}catch(e){}})();
+</script>
+</head>
+<body>
+<a class="skip-link" href="#content">Skip to content</a>
+<header class="topbar">
+  <button class="icon-button nav-toggle" type="button" aria-expanded="false" aria-controls="sidebar" aria-label="Show contents">
+    <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 5h14M3 10h14M3 15h14"/></svg>
+  </button>
+  <a class="brand" href="index.html"><span class="brand-name">Z-Machine Standard</span><span class="brand-version">1.1</span></a>
+  <div class="topbar-actions">
+    <button class="search-trigger" type="button" data-search-open>
+      <svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="9" cy="9" r="6"/><path d="M13.5 13.5 18 18"/></svg>
+      <span>Search</span><kbd>/</kbd>
+    </button>
+    <button class="icon-button theme-toggle" type="button" aria-label="Switch colour theme">
+      <svg class="icon-sun" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="4"/><path d="M10 1v2M10 17v2M1 10h2M17 10h2M3.9 3.9l1.4 1.4M14.7 14.7l1.4 1.4M16.1 3.9l-1.4 1.4M5.3 14.7l-1.4 1.4"/></svg>
+      <svg class="icon-moon" viewBox="0 0 20 20" aria-hidden="true"><path d="M17 12.3A7.5 7.5 0 0 1 7.7 3a7.5 7.5 0 1 0 9.3 9.3z"/></svg>
+    </button>
+  </div>
+</header>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Specification contents">
+<!--nav:start-->
+<div class="nav-inner">
+<a class="nav-home" href="index.html">Contents</a>
+<ul class="nav-list">
+<li class="is-current"><a href="preface.html" aria-current="page"><span class="nav-label">Preface</span></a></li>
+<li><a href="overview.html"><span class="nav-label">Overview</span></a></li>
+</ul>
+<h2 class="nav-group">Fundamentals</h2>
+<ul class="nav-list">
+<li><a href="sect01.html"><span class="nav-num">1</span><span class="nav-label">The memory map</span></a></li>
+<li><a href="sect02.html"><span class="nav-num">2</span><span class="nav-label">Numbers and arithmetic</span></a></li>
+<li><a href="sect03.html"><span class="nav-num">3</span><span class="nav-label">Text and characters</span></a></li>
+<li><a href="sect04.html"><span class="nav-num">4</span><span class="nav-label">Instruction encoding</span></a></li>
+<li><a href="sect05.html"><span class="nav-num">5</span><span class="nav-label">Routine encoding</span></a></li>
+<li><a href="sect06.html"><span class="nav-num">6</span><span class="nav-label">The game state</span></a></li>
+</ul>
+<h2 class="nav-group">Input/Output</h2>
+<ul class="nav-list">
+<li><a href="sect07.html"><span class="nav-num">7</span><span class="nav-label">Output streams</span></a></li>
+<li><a href="sect08.html"><span class="nav-num">8</span><span class="nav-label">The screen model</span></a></li>
+<li><a href="sect09.html"><span class="nav-num">9</span><span class="nav-label">Sound effects</span></a></li>
+<li><a href="sect10.html"><span class="nav-num">10</span><span class="nav-label">Input streams</span></a></li>
+</ul>
+<h2 class="nav-group">Tables</h2>
+<ul class="nav-list">
+<li><a href="sect11.html"><span class="nav-num">11</span><span class="nav-label">The header</span></a></li>
+<li><a href="sect12.html"><span class="nav-num">12</span><span class="nav-label">The object table</span></a></li>
+<li><a href="sect13.html"><span class="nav-num">13</span><span class="nav-label">Dictionary and lexing</span></a></li>
+</ul>
+<h2 class="nav-group">Instruction Set</h2>
+<ul class="nav-list">
+<li><a href="sect14.html"><span class="nav-num">14</span><span class="nav-label">Table of opcodes</span></a></li>
+<li><a href="sect15.html"><span class="nav-num">15</span><span class="nav-label">Dictionary of opcodes</span></a></li>
+</ul>
+<h2 class="nav-group">An Unusual Font</h2>
+<ul class="nav-list">
+<li><a href="sect16.html"><span class="nav-num">16</span><span class="nav-label">Font 3</span></a></li>
+</ul>
+<h2 class="nav-group">Appendices</h2>
+<ul class="nav-list">
+<li><a href="appa.html"><span class="nav-num">A</span><span class="nav-label">Error messages and debugging</span></a></li>
+<li><a href="appb.html"><span class="nav-num">B</span><span class="nav-label">Header conventions</span></a></li>
+<li><a href="appc.html"><span class="nav-num">C</span><span class="nav-label">Resources available</span></a></li>
+<li><a href="appd.html"><span class="nav-num">D</span><span class="nav-label">History</span></a></li>
+<li><a href="appe.html"><span class="nav-num">E</span><span class="nav-label">Statistics</span></a></li>
+<li><a href="appf.html"><span class="nav-num">F</span><span class="nav-label">Canonical story files</span></a></li>
+</ul>
+<h2 class="nav-group">Related standards</h2>
+<p class="nav-note">Mirrored in this repository</p>
+<ul class="nav-list">
+<li><a href="quetzal.html"><span class="nav-label">Quetzal</span></a></li>
+<li><a href="blorb.html"><span class="nav-label">Blorb</span></a></li>
+</ul>
+</div>
+<!--nav:end-->
+</nav>
+<div class="main-column">
+<main class="content" id="content">
+<div class="page-head">
+<img class="page-icon" src="images/zlogo.svg" alt="" width="85" height="111" loading="lazy" decoding="async">
+<h1>Preface</h1>
+</div>
+<div class="intro">
+<p>The Z-machine was created on a coffee table in Pittsburgh in 1979.  It
+   is an imaginary computer whose programs are adventure games, and is
+   well-adapted to its task, implementing complex games remarkably compactly. 
+   They were still perhaps 100K long, too large for the memory of the home
+   computers of their day, and the Z-machine seems to have made the first
+   usage of virtual memory on a microcomputer.  Further ahead of its time
+   was the ability to efficiently save and restore the entire execution state.
+</p>
+<p>The design's cardinal principle is that any game is 100% portable to
+   different computers: that is, any legal program exactly determines its
+   behaviour.  This portability is largely made possible by a willingness to
+   constrain maximum as well as minimum levels of performance (for instance,
+   dynamic memory allocation is impossible).
+</p>
+<p>Infocom's catalogue continues to be sold and to be played under
+   interpreter programs, either original Infocom ones or more recent and
+   generally better freeware ones.  About
+   <a href="appf.html">130 story files</a> compiled by Infocom's compiler
+   <strong>Zilch</strong> survive and since 1993 very many more story files have
+   been created with the Inform design system.
+</p>
+<p>Eight Versions of the Z-machine exist, and the first byte of any
+   "story file" (that is: any Z-machine program) gives the Version number
+   it must be interpreted under.
+</p>
+</div>
+
+<section class="clause-section is-topic" id="standardisation">
+<h2 id="h-standardisation">Standardisation<a class="heading-anchor" href="#standardisation" aria-label="Link to Standardisation"></a></h2>
+<p>The majority of opcode names used in this document were agreed between 1994 and 1995
+   as a standard set by Mark Howell, author of the disassembler <strong>Txd</strong>
+   (part of the <strong>Ztools</strong> suite of utility programs), and Graham Nelson,
+   author of the assembly level of Inform.  They do not correspond to
+   Infocom's opcode names.
+</p>
+<p>The first vesion of this Standard was drawn up in November 1995, 
+   drawing on a rougher description written in 1993 and, before that, 
+   sketches of table formats by Mike Threepoint and others.  It 
+   formalised what different interpreter writers regard as the Z-machine,
+   guaranteeing a reliable and well-featured platform for writers
+   of new games.  The initial 0.2 Standard was followed by the 1.0 Standard,
+   which contained mostly corrections and clarifications, but also added some 
+   new features.
+</p>
+<p>This third version of the Standard was initially put together by Kevin Bracey
+   and Jason C. Penney and proposed on the Z-Machine Mailing List in December
+   2001. After much discussion, and nine drafts, the final list of changes to
+   the Standard was uploaded to the if-archive in May 2006. This 2014 document
+   adds no new material to that final draft, and is merely a merging of those
+   changes to the main Standard.
+</p>
+<p>The main additions in the 1.1 Standard are:</p>
+<ul>
+  <li>Better colour support, giving games access to 32,768 colours as opposed to 
+      the previous 11. Version 6 games may also make use of the new 'transparent'
+      background colour.
+  </li>
+  <li>Version 6 games may now hint to the interpreter that it is safe to make changes
+      to the display in a backing store and flush them to the screen later, rather than 
+	  making changes directly to the screen. In a program carrying out a complex layered 
+	  graphical composition, this may speed up the process.
+  </li>
+  <li>The <strong>save</strong> and <strong>restore</strong> opcodes have a new optional
+      operand that allow the game to control whether the interpreter prompts for a filename
+	  or executes the intructions silently.
+  </li>
+  <li>The optional operand removed from <strong>set_font</strong> in the previous Standard
+      has been reinstated.
+  </li>
+</ul>
+<p>There are three companion documents attached to this Standard.</p>
+<ul>
+  <li><strong>Quetzal</strong> by Martin Frost defines a standard
+      format for saved-game files, the purpose of which is to allow
+      a player to save a game using one interpreter, and then restore
+      and continure playing on a new interpreter, or even an entirely
+      new machine.
+  </li>
+  <li><strong>Blorb</strong> by Andrew Plotkin is a standard for a "resources" 
+      file to accompany or encapsulate a Z-machine game, neatly packaging up 
+	  sound and graphics in modern formats. 
+  </li>
+  <li><strong>The Treaty of Babel</strong> is a standard for bibliographic 
+      information for interactive fiction games. The aim is to provide a unified
+      way to identify and describe story files of many different internal formats. 
+      The Treaty is not "owned" by any individual, but by a committee of
+      representatives from each of the pieces of software which have signed
+      up.
+  </li>
+</ul>
+<p>Standard interpreters are not <em>required</em> to support these standards, since they
+   do not affect Z-Machine behaviour, but interpreter-writers are strongly encouraged to consider it.
+</p>
+</section>
+
+<section class="clause-section is-topic has-marker" id="so-what-is-standard">
+<h2 id="h-so-what-is-standard">So what is "standard"?<a class="heading-anchor" href="#so-what-is-standard" aria-label="Link to So what is "standard"?"></a></h2>
+<p>To call itself "Standard", an interpreter should (as far as anyone knows)
+   obey this document exactly for every Version of the Z-machine it claims to
+   interpret.  Interpreters need not provide optional features suggested in
+   the "remarks" sections, and need not make their source code public.
+   Each edition of this document has a Revision number, somewhat like the JFIF
+   identification number used by the JPEG standard.  A standard interpreter
+   should communicate its revision number in three ways:
+</p>
+<ul>
+  <li>To someone downloading it from the Internet:
+      by including it in its filename.
+  </li>
+  <li>To the player: for instance by means of an "information" option
+      on a menu, or in an initialisation sequence.
+  </li>
+  <li>To the game: by writing it into bytes in the header which were
+      always left zero before this standard was devised (see <strong>§</strong>11).  A game
+      compiled with Inform library 5/12 or later prints the revision number in its
+      banner (if this isn't 0.0).
+  </li>
+</ul>
+<p>Few arbitrary choices have been made in writing this document.
+   Where Infocom's own shipped interpreters disagree, or contain manifest
+   bugs, it has usually been possible to decide which was "correct".
+   Elsewhere, minimum levels of performance have been
+   invented where necessary.  (For example, a minimum call-stack size
+   is needed for programmers to be sure of what level of recursion is safe.)
+</p>
+<p>Those paragraphs which genuinely extend the Infocom format are marked 
+   <strong>***[n.m]</strong>, where <strong>n</strong> and <strong>m</strong> 
+   are the major and minor version numbers for the standard in which the 
+   feature was added. Where a feature has been added to the standard which 
+   was part of Infocom's design but missing from earlier standard versions, 
+   the <strong>[n.m]</strong> notation will be present without the <strong class="spec-marker">***</strong> 
+   mark. In any event, Infocom's original shipped interpreters do not conform to 
+   this standard document, because of bugs or because of slight variations between 
+   the Inform output format and Infocom's.
+</p>
+</section>
+
+<section class="clause-section is-topic" id="notation">
+<h2 id="h-notation">Notation<a class="heading-anchor" href="#notation" aria-label="Link to Notation"></a></h2>
+<p>Hexadecimal numbers are written with an initial dollar, as in <strong>$ff</strong>,
+   while binary numbers are written with a double-dollar as in <strong>$$11011</strong>,
+   according to Inform conventions.  The bits in a byte are numbered 0 to 7,
+   0 being the least significant and the top bit, 7, the most.
+</p>
+<p>Story files are mechanically best identified by their release number
+   and serial code, which are written into the header information
+   at the bottom of Z-machine memory.  The release number can be anything
+   between 0 and 65535 but is usually between 1 and 100.
+   The serial code can consist of any six textual characters but is
+   usually the date of compilation, arranged <strong>YYMMDD</strong>:
+   thus 970619 refers to June 19th, 1997.
+</p>
+<p>Paul David Doherty, in his extensive investigations into Infocom's
+   released games, introduced the notation
+</p>
+<p><strong>Release number.Serial code</strong></p>
+<p>to identify particular story files: for example the first production
+   copy of 'Enchanter' is 10.830810.  This notation is used throughout
+   the Standard when individual Infocom files need to be referred to.
+</p>
+</section>
+
+<section class="clause-section is-topic" id="where-are-all-the-grammar-tables">
+<h2 id="h-where-are-all-the-grammar-tables">Where are all the grammar tables?<a class="heading-anchor" href="#where-are-all-the-grammar-tables" aria-label="Link to Where are all the grammar tables?"></a></h2>
+<p>The Z-machine has some lexical acuity but it doesn't contain a full parser:
+   it's like a computer without an operating system.  A game program has to
+   contain its own parser and the tables this uses are not part of the formal
+   Z-machine specification.  (Many Infocom games have similar parsing
+   table formats simply because, until Version 6, they used an evolving
+   version of the 'Zork I' parser.  A quite different parser was used
+   in Version 6.)  Inform's parsing table formats are documented in the
+   <em>Inform Technical Manual</em>.  For the usual format of Infocom's parsing
+   tables, see the <strong>Ztools</strong> utility <strong>Infodump</strong>.
+</p>
+</section>
+
+<section class="clause-section is-topic" id="acknowledgements">
+<h2 id="h-acknowledgements">Acknowledgements<a class="heading-anchor" href="#acknowledgements" aria-label="Link to Acknowledgements"></a></h2>
+<blockquote>
+  <p>There is an obvious resemblance between an unreadable script
+     and a secret code; similar methods can be employed to break
+     both.  But the differences must not be overlooked.  The code is
+     deliberately designed to baffle the investigator; the script
+     is only puzzling by accident.
+  </p>
+
+  <p>John Chadwick, <strong>The Decipherment of Linear B</strong></p>
+</blockquote>
+<p>The Z-machine was originally devised by Joel Berez and Marc Blank in 1979.
+   Marc Blank made most of the Version 4 extensions, and Version 5 was created
+   by Dave Lebling (with contributions from others including Brian Moriarty,
+   Duncan Blanchard and Linde Dynneson).  Version 6 was largely the work of Tim
+   Anderson and Dave Lebling.
+</p>
+<p>In the reverse direction, decipherment is mostly due to the InfoTaskForce
+   (David Beazley, George Janczuk, Peter Lisle, Russell Hoare and Chris Tham),
+   Matthias Pfaller, Mike Threepoint, Mark Howell, Paul David Doherty and
+   Stefan Jokisch.  Only a few of the pieces in the jigsaw were placed by
+   myself.
+</p>
+<p>I gratefully acknowledge the help of Paul David Doherty and Mark Howell, who
+   each read drafts of this paper and sent back detailed corrections; also, of
+   Stefan Jokisch and Marnix Klooster who have put a great deal of work into
+   the fine detail of the specification; and of all those who commented on
+   the circulated draft.  Mistakes and misunderstandings remain my own.</p>
+<p><em>Graham Nelson</em></p>
+<p><em>15 November 1995</em></p>
+<p>Kevin Bracey and Stefan Jokisch discovered most of the mistakes in
+   Standard 0.2, in developing the first Version 6 interpreters of the
+   modern age: <strong>Zip2000</strong> and <strong>Frotz</strong>.  Matthew Russotto
+   and Mark Knibbs supplied helpful information about Infocom's own
+   Version 6 interpreters.  Stefan also kindly read and commented on
+   numerous drafts of the present revision.  Finally, discussion about
+   this document was greatly assisted by the Z-Machine Mailing
+   List, organised by Marnix Klooster.</p>
+<p><em>Graham Nelson</em></p>
+<p><em>22 June 1997</em></p>
+<p>The majority of the clarifications and updates in this latest revision are 
+   the work of Kevin Bracey and Jason C. Penney. Thanks go also to the members 
+   of the (now defunct) Z-Machine Mailing List, and those of the intfiction.org 
+   forum, especially Dannii Willis, for bringing to light issues with my initial
+   revision. Special thanks to Andrew Plotkin for his notes, advice and general
+   help while working on this revised document. 
+</p>
+<p><em>David Fillmore</em></p>
+<p><em>21 February 2014</em></p>
+<p>The Z-Machine Standard Version 1.1 was the work of Kevin Bracey &amp; Jason C. Penney.
+   The initial document went through several drafts before arriving at the finished 
+   document, thanks to the comments and advice of the members of the Z-Machine Mailing List.
+
+</p>
+<p><em>David Fillmore</em></p>
+<p><em>24 February 2014</em></p>
+<p>This edition re-typesets the 1.1 Standard in modern HTML, adding navigation,
+   full-text search and a printable stylesheet, and brings <strong>Quetzal</strong>
+   and <strong>Blorb</strong> alongside it so that the specification is complete
+   offline. No normative text has been altered. A handful of numbering errors
+   which had accumulated in the source have been corrected: a second, verbatim
+   copy of <strong>§</strong>8.3.6 has been removed; the clause displayed as
+   "3" in <strong>§</strong>13 is restored to 13.3; the Standard 1.1 addition
+   which duplicated the number 8.8.3.2.4 is renumbered 8.8.3.2.3.1, the clause it
+   elaborates; and 8.8.2.8 is corrected to 8.8.3.2.8.
+</p>
+<p>In <strong>§</strong>7.6.1, where Standard 1.1 added four rules about
+   filenames to a list of three older ones without renumbering, three of the
+   additions now continue the list as 7.6.1.3 to 7.6.1.5. No clause carried over
+   from Standard 1.0 has been renumbered. The fourth addition, which restates
+   7.6.1 itself rather than extending it, is left as it stands: the number it
+   would naturally take is already in use, and claiming it would disturb
+   numbering that other documents rely on.
+</p>
+<p><em>Jeff Nyman</em></p>
+<p><em>1 August 2026</em></p>
+</section>
+</main>
+<nav class="pager" aria-label="Previous and next section"><span class="pager-link is-empty"></span><a class="pager-link pager-next" rel="next" href="overview.html"><span class="pager-kind">Next</span><span class="pager-title">Overview</span></a></nav>
+<footer class="site-footer">
+  <p>The Z-Machine Standards Document, version 1.1 &mdash; 24 February 2014.
+     Canonical copy at <a href="https://www.inform-fiction.org/zmachine/standards/current/">inform-fiction.org</a>.</p>
+</footer>
+</div>
+<aside class="outline" id="outline" aria-label="On this page" data-generated>
+<h2>On this page</h2>
+<ol>
+<li class="depth-1"><a href="#standardisation">Standardisation</a></li>
+<li class="depth-1"><a href="#so-what-is-standard">So what is "standard"?</a></li>
+<li class="depth-1"><a href="#notation">Notation</a></li>
+<li class="depth-1"><a href="#where-are-all-the-grammar-tables">Where are all the grammar tables?</a></li>
+<li class="depth-1"><a href="#acknowledgements">Acknowledgements</a></li>
+</ol>
+</aside>
+</div>
+<script src="assets/nav.js"></script>
+<script src="assets/zspec.js" defer></script>
+</body>
+</html>

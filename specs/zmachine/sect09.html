@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>9. Sound effects — The Z-Machine Standards Document 1.1</title>
+<meta name="description" content="9. Sound effects — section of the Z-Machine Standards Document, version 1.1.">
+<link rel="canonical" href="https://jeffnyman.github.io/z-machine-standard/sect09.html">
+<meta name="theme-color" content="#0d63c9">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="The Z-Machine Standards Document 1.1">
+<meta property="og:title" content="9. Sound effects — The Z-Machine Standards Document 1.1">
+<meta property="og:description" content="9. Sound effects — section of the Z-Machine Standards Document, version 1.1.">
+<meta property="og:url" content="https://jeffnyman.github.io/z-machine-standard/sect09.html">
+<link rel="stylesheet" href="assets/zspec.css">
+<script>/* Set the theme before first paint to avoid a flash. */
+(function(){try{var t=localStorage.getItem('zspec-theme');if(t==='dark'||t==='light')document.documentElement.dataset.theme=t;}catch(e){}})();
+</script>
+</head>
+<body>
+<a class="skip-link" href="#content">Skip to content</a>
+<header class="topbar">
+  <button class="icon-button nav-toggle" type="button" aria-expanded="false" aria-controls="sidebar" aria-label="Show contents">
+    <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 5h14M3 10h14M3 15h14"/></svg>
+  </button>
+  <a class="brand" href="index.html"><span class="brand-name">Z-Machine Standard</span><span class="brand-version">1.1</span></a>
+  <div class="topbar-actions">
+    <button class="search-trigger" type="button" data-search-open>
+      <svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="9" cy="9" r="6"/><path d="M13.5 13.5 18 18"/></svg>
+      <span>Search</span><kbd>/</kbd>
+    </button>
+    <button class="icon-button theme-toggle" type="button" aria-label="Switch colour theme">
+      <svg class="icon-sun" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="4"/><path d="M10 1v2M10 17v2M1 10h2M17 10h2M3.9 3.9l1.4 1.4M14.7 14.7l1.4 1.4M16.1 3.9l-1.4 1.4M5.3 14.7l-1.4 1.4"/></svg>
+      <svg class="icon-moon" viewBox="0 0 20 20" aria-hidden="true"><path d="M17 12.3A7.5 7.5 0 0 1 7.7 3a7.5 7.5 0 1 0 9.3 9.3z"/></svg>
+    </button>
+  </div>
+</header>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Specification contents">
+<!--nav:start-->
+<div class="nav-inner">
+<a class="nav-home" href="index.html">Contents</a>
+<ul class="nav-list">
+<li><a href="preface.html"><span class="nav-label">Preface</span></a></li>
+<li><a href="overview.html"><span class="nav-label">Overview</span></a></li>
+</ul>
+<h2 class="nav-group">Fundamentals</h2>
+<ul class="nav-list">
+<li><a href="sect01.html"><span class="nav-num">1</span><span class="nav-label">The memory map</span></a></li>
+<li><a href="sect02.html"><span class="nav-num">2</span><span class="nav-label">Numbers and arithmetic</span></a></li>
+<li><a href="sect03.html"><span class="nav-num">3</span><span class="nav-label">Text and characters</span></a></li>
+<li><a href="sect04.html"><span class="nav-num">4</span><span class="nav-label">Instruction encoding</span></a></li>
+<li><a href="sect05.html"><span class="nav-num">5</span><span class="nav-label">Routine encoding</span></a></li>
+<li><a href="sect06.html"><span class="nav-num">6</span><span class="nav-label">The game state</span></a></li>
+</ul>
+<h2 class="nav-group">Input/Output</h2>
+<ul class="nav-list">
+<li><a href="sect07.html"><span class="nav-num">7</span><span class="nav-label">Output streams</span></a></li>
+<li><a href="sect08.html"><span class="nav-num">8</span><span class="nav-label">The screen model</span></a></li>
+<li class="is-current"><a href="sect09.html" aria-current="page"><span class="nav-num">9</span><span class="nav-label">Sound effects</span></a></li>
+<li><a href="sect10.html"><span class="nav-num">10</span><span class="nav-label">Input streams</span></a></li>
+</ul>
+<h2 class="nav-group">Tables</h2>
+<ul class="nav-list">
+<li><a href="sect11.html"><span class="nav-num">11</span><span class="nav-label">The header</span></a></li>
+<li><a href="sect12.html"><span class="nav-num">12</span><span class="nav-label">The object table</span></a></li>
+<li><a href="sect13.html"><span class="nav-num">13</span><span class="nav-label">Dictionary and lexing</span></a></li>
+</ul>
+<h2 class="nav-group">Instruction Set</h2>
+<ul class="nav-list">
+<li><a href="sect14.html"><span class="nav-num">14</span><span class="nav-label">Table of opcodes</span></a></li>
+<li><a href="sect15.html"><span class="nav-num">15</span><span class="nav-label">Dictionary of opcodes</span></a></li>
+</ul>
+<h2 class="nav-group">An Unusual Font</h2>
+<ul class="nav-list">
+<li><a href="sect16.html"><span class="nav-num">16</span><span class="nav-label">Font 3</span></a></li>
+</ul>
+<h2 class="nav-group">Appendices</h2>
+<ul class="nav-list">
+<li><a href="appa.html"><span class="nav-num">A</span><span class="nav-label">Error messages and debugging</span></a></li>
+<li><a href="appb.html"><span class="nav-num">B</span><span class="nav-label">Header conventions</span></a></li>
+<li><a href="appc.html"><span class="nav-num">C</span><span class="nav-label">Resources available</span></a></li>
+<li><a href="appd.html"><span class="nav-num">D</span><span class="nav-label">History</span></a></li>
+<li><a href="appe.html"><span class="nav-num">E</span><span class="nav-label">Statistics</span></a></li>
+<li><a href="appf.html"><span class="nav-num">F</span><span class="nav-label">Canonical story files</span></a></li>
+</ul>
+<h2 class="nav-group">Related standards</h2>
+<p class="nav-note">Mirrored in this repository</p>
+<ul class="nav-list">
+<li><a href="quetzal.html"><span class="nav-label">Quetzal</span></a></li>
+<li><a href="blorb.html"><span class="nav-label">Blorb</span></a></li>
+</ul>
+</div>
+<!--nav:end-->
+</nav>
+<div class="main-column">
+<main class="content" id="content">
+<div class="page-head">
+<img class="page-icon" src="images/icon09.gif" alt="" width="82" height="86" loading="lazy" decoding="async">
+<h1>9. Sound effects</h1>
+</div>
+<section class="clause-section is-clause" id="9.1">
+<p><a class="clause-num" href="#9.1">9.1</a><button class="copy-link" type="button" data-anchor="9.1" aria-label="Copy link to 9.1" title="Copy link"></button> Some games, from Version 3 onward, have sound effects attached.
+   These are not stored in the story files (or the Z-machine) itself,
+   and the interpreter is simply expected to know where to find them.
+   Other games have only one sound effect, usable in a much more restricted
+   way: a beep or bell sound, which we shall call a "bleep".
+</p>
+</section>
+
+<section class="clause-section is-clause" id="9.1.1">
+<p><a class="clause-num" href="#9.1.1">9.1.1</a><button class="copy-link" type="button" data-anchor="9.1.1" aria-label="Copy link to 9.1.1" title="Copy link"></button> In Version 6, the interpreter should set bit 5 of 'Flags 1'
+   if it can provide sound effects beyond a bleep.
+</p>
+</section>
+
+<section class="clause-section is-clause" id="9.1.2">
+<p><a class="clause-num" href="#9.1.2">9.1.2</a><button class="copy-link" type="button" data-anchor="9.1.2" aria-label="Copy link to 9.1.2" title="Copy link"></button> In Version 5 and later, a game should have bit 7 of 'Flags 2'
+   set in its story file if it wants to use sound effects beyond a bleep.
+   The interpreter should then clear this bit if it cannot oblige.
+</p>
+</section>
+
+<section class="clause-section is-clause" id="9.2">
+<p><a class="clause-num" href="#9.2">9.2</a><button class="copy-link" type="button" data-anchor="9.2" aria-label="Copy link to 9.2" title="Copy link"></button> Sound effects are numbered upwards from 1.  Number 1 is a
+   high-pitched bleep, number 2 a low-pitched one and effects from 3 upward
+   are supplied by the interpreter somehow for the particular game in
+   question.
+</p>
+</section>
+
+<section class="clause-section is-clause has-marker is-v1-1" id="9.2.1">
+<p><a class="clause-num" href="#9.2.1">9.2.1</a><button class="copy-link" type="button" data-anchor="9.2.1" aria-label="Copy link to 9.2.1" title="Copy link"></button> <strong class="spec-marker spec-marker--v1-1">***[1.1]</strong>
+   Aside from bleeps, there are two types of sound effect, samples and music. 
+   The game has no way of telling the type of a given sound effect.
+</p>
+</section>
+
+<section class="clause-section is-clause" id="9.3">
+<p><a class="clause-num" href="#9.3">9.3</a><button class="copy-link" type="button" data-anchor="9.3" aria-label="Copy link to 9.3" title="Copy link"></button> Sound effects (other than bleeps) can be played at any volume
+   level from 1 to 8 (8 being loudest of these).  The volume level -1
+   should be implemented as "loudest possible".
+</p>
+</section>
+
+<section class="clause-section is-clause" id="9.4">
+<p><a class="clause-num" href="#9.4">9.4</a><button class="copy-link" type="button" data-anchor="9.4" aria-label="Copy link to 9.4" title="Copy link"></button> Bleeps are immediate and brief.  Other sound effects take place
+   in the background, while normal operation of the Z-machine is going on.
+   Control is via the <a href="sect15.html#sound_effect"><strong>sound_effect</strong></a> opcode, allowing the game to prepare,
+   start, stop or finish with an effect.
+</p>
+</section>
+
+<section class="clause-section is-clause" id="9.4.1">
+<p><a class="clause-num" href="#9.4.1">9.4.1</a><button class="copy-link" type="button" data-anchor="9.4.1" aria-label="Copy link to 9.4.1" title="Copy link"></button> The game may (but need not) "prepare" a sound effect before
+   use.  This would indicate to the interpreter that the game intends
+   to use the effect soon: an interpreter might act on this information by
+   loading the sampled sound off disc and into a memory cache.
+</p>
+</section>
+
+<section class="clause-section is-clause has-marker is-v1-1" id="9.4.2">
+<p><a class="clause-num" href="#9.4.2">9.4.2</a><button class="copy-link" type="button" data-anchor="9.4.2" aria-label="Copy link to 9.4.2" title="Copy link"></button> <strong class="spec-marker spec-marker--v1-1">***[1.1]</strong>
+   A sound effect (other than a bleep) can then be "stopped" or
+   "started".  Only one sound effect of each type can play at any given time,
+   so that starting a new music sound effect stops any current music playing, and starting any
+   new sample sound effect stops any current sample sound playing. Samples and music do not interrupt
+   each other.
+</p>
+</section>
+
+<section class="clause-section is-clause" id="9.4.3">
+<p><a class="clause-num" href="#9.4.3">9.4.3</a><button class="copy-link" type="button" data-anchor="9.4.3" aria-label="Copy link to 9.4.3" title="Copy link"></button> In Versions 5 and later, a sound effect may repeat any specified
+   number of times, or repeat forever (until stopped).
+</p>
+</section>
+
+<section class="clause-section is-clause" id="9.4.4">
+<p><a class="clause-num" href="#9.4.4">9.4.4</a><button class="copy-link" type="button" data-anchor="9.4.4" aria-label="Copy link to 9.4.4" title="Copy link"></button> Eventually, though, if it has not been stopped, it may end by itself.
+   A routine (specified at start time) can then be called.  The intention is that
+   this routine may implement effects such as fading in and out, by replaying
+   the sound effect at a different volume.  (A game should not place any important
+   code in such a routine.) The routine is only called when the sound has played the requested
+   number of times. If manually stopped or interrupted by another sound, the
+   routine is not called.
+</p>
+</section>
+
+<section class="clause-section is-clause" id="9.4.5">
+<p><a class="clause-num" href="#9.4.5">9.4.5</a><button class="copy-link" type="button" data-anchor="9.4.5" aria-label="Copy link to 9.4.5" title="Copy link"></button> The game may, but need not, explicitly "finish with"
+   any sound effect which is not likely to occur again for a while:
+   the interpreter can then throw it out of memory.
+</p>
+</section>
+
+<section class="clause-section is-topic" id="remarks">
+<h2 id="h-remarks">Remarks<a class="heading-anchor" href="#remarks" aria-label="Link to Remarks"></a></h2>
+<p>The safest way an Inform program can try to produce a bleep is by
+   executing <a href="sect15.html#sound_effect"><strong>@sound_effect 1</strong></a>.  Some ports of <strong>Zip</strong> believe that the
+   first operand of this is the number of bleeps to make (so that
+   <a href="sect15.html#sound_effect"><strong>@sound_effect 2</strong></a> bleeps twice), but this is incorrect.
+</p>
+<p>Several Infocom games bleep (using <a href="sect15.html#sound_effect"><strong>sound_effect</strong></a> with only one
+   operand, always equal to 1 or 2).  Two provided sampled sound effects
+   but did not bleep: 'The Lurking Horror' and 'Sherlock'.
+   Their story files contain the following usages of <a href="sect15.html#sound_effect"><strong>sound_effect</strong></a>:
+</p>
+<pre>
+  sound_effect number 2 volume                   (in TLH)
+  sound_effect number 2 volume/repeats function  (in Sherlock)
+  sound_effect 0 3
+  sound_effect number 3
+  sound_effect 0 4
+</pre>
+<p>except that, probably due to a bug in its own code, 'TLH' can also
+   generate
+</p>
+<pre>
+  sound_effect 4 8
+  sound_effect 4095 2 15
+</pre>
+<p>A further difficulty with 'TLH' is that it assumes the interpreter is
+   as slow as Infocom's Amiga interpreter was: it fires off several sound
+   effects in one game round, assuming there will be time for it to play
+   most of each one.  To simulate this, <a href="sect15.html#sound_effect"><strong>sound_effect</strong></a> must be rewritten
+   to pause sometimes:
+</p>
+<p>if a new sample sound effect is begun while there is still one
+   playing which was started since the last keyboard input,
+   then wait until that earlier one finishes one cycle before
+   replacing it with the new sound effect. Music sound effects are not 
+   affected by this. New music should interrupt  old music immediately at 
+   all times.
+</p>
+<p>Infocom's MS-DOS interpreters for V4 to V6 set bit 5 of 'Flags 1' in
+   all circumstances (i.e., whether or not sound effects are available).
+   This would be incorrect behaviour for a standard interpreter.
+</p>
+<p>Infocom implemented sound effects differently on different machines.
+   The format of Infocom's shipped sound effects files has been
+   documented by Stefan Jokisch and his notes are available from
+   <a href="https://ifarchive.org/if-archive/infocom/info/sound_format.txt">the Interactive Fiction Archive</a>. 
+</p>
+<p>However, modern interpreters are strong encouraged to support Andrew Plotkin's
+   <a href="blorb.html"><strong>Blorb</strong></a> format, which is a more modern way to make sound effects 
+   available to newer games. Blorb files have been made available for the Infocom 
+   sound effects, so that modern interpreters need no longer support the Infocom format.
+</p>
+<p>When using Blorb resources, the default interpreter behaviour (unless over-
+   ridden by the player) should be for samples played at maximum volume (64), in
+   one channel of a SONG or MOD played at volume 8, to be of equal volume to
+   samples played at maximum volume (8) as an effect. This will be the natural
+   behaviour if effects use one physical channel and MODs/SONGs use four
+   physical channels.
+</p>
+<p>Ideally, a sound played at volume <em>n</em> in a SONG played at volume <em>m</em> should
+   sound the same as when played as an effect at volume <em>n*m/64</em>. This mandates
+   that the volume scale for effects be equivalent to the scale defined for
+   samples in the MOD specification.
+</p>
+<p>If multi-channel effects are used, the overall volume should be independent
+   of the number of channels used in the sound. Thus a stereo AIFF containing
+   the same samples for left and right should sound as loud as a mono AIFF
+   containing the same data. This will need adjustment of volume if stereo AIFFs
+   use two physical channels and mono AIFFs use one. No adjustment would be
+   required if an interpreter reduced all AIFFs to mono.
+</p>
+</section>
+</main>
+<nav class="pager" aria-label="Previous and next section"><a class="pager-link pager-prev" rel="prev" href="sect08.html"><span class="pager-kind">Previous</span><span class="pager-title">8. The screen model</span></a><a class="pager-link pager-next" rel="next" href="sect10.html"><span class="pager-kind">Next</span><span class="pager-title">10. Input streams</span></a></nav>
+<footer class="site-footer">
+  <p>The Z-Machine Standards Document, version 1.1 &mdash; 24 February 2014.
+     Canonical copy at <a href="https://www.inform-fiction.org/zmachine/standards/current/">inform-fiction.org</a>.</p>
+</footer>
+</div>
+<aside class="outline" id="outline" aria-label="On this page" data-generated>
+<h2>On this page</h2>
+<ol>
+<li class="depth-2"><a href="#9.1" title="Some games, from Version 3 onward, have sound effects attached. These are not stored in the story files (or the Z-machin">9.1</a></li>
+<li class="depth-3"><a href="#9.1.1" title="In Version 6, the interpreter should set bit 5 of 'Flags 1' if it can provide sound effects beyond a bleep.">9.1.1</a></li>
+<li class="depth-3"><a href="#9.1.2" title="In Version 5 and later, a game should have bit 7 of 'Flags 2' set in its story file if it wants to use sound effects bey">9.1.2</a></li>
+<li class="depth-2"><a href="#9.2" title="Sound effects are numbered upwards from 1. Number 1 is a high-pitched bleep, number 2 a low-pitched one and effects from">9.2</a></li>
+<li class="depth-3"><a href="#9.2.1" title="***[1.1] Aside from bleeps, there are two types of sound effect, samples and music. The game has no way of telling the t">9.2.1</a></li>
+<li class="depth-2"><a href="#9.3" title="Sound effects (other than bleeps) can be played at any volume level from 1 to 8 (8 being loudest of these). The volume l">9.3</a></li>
+<li class="depth-2"><a href="#9.4" title="Bleeps are immediate and brief. Other sound effects take place in the background, while normal operation of the Z-machin">9.4</a></li>
+<li class="depth-3"><a href="#9.4.1" title="The game may (but need not) "prepare" a sound effect before use. This would indicate to the interpreter that the game in">9.4.1</a></li>
+<li class="depth-3"><a href="#9.4.2" title="***[1.1] A sound effect (other than a bleep) can then be "stopped" or "started". Only one sound effect of each type can ">9.4.2</a></li>
+<li class="depth-3"><a href="#9.4.3" title="In Versions 5 and later, a sound effect may repeat any specified number of times, or repeat forever (until stopped).">9.4.3</a></li>
+<li class="depth-3"><a href="#9.4.4" title="Eventually, though, if it has not been stopped, it may end by itself. A routine (specified at start time) can then be ca">9.4.4</a></li>
+<li class="depth-3"><a href="#9.4.5" title="The game may, but need not, explicitly "finish with" any sound effect which is not likely to occur again for a while: th">9.4.5</a></li>
+<li class="depth-1"><a href="#remarks">Remarks</a></li>
+</ol>
+</aside>
+</div>
+<script src="assets/nav.js"></script>
+<script src="assets/zspec.js" defer></script>
+</body>
+</html>
