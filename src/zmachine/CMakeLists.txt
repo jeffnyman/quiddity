@@ -11,6 +11,7 @@ add_library(zmachine STATIC
     header.c
     memory.c
     status.c
+    text.c
 )
 
 target_include_directories(zmachine PUBLIC
