@@ -44,6 +44,56 @@ Quiddity strives to be specification _accurate_ rather than specification _compl
 
 A reference implementation is the authoritative standard others are measured against, and that role demands completeness. Quiddity's aims are more modest. The project is pedagogical: it exists to understand how such an emulator is built and, through building it, to understand the Z-Machine and Glulx.
 
+## Building
+
+Quiddity is written in C11 and builds with CMake 3.25 or later under GCC, Clang, or MSVC. Warnings are treated as errors on every compiler. The presets in `CMakePresets.json` cover the supported toolchains, and each preset is enabled only on the platform it is for. To see which apply where you are:
+
+```
+cmake --list-presets
+```
+
+On Windows, the presets are `msvc` and `clang-cl`. Both use the Visual Studio generator, so they work from any shell once `cmake` is on the PATH; no developer command prompt is needed:
+
+```
+cmake --preset msvc
+cmake --build --preset msvc
+ctest --preset msvc
+```
+
+On Linux and macOS, including WSL, the presets are `gcc`, `clang`, `asan`, and `release`:
+
+```
+cmake --preset gcc
+cmake --build --preset gcc
+ctest --preset gcc
+```
+
+The `asan` preset builds with AddressSanitizer and UndefinedBehaviorSanitizer and is the one to run tests under when something is suspected of misbehaving.
+
+Every build puts its executables under `build/<preset>/bin`. The Visual Studio generator adds a configuration folder, so after a `msvc` build the interpreter is at `build/msvc/bin/Debug/quiddity.exe`; after a `gcc` build it is at `build/gcc/bin/quiddity`. Run it from there:
+
+```
+build/gcc/bin/quiddity path/to/story.z3
+```
+
+In VS Code with the CMake Tools extension, pick a configure preset when prompted, then use the build, run, and debug buttons on the status bar; the tracked `.vscode` files wire F5 to the `quiddity` target.
+
+## Testing
+
+Tests are run by CTest, which the test presets point at the right build directory:
+
+```
+ctest --preset msvc        # or gcc, clang, asan on Linux
+```
+
+This prints one line per test and shows a test's output only when it fails. Add `-V` to see every test's full output, including the per-check summary, on every run. To run a single test by name, use `-R`:
+
+```
+ctest --preset msvc -R test_check
+```
+
+Each test is also an ordinary executable in the same `bin` folder as the interpreter, so it can be run directly or under a debugger. The tests use the small harness in `tests/check.h`; a new test is one C file plus one line in `tests/CMakeLists.txt`. In VS Code, CMake Tools adds a test button to the status bar and lists the tests in the Testing sidebar.
+
 ## License
 
 **Quiddity**, An Interactive Fiction Interpreter\
