@@ -80,6 +80,15 @@ typedef struct zm_machine {
     /* Byte address of the global variables table (Spec §6.2). */
     uint32_t globals;
 
+    /* The random number generator (Spec §2.4). In "random" mode the
+     * state is a 64-bit generator seeded from the clock. In
+     * "predictable" mode with a seed below 1000 the generator counts
+     * 1, 2, ..., seed and repeats (Spec §2 Remarks); with a larger seed
+     * the 64-bit generator is seeded with it. */
+    uint64_t random_state;
+    uint16_t random_interval;   /* 0 unless predictable with a small seed */
+    uint16_t random_counter;
+
     /* Cleared by quit. */
     int running;
 
@@ -108,5 +117,15 @@ void zm_machine_run(zm_machine *m);
  * (Spec §6.3.4) is internal to the machine. */
 uint16_t zm_machine_read_variable(zm_machine *m, uint8_t variable);
 void zm_machine_write_variable(zm_machine *m, uint8_t variable, uint16_t value);
+
+/* Put the random number generator into "predictable" mode with a seed,
+ * as the random opcode does with a negative operand (Spec §2.4.2). A
+ * front end may offer this to the player for testing (Spec §2.4.3).
+ * Seed 0 returns the generator to "random" mode. */
+void zm_machine_seed_random(zm_machine *m, uint16_t seed);
+
+/* Draw a number from 1 to range, which must be at least 1 (Spec
+ * §2.4.1). */
+uint16_t zm_machine_random(zm_machine *m, uint16_t range);
 
 #endif /* ZM_MACHINE_H */

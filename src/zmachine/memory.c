@@ -87,6 +87,12 @@ static zm_status establish(zm_memory *mem, uint8_t *bytes, uint32_t size)
         return ZM_ERROR_BAD_MEMORY_MAP;
     }
 
+    mem->original = malloc(static_base);
+    if (mem->original == NULL) {
+        return ZM_ERROR_OUT_OF_MEMORY;
+    }
+    memcpy(mem->original, bytes, static_base);
+
     mem->bytes = bytes;
     mem->size = size;
     mem->version = version;
@@ -175,6 +181,7 @@ zm_status zm_memory_load_file(zm_memory *mem, const char *path)
 void zm_memory_free(zm_memory *mem)
 {
     free(mem->bytes);
+    free(mem->original);
     memset(mem, 0, sizeof *mem);
 }
 

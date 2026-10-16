@@ -119,8 +119,10 @@ uint16_t zm_header_compute_checksum(const zm_memory *mem)
         length = mem->size;
     }
 
+    /* The sum is of the file, so the dynamic part comes from the copy
+     * kept at load time; the game may have written to memory since. */
     for (uint32_t address = ZM_HEADER_SIZE; address < length; address++) {
-        sum += mem->bytes[address];
+        sum += address < mem->static_base ? mem->original[address] : mem->bytes[address];
     }
 
     return (uint16_t)(sum & 0xffff);

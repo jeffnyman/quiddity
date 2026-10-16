@@ -1,10 +1,12 @@
 /*
  * machine.c: see zm/machine.h. Implements Spec §5, §6, and the opcodes of
- * Spec §15 that have been reached so far.
+ * Spec §15 that have been reached so far, with the arithmetic of Spec §2
+ * and the object table of Spec §12 as the opcodes need them.
  *
  * The file is in four parts: the stack and variables (§6.2, §6.3), routine
  * calls and returns (§5, §6.4), the helpers every opcode shares (store,
- * branch, printing), and the dispatch itself.
+ * branch, printing, arithmetic, random numbers, objects), and the
+ * dispatch itself.
  */
 
 #include "zm/machine.h"
@@ -12,10 +14,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 #include "zm/fatal.h"
 #include "zm/header.h"
 #include "zm/instruction.h"
+#include "zm/object.h"
 #include "zm/text.h"
 
 /*
@@ -274,6 +278,189 @@ static void not_implemented(zm_machine *m, const zm_instruction *inst)
 }
 
 /*
+ * Arithmetic (Spec §2).
+ *
+ * Operands arrive as the 16-bit words they are stored as. Spec §2.2.1
+ * makes comparison, multiplication, addition, subtraction, division, and
+ * remainder signed, and bitwise operations unsigned, so the signed ones
+ * reinterpret their operands first. Results are reduced modulo $10000
+ * (Spec §2.3.2), which is what converting back to a 16-bit word does.
+ */
+
+static int16_t as_signed(uint16_t word)
+{
+    return (int16_t)word;
+}
+
+static uint16_t as_word(int32_t value)
+{
+    return (uint16_t)value;
+}
+
+static uint16_t divide(const zm_instruction *inst, uint16_t a, uint16_t b, int remainder)
+{
+    int32_t x = as_signed(a);
+    int32_t y = as_signed(b);
+
+    /* Spec §2.3.1. */
+    if (y == 0) {
+        zm_fatal("%s by zero at $%05x", remainder ? "remainder of division" : "division", (unsigned)inst->address);
+    }
+
+    /* Spec §2 Remarks: -11 / 2 = -5 and -13 % 5 = -3, which is C's
+     * truncation toward zero. The one overflow, -32768 / -1, gives 32768
+     * in the wider type and $8000 once reduced. */
+    return as_word(remainder ? x % y : x / y);
+}
+
+/* Spec §15 art_shift and log_shift: a positive count shifts left, a
+ * negative one right; arithmetic shifts carry the sign bit down. */
+static uint16_t shift(const zm_instruction *inst, uint16_t value, uint16_t places, int arithmetic)
+{
+    int count = as_signed(places);
+
+    if (count > 15 || count < -15) {
+        zm_fatal("%s by %d places at $%05x", inst->info->name, count, (unsigned)inst->address);
+    }
+    if (count >= 0) {
+        return (uint16_t)((uint32_t)value << count);
+    }
+    if (arithmetic && (value & 0x8000u)) {
+        /* Right-shifting a negative number is implementation-defined in
+         * C, so shift its complement, which is positive, and complement
+         * the result: the ones shifted in become the copies of the sign
+         * bit that an arithmetic shift wants. */
+        return (uint16_t)~((uint16_t)~value >> -count);
+    }
+    return (uint16_t)(value >> -count);
+}
+
+/*
+ * Random numbers (Spec §2.4).
+ *
+ * Spec §2 Remarks warns against the C library's rand(). The generator
+ * here is xorshift64*, a small, well-studied generator whose high bits
+ * are the good ones, which is why the draw below uses them. It is
+ * seeded through a mixing function so that seeds that differ in a bit
+ * or two give unrelated sequences (Spec §2.4.2).
+ */
+
+static uint64_t mix64(uint64_t z)
+{
+    z += 0x9e3779b97f4a7c15u;
+    z = (z ^ (z >> 30)) * 0xbf58476d1ce4e5b9u;
+    z = (z ^ (z >> 27)) * 0x94d049bb133111ebu;
+    return z ^ (z >> 31);
+}
+
+static uint64_t next_random(zm_machine *m)
+{
+    uint64_t x = m->random_state;
+
+    x ^= x >> 12;
+    x ^= x << 25;
+    x ^= x >> 27;
+    m->random_state = x;
+    return x * 0x2545f4914f6cdd1du;
+}
+
+void zm_machine_seed_random(zm_machine *m, uint16_t seed)
+{
+    m->random_interval = 0;
+    m->random_counter = 0;
+
+    if (seed == 0) {
+        /* "Random" mode (Spec §2.4): the clock, with the address of the
+         * machine stirred in so that two machines started in the same
+         * second differ. mix64() never yields 0, which xorshift needs. */
+        m->random_state = mix64((uint64_t)time(NULL) ^ ((uint64_t)clock() << 32) ^ (uint64_t)(uintptr_t)m);
+    } else if (seed < 1000) {
+        /* Spec §2 Remarks: a small seed asks for the sequence 1, 2, ...,
+         * seed, repeating, so that every value turns up in order. */
+        m->random_interval = seed;
+    } else {
+        m->random_state = mix64(seed);
+    }
+}
+
+uint16_t zm_machine_random(zm_machine *m, uint16_t range)
+{
+    if (range == 0) {
+        zm_fatal("random number from an empty range");
+    }
+
+    if (m->random_interval != 0) {
+        uint16_t value = (uint16_t)(m->random_counter % range + 1u);
+
+        m->random_counter = (uint16_t)((m->random_counter + 1u) % m->random_interval);
+        return value;
+    }
+
+    return (uint16_t)((next_random(m) >> 32) % range + 1u);
+}
+
+/*
+ * Objects (Spec §12). The table is zm/object.h's; what belongs here is
+ * the machine's treatment of object 0.
+ *
+ * Spec §12.3: object 0 means "nothing", and there is formally no such
+ * object. Games nonetheless ask about it now and then, by taking the
+ * parent of nothing or testing an attribute of nothing, and a halt there
+ * would leave some Infocom games unplayable. So the enquiries treat
+ * nothing as an object with no parent, no children, no attributes, and
+ * no properties of its own, which is what such code expects. Anything
+ * that would change object 0, or print its name, is a fault, as there is
+ * nothing to change (and Spec §15 print_obj asks for a halt).
+ */
+
+/* Look up a property for get_prop, get_prop_addr, and put_prop. Faults
+ * on a property number no object can have; returns 1 if the object
+ * provides the property, 0 if it falls back on the default. */
+static int find_property(zm_machine *m, const zm_instruction *inst, uint16_t object, uint16_t number, zm_property *prop)
+{
+    unsigned limit = m->mem->version <= 3 ? 31u : 63u;
+
+    if (number == 0 || number > limit) {
+        zm_fatal("%s at $%05x asks for property %u, which does not exist in Version %u",
+                 inst->info->name, (unsigned)inst->address, (unsigned)number, (unsigned)m->mem->version);
+    }
+    if (object == 0) {
+        return 0;
+    }
+    return zm_object_find_property(m->mem, object, number, prop);
+}
+
+/* Fault unless an object operand names a real object. */
+static uint16_t object_to_change(zm_machine *m, const zm_instruction *inst, uint16_t object)
+{
+    (void)m;
+    if (object == 0) {
+        zm_fatal("%s at $%05x applied to object 0, which is nothing", inst->info->name, (unsigned)inst->address);
+    }
+    return object;
+}
+
+static void print_object_name(zm_machine *m, uint16_t object)
+{
+    /* Spec §12.4: an empty name has a text-length of 0 and no text to
+     * decode. */
+    if (zm_object_name_length(m->mem, object) > 0) {
+        print_string(m, zm_object_name(m->mem, object));
+    }
+}
+
+/* Spec §15 get_prop and put_prop: only properties of 1 or 2 bytes may be
+ * read or written as values. */
+static void check_property_is_a_value(const zm_instruction *inst, uint16_t object, const zm_property *prop)
+{
+    if (prop->length > 2) {
+        zm_fatal("%s at $%05x on property %u of object %u, which has %u bytes rather than 1 or 2",
+                 inst->info->name, (unsigned)inst->address, (unsigned)prop->number,
+                 (unsigned)object, (unsigned)prop->length);
+    }
+}
+
+/*
  * Dispatch. Each function receives the decoded instruction and its
  * operand values, already fetched in order (Spec §4.5.2).
  */
@@ -309,6 +496,22 @@ static void execute_0op(zm_machine *m, const zm_instruction *inst)
     case 11: /* new_line */
         print_zscii(m, ZM_ZSCII_NEWLINE);
         break;
+    case 12: /* show_status: Version 3 only, but Spec §15 asks that it be
+              * a nop in later Versions for the sake of 'Wishbringer'
+              * release 23. The status line itself comes with the screen
+              * model. */
+        if (m->mem->version <= 3) {
+            not_implemented(m, inst);
+        }
+        break;
+    case 13: /* verify: compare the checksum of the file with the header's
+              * (Spec §15 verify; the sum is defined there and computed by
+              * the header module). */
+        branch(m, inst, zm_header_compute_checksum(m->mem) == zm_read_word(m->mem, ZM_HEADER_CHECKSUM));
+        break;
+    case 15: /* piracy: "interpreters are asked to be gullible" */
+        branch(m, inst, 1);
+        break;
     default:
         not_implemented(m, inst);
     }
@@ -321,6 +524,26 @@ static void execute_1op(zm_machine *m, const zm_instruction *inst, const uint16_
     switch (inst->number) {
     case 0:  /* jz */
         branch(m, inst, ops[0] == 0);
+        break;
+    case 1:  /* get_sibling: store, then branch if there is one */
+    case 2:  /* get_child */
+    case 3:  /* get_parent: store only */
+        {
+            uint16_t result = 0;
+
+            if (ops[0] != 0) {
+                result = inst->number == 1 ? zm_object_sibling(m->mem, ops[0])
+                       : inst->number == 2 ? zm_object_child(m->mem, ops[0])
+                                           : zm_object_parent(m->mem, ops[0]);
+            }
+            store_result(m, inst, result);
+            if (inst->number != 3) {
+                branch(m, inst, result != 0);
+            }
+        }
+        break;
+    case 4:  /* get_prop_len */
+        store_result(m, inst, zm_property_length_at(m->mem, ops[0]));
         break;
     case 5:  /* inc: signed, so $ffff becomes 0 */
         variable = variable_reference(inst, ops[0]);
@@ -335,6 +558,12 @@ static void execute_1op(zm_machine *m, const zm_instruction *inst, const uint16_
         break;
     case 8:  /* call_1s */
         call_routine(m, ops[0], NULL, 0, inst->store);
+        break;
+    case 9:  /* remove_obj */
+        zm_object_remove(m->mem, object_to_change(m, inst, ops[0]));
+        break;
+    case 10: /* print_obj */
+        print_object_name(m, object_to_change(m, inst, ops[0]));
         break;
     case 11: /* ret */
         return_from_routine(m, ops[0]);
@@ -351,11 +580,12 @@ static void execute_1op(zm_machine *m, const zm_instruction *inst, const uint16_
         variable = variable_reference(inst, ops[0]);
         store_result(m, inst, read_variable(m, variable, 1));
         break;
-    case 15: /* call_1n (Version 5 and later; "not" before that) */
+    case 15: /* call_1n from Version 5; not (bitwise, Spec §2.2.1) before
+              * that, where it has room because call_1n does not exist */
         if (m->mem->version >= 5) {
             call_routine(m, ops[0], NULL, 0, -1);
         } else {
-            not_implemented(m, inst);
+            store_result(m, inst, (uint16_t)~ops[0]);
         }
         break;
     default:
@@ -381,8 +611,116 @@ static void execute_2op(zm_machine *m, const zm_instruction *inst, const uint16_
             branch(m, inst, equal);
         }
         break;
+    case 2:  /* jl: signed (Spec §2.2.1) */
+        branch(m, inst, as_signed(ops[0]) < as_signed(ops[1]));
+        break;
+    case 3:  /* jg */
+        branch(m, inst, as_signed(ops[0]) > as_signed(ops[1]));
+        break;
+    case 4:  /* dec_chk: decrement the variable, in place for the stack
+              * (Spec §6.3.4), then branch if it is now less than the value */
+    case 5:  /* inc_chk: the same, branching if now greater */
+        {
+            uint8_t variable = variable_reference(inst, ops[0]);
+            uint16_t value = read_variable(m, variable, 1);
+
+            value = (uint16_t)(inst->number == 4 ? value - 1u : value + 1u);
+            write_variable(m, variable, value, 1);
+            branch(m, inst, inst->number == 4 ? as_signed(value) < as_signed(ops[1])
+                                              : as_signed(value) > as_signed(ops[1]));
+        }
+        break;
+    case 6:  /* jin: branch if the first object's parent is the second */
+        branch(m, inst, (ops[0] == 0 ? 0 : zm_object_parent(m->mem, ops[0])) == ops[1]);
+        break;
+    case 7:  /* test: branch if every flag in the second operand is set
+              * in the first */
+        branch(m, inst, (ops[0] & ops[1]) == ops[1]);
+        break;
+    case 8:  /* or: bitwise, so unsigned (Spec §2.2.1) */
+        store_result(m, inst, ops[0] | ops[1]);
+        break;
+    case 9:  /* and */
+        store_result(m, inst, ops[0] & ops[1]);
+        break;
+    case 10: /* test_attr */
+        branch(m, inst, ops[0] != 0 && zm_object_test_attribute(m->mem, ops[0], ops[1]));
+        break;
+    case 11: /* set_attr */
+        zm_object_set_attribute(m->mem, object_to_change(m, inst, ops[0]), ops[1]);
+        break;
+    case 12: /* clear_attr */
+        zm_object_clear_attribute(m->mem, object_to_change(m, inst, ops[0]), ops[1]);
+        break;
     case 13: /* store */
         write_variable(m, variable_reference(inst, ops[0]), ops[1], 1);
+        break;
+    case 14: /* insert_obj */
+        zm_object_insert(m->mem, object_to_change(m, inst, ops[0]), object_to_change(m, inst, ops[1]));
+        break;
+    case 15: /* loadw: the word at array + 2 * index. Addresses are 16
+              * bits, so the sum wraps, which also lets an index be
+              * negative. */
+        store_result(m, inst, zm_read_word(m->mem, (uint16_t)(ops[0] + 2u * ops[1])));
+        break;
+    case 16: /* loadb */
+        store_result(m, inst, zm_read_byte(m->mem, (uint16_t)(ops[0] + ops[1])));
+        break;
+    case 17: /* get_prop: the value, or the default if the object has no
+              * such property (Spec §12.2) */
+        {
+            zm_property prop;
+
+            if (!find_property(m, inst, ops[0], ops[1], &prop)) {
+                store_result(m, inst, zm_property_default(m->mem, ops[1]));
+            } else {
+                check_property_is_a_value(inst, ops[0], &prop);
+                store_result(m, inst, prop.length == 1 ? zm_read_byte(m->mem, prop.address)
+                                                       : zm_read_word(m->mem, prop.address));
+            }
+        }
+        break;
+    case 18: /* get_prop_addr: the address of the data, or 0 */
+        {
+            zm_property prop;
+
+            store_result(m, inst, find_property(m, inst, ops[0], ops[1], &prop) ? (uint16_t)prop.address : 0u);
+        }
+        break;
+    case 19: /* get_next_prop: the number after the given one in the
+              * object's list, the first for 0, and 0 at the end */
+        {
+            zm_property prop;
+
+            if (ops[0] == 0) {
+                store_result(m, inst, 0);
+            } else if (ops[1] == 0) {
+                zm_property_decode(m->mem, zm_object_first_property(m->mem, ops[0]), &prop);
+                store_result(m, inst, prop.number);
+            } else if (!find_property(m, inst, ops[0], ops[1], &prop)) {
+                /* Spec §15 get_next_prop: illegal, and cheap to check. */
+                zm_fatal("get_next_prop at $%05x asks what follows property %u of object %u, which has no such property",
+                         (unsigned)inst->address, (unsigned)ops[1], (unsigned)ops[0]);
+            } else {
+                zm_property_decode(m->mem, prop.next, &prop);
+                store_result(m, inst, prop.number);
+            }
+        }
+        break;
+    case 20: /* add */
+        store_result(m, inst, as_word(as_signed(ops[0]) + as_signed(ops[1])));
+        break;
+    case 21: /* sub */
+        store_result(m, inst, as_word(as_signed(ops[0]) - as_signed(ops[1])));
+        break;
+    case 22: /* mul */
+        store_result(m, inst, as_word(as_signed(ops[0]) * as_signed(ops[1])));
+        break;
+    case 23: /* div */
+        store_result(m, inst, divide(inst, ops[0], ops[1], 0));
+        break;
+    case 24: /* mod */
+        store_result(m, inst, divide(inst, ops[0], ops[1], 1));
         break;
     case 25: /* call_2s */
         call_routine(m, ops[0], ops + 1, 1, inst->store);
@@ -404,11 +742,44 @@ static void execute_var(zm_machine *m, const zm_instruction *inst, const uint16_
         }
         call_routine(m, ops[0], ops + 1, count - 1, inst->store);
         break;
+    case 1:  /* storew: dynamic memory only, which zm_write_word enforces */
+        zm_write_word(m->mem, (uint16_t)(ops[0] + 2u * ops[1]), ops[2]);
+        break;
+    case 2:  /* storeb */
+        zm_write_byte(m->mem, (uint16_t)(ops[0] + ops[1]), (uint8_t)ops[2]);
+        break;
+    case 3:  /* put_prop: a 1-byte property takes the low byte */
+        {
+            zm_property prop;
+
+            if (!find_property(m, inst, ops[0], ops[1], &prop)) {
+                /* Spec §15 put_prop: there is no default to write to. */
+                zm_fatal("put_prop at $%05x to object %u, which has no property %u",
+                         (unsigned)inst->address, (unsigned)ops[0], (unsigned)ops[1]);
+            }
+            check_property_is_a_value(inst, ops[0], &prop);
+            if (prop.length == 1) {
+                zm_write_byte(m->mem, prop.address, (uint8_t)ops[2]);
+            } else {
+                zm_write_word(m->mem, prop.address, ops[2]);
+            }
+        }
+        break;
     case 5:  /* print_char */
         print_zscii(m, ops[0]);
         break;
     case 6:  /* print_num */
         print_number(m, ops[0]);
+        break;
+    case 7:  /* random: a positive range draws; a negative one seeds the
+              * predictable sequence and gives 0; 0 returns to random mode
+              * (Spec §15 random) */
+        if (as_signed(ops[0]) > 0) {
+            store_result(m, inst, zm_machine_random(m, ops[0]));
+        } else {
+            zm_machine_seed_random(m, as_word(-as_signed(ops[0])));
+            store_result(m, inst, 0);
+        }
         break;
     case 8:  /* push */
         push(m, ops[0]);
@@ -441,14 +812,30 @@ static void execute_var(zm_machine *m, const zm_instruction *inst, const uint16_
         }
         call_routine(m, ops[0], ops + 1, count - 1, -1);
         break;
+    case 24: /* not, moved here from 1OP:15 in Version 5 */
+        store_result(m, inst, (uint16_t)~ops[0]);
+        break;
+    case 31: /* check_arg_count: branch if the current routine was given
+              * at least that many arguments (Spec §6.4.4.1) */
+        branch(m, inst, ops[0] <= current_frame(m)->argument_count);
+        break;
     default:
         not_implemented(m, inst);
     }
 }
 
-static void execute_ext(zm_machine *m, const zm_instruction *inst)
+static void execute_ext(zm_machine *m, const zm_instruction *inst, const uint16_t *ops)
 {
-    not_implemented(m, inst);
+    switch (inst->number) {
+    case 2:  /* log_shift */
+        store_result(m, inst, shift(inst, ops[0], ops[1], 0));
+        break;
+    case 3:  /* art_shift */
+        store_result(m, inst, shift(inst, ops[0], ops[1], 1));
+        break;
+    default:
+        not_implemented(m, inst);
+    }
 }
 
 void zm_machine_step(zm_machine *m)
@@ -489,7 +876,7 @@ void zm_machine_step(zm_machine *m)
     case ZM_OP_1OP: execute_1op(m, &inst, ops); break;
     case ZM_OP_2OP: execute_2op(m, &inst, ops, inst.operand_count); break;
     case ZM_OP_VAR: execute_var(m, &inst, ops, inst.operand_count); break;
-    case ZM_OP_EXT: execute_ext(m, &inst); break;
+    case ZM_OP_EXT: execute_ext(m, &inst, ops); break;
     }
 }
 
@@ -525,6 +912,9 @@ zm_status zm_machine_init(zm_machine *m, zm_memory *mem, const zm_io *io)
 
     zm_header_read(mem, &h);
     m->globals = h.globals;
+
+    /* Spec §2.4: the generator starts in "random" mode. */
+    zm_machine_seed_random(m, 0);
 
     /* Frame 0 is the starting environment, which has no locals and no
      * caller (Spec §5.5). Its stack base is 0, so the stack starts

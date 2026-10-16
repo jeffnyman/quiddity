@@ -41,6 +41,12 @@ typedef struct zm_memory {
      * (Spec §1.1). */
     uint32_t high_base;
 
+    /* A copy of dynamic memory (the first static_base bytes) as it was
+     * loaded, before the game changed anything. verify sums the file, not
+     * the memory (Spec §15 verify); restart puts it back; and a saved game
+     * records only what differs from it (Quetzal §3). */
+    uint8_t *original;
+
     /* The Version number from header byte $00, kept here because address
      * unpacking (Spec §1.2.3) depends on it. */
     uint8_t version;

@@ -12,6 +12,7 @@ add_library(zmachine STATIC
     instruction.c
     machine.c
     memory.c
+    object.c
     status.c
     text.c
 )

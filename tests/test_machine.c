@@ -8,9 +8,10 @@
  * follow Spec §4; the comment beside each line gives the assembly.
  *
  * Every hand-built story has the same shape: the header, the global
- * variables at $40 (Spec §6.2), code from $240, routines at $300, $340,
- * $380, and $3c0 (all divisible by 8, so they can be packed addresses in
- * any Version, Spec §5.1), and a string at $400.
+ * variables at $40 (Spec §6.2), room for an object table at $240, code
+ * from $400, routines at $4c0, $500, $540, and $580 (all divisible by 8,
+ * so they can be packed addresses in any Version, Spec §5.1), and a
+ * string at $5c0.
  */
 
 #include <setjmp.h>
@@ -27,12 +28,13 @@
 
 #define STORY_SIZE 2048u
 #define GLOBALS 0x40u
-#define CODE 0x240u
-#define R1 0x300u
-#define R2 0x340u
-#define R3 0x380u
-#define R4 0x3c0u
-#define STRING 0x400u
+#define OBJECTS 0x240u
+#define CODE 0x400u
+#define R1 0x4c0u
+#define R2 0x500u
+#define R3 0x540u
+#define R4 0x580u
+#define STRING 0x5c0u
 
 /* Variable numbers (Spec §4.2.2). */
 #define SP 0x00
@@ -609,8 +611,8 @@ static void test_faults(void)
 
     /* An opcode that exists but is not implemented yet is named. */
     story_init(&s, 3);
-    EMIT(&s, 0xd6, 0x2f, 0x03, 0xe8, G0, 0x00);                 /* mul 1000 G0 -> sp */
-    expect_fault(&s, "mul", &out);
+    EMIT(&s, 0xbc);                                             /* show_status */
+    expect_fault(&s, "show_status", &out);
 
     /* Spec §15 je: one operand is not permitted. */
     story_init(&s, 3);
@@ -647,6 +649,527 @@ static void test_faults(void)
     }
 }
 
+/*
+ * Arithmetic, logic, and memory (Spec §2, §15).
+ */
+
+static void test_arithmetic_is_signed_and_wraps(void)
+{
+    story s;
+    output out;
+    zm_machine m;
+    zm_memory mem;
+
+    /* Spec §2.2.1 and the worked examples in Spec §2 Remarks. Two large
+     * constants need the variable form (Spec §4.4.2), type byte $0f. */
+    story_init(&s, 3);
+    EMIT(&s, 0x14, 3, 4, G0);                                   /* add 3 4 -> G0 */
+    EMIT(&s, 0xe6, 0xbf, G0, 0xe5, 0x7f, ' ');                  /* print_num G0; print_char ' ' */
+    EMIT(&s, 0x15, 3, 10, G0);                                  /* sub 3 10 -> G0 */
+    EMIT(&s, 0xe6, 0xbf, G0, 0xe5, 0x7f, ' ');
+    EMIT(&s, 0xd6, 0x0f, 0x03, 0xe8, 0x03, 0xe8, G0);           /* mul 1000 1000 -> G0 */
+    EMIT(&s, 0xe6, 0xbf, G0, 0xe5, 0x7f, ' ');
+    EMIT(&s, 0xd7, 0x0f, 0xff, 0xf5, 0x00, 0x02, G0);           /* div -11 2 -> G0 */
+    EMIT(&s, 0xe6, 0xbf, G0, 0xe5, 0x7f, ' ');
+    EMIT(&s, 0xd7, 0x0f, 0xff, 0xf5, 0xff, 0xfe, G0);           /* div -11 -2 -> G0 */
+    EMIT(&s, 0xe6, 0xbf, G0, 0xe5, 0x7f, ' ');
+    EMIT(&s, 0xd7, 0x0f, 0x00, 0x0b, 0xff, 0xfe, G0);           /* div 11 -2 -> G0 */
+    EMIT(&s, 0xe6, 0xbf, G0, 0xe5, 0x7f, ' ');
+    EMIT(&s, 0xd8, 0x0f, 0xff, 0xf3, 0x00, 0x05, G0);           /* mod -13 5 -> G0 */
+    EMIT(&s, 0xe6, 0xbf, G0, 0xe5, 0x7f, ' ');
+    EMIT(&s, 0xd8, 0x0f, 0x00, 0x0d, 0xff, 0xfb, G0);           /* mod 13 -5 -> G0 */
+    EMIT(&s, 0xe6, 0xbf, G0, 0xe5, 0x7f, ' ');
+    EMIT(&s, 0xd8, 0x0f, 0xff, 0xf3, 0xff, 0xfb, G0);           /* mod -13 -5 -> G0 */
+    EMIT(&s, 0xe6, 0xbf, G0, 0xe5, 0x7f, ' ');
+    EMIT(&s, 0xd7, 0x0f, 0x80, 0x00, 0xff, 0xff, G0);           /* div -32768 -1 -> G0 (Spec §2.3.2) */
+    EMIT(&s, 0xe6, 0xbf, G0, 0xe5, 0x7f, ' ');
+    EMIT(&s, 0xd4, 0x0f, 0x7f, 0xff, 0x00, 0x01, G0);           /* add 32767 1 -> G0 */
+    EMIT(&s, 0xe6, 0xbf, G0);
+    EMIT(&s, 0xba);                                             /* quit */
+
+    run(&s, &out, &m, &mem);
+    CHECK_EQ_STR(out.text, "7 -7 16960 -5 5 -5 -3 3 -3 -32768 -32768");
+
+    zm_machine_free(&m);
+    zm_memory_free(&mem);
+}
+
+static void test_comparisons_and_bitwise_logic(void)
+{
+    story s;
+    output out;
+    zm_machine m;
+    zm_memory mem;
+
+    /* Each branch, when it goes the way the Standard says, skips a
+     * print_char; a letter in the output names the test that failed.
+     * Branch byte $c5 is "on true, forward 5", $45 "on false". */
+    story_init(&s, 3);
+    EMIT(&s, 0xc2, 0x1f, 0xff, 0xff, 0x01, 0xc5);               /* jl -1 1 ?+5 (signed: taken) */
+    EMIT(&s, 0xe5, 0x7f, 'a');
+    EMIT(&s, 0xc2, 0x4f, 0x01, 0xff, 0xff, 0x45);               /* jl 1 -1 ?~+5 (not less: taken) */
+    EMIT(&s, 0xe5, 0x7f, 'b');
+    EMIT(&s, 0xc3, 0x4f, 0x01, 0xff, 0xff, 0xc5);               /* jg 1 -1 ?+5 */
+    EMIT(&s, 0xe5, 0x7f, 'c');
+    EMIT(&s, 0x03, 5, 5, 0x45);                                 /* jg 5 5 ?~+5 */
+    EMIT(&s, 0xe5, 0x7f, 'd');
+    EMIT(&s, 0x07, 0x0f, 0x05, 0xc5);                           /* test $0f $05 ?+5 (all flags set) */
+    EMIT(&s, 0xe5, 0x7f, 'e');
+    EMIT(&s, 0x07, 0x0f, 0x10, 0x45);                           /* test $0f $10 ?~+5 */
+    EMIT(&s, 0xe5, 0x7f, 'f');
+    EMIT(&s, 0x08, 0x0f, 0xf0, G0);                             /* or $0f $f0 -> G0 */
+    EMIT(&s, 0xe6, 0xbf, G0, 0xe5, 0x7f, ' ');
+    EMIT(&s, 0x09, 0x0f, 0x3c, G0);                             /* and $0f $3c -> G0 */
+    EMIT(&s, 0xe6, 0xbf, G0, 0xe5, 0x7f, ' ');
+    EMIT(&s, 0x9f, 0x00, G0);                                   /* not 0 -> G0 (1OP:15 before Version 5) */
+    EMIT(&s, 0xe6, 0xbf, G0);
+    EMIT(&s, 0xba);
+
+    run(&s, &out, &m, &mem);
+    CHECK_EQ_STR(out.text, "255 12 -1");
+    zm_machine_free(&m);
+    zm_memory_free(&mem);
+
+    /* From Version 5, not is VAR:24 (Spec §14, §15 not). */
+    story_init(&s, 5);
+    EMIT(&s, 0xf8, 0x3f, 0x0f, 0x0f, G0);                       /* not $0f0f -> G0 */
+    EMIT(&s, 0xe6, 0xbf, G0);
+    EMIT(&s, 0xba);
+
+    run(&s, &out, &m, &mem);
+    CHECK_EQ_STR(out.text, "-3856");
+    zm_machine_free(&m);
+    zm_memory_free(&mem);
+}
+
+static void test_inc_chk_and_dec_chk(void)
+{
+    story s;
+    output out;
+    zm_machine m;
+    zm_memory mem;
+
+    story_init(&s, 3);
+    EMIT(&s, 0x0d, G0, 5);                                      /* store G0 5 */
+    EMIT(&s, 0x05, G0, 5, 0xc5);                                /* inc_chk G0 5 ?+5   (6 > 5) */
+    EMIT(&s, 0xe5, 0x7f, 'a');
+    EMIT(&s, 0x05, G0, 10, 0x45);                               /* inc_chk G0 10 ?~+5 (7 > 10 is false) */
+    EMIT(&s, 0xe5, 0x7f, 'b');
+    EMIT(&s, 0x04, G0, 7, 0xc5);                                /* dec_chk G0 7 ?+5   (6 < 7) */
+    EMIT(&s, 0xe5, 0x7f, 'c');
+    EMIT(&s, 0x04, G0, 0, 0x45);                                /* dec_chk G0 0 ?~+5  (5 < 0 is false) */
+    EMIT(&s, 0xe5, 0x7f, 'd');
+    EMIT(&s, 0xe6, 0xbf, G0, 0xe5, 0x7f, ' ');                  /* print_num G0 (5) */
+    /* The comparison is signed (Spec §2.2.1): 32767 + 1 is -32768. */
+    EMIT(&s, 0xcd, 0x4f, G0, 0x7f, 0xff);                       /* store G0 32767 */
+    EMIT(&s, 0x05, G0, 0, 0x45);                                /* inc_chk G0 0 ?~+5 (-32768 > 0 is false) */
+    EMIT(&s, 0xe5, 0x7f, 'e');
+    EMIT(&s, 0xe6, 0xbf, G0, 0xe5, 0x7f, ' ');                  /* print_num G0 (-32768) */
+    /* Spec §6.3.4: on the stack, in place. */
+    EMIT(&s, 0xe8, 0x7f, 1);                                    /* push 1 */
+    EMIT(&s, 0x05, SP, 1, 0xc5);                                /* inc_chk sp 1 ?+5 (2 > 1) */
+    EMIT(&s, 0xe5, 0x7f, 'f');
+    EMIT(&s, 0xe6, 0xbf, SP);                                   /* print_num sp (2, popping it) */
+    EMIT(&s, 0xba);
+
+    run(&s, &out, &m, &mem);
+    CHECK_EQ_STR(out.text, "5 -32768 2");
+    CHECK_EQ_INT(m.sp, 0);
+
+    zm_machine_free(&m);
+    zm_memory_free(&mem);
+}
+
+#define TABLE 0x220u
+
+static void test_memory_access(void)
+{
+    story s;
+    output out;
+    zm_machine m;
+    zm_memory mem;
+
+    story_init(&s, 3);
+    EMIT(&s, 0xe1, 0x13, 0x02, 0x20, 1, 0x12, 0x34);            /* storew TABLE 1 $1234 */
+    EMIT(&s, 0xe2, 0x17, 0x02, 0x20, 1, 0xab);                  /* storeb TABLE 1 $ab */
+    EMIT(&s, 0xcf, 0x1f, 0x02, 0x20, 1, G0);                    /* loadw TABLE 1 -> G0 */
+    EMIT(&s, 0xe6, 0xbf, G0, 0xe5, 0x7f, ' ');
+    EMIT(&s, 0xd0, 0x1f, 0x02, 0x20, 1, G0);                    /* loadb TABLE 1 -> G0 */
+    EMIT(&s, 0xe6, 0xbf, G0, 0xe5, 0x7f, ' ');
+    EMIT(&s, 0xd0, 0x1f, 0x02, 0x20, 3, G0);                    /* loadb TABLE 3 -> G0 */
+    EMIT(&s, 0xe6, 0xbf, G0, 0xe5, 0x7f, ' ');
+    /* A negative index reaches back, since addresses wrap at 16 bits. */
+    EMIT(&s, 0xcf, 0x0f, 0x02, 0x24, 0xff, 0xff, G0);           /* loadw TABLE+4 -1 -> G0 */
+    EMIT(&s, 0xe6, 0xbf, G0);
+    EMIT(&s, 0xba);
+
+    run(&s, &out, &m, &mem);
+    CHECK_EQ_STR(out.text, "4660 171 52 4660");
+    CHECK_EQ_INT(zm_read_byte(&mem, TABLE), 0x00);
+    CHECK_EQ_INT(zm_read_byte(&mem, TABLE + 1), 0xab);
+    CHECK_EQ_INT(zm_read_word(&mem, TABLE + 2), 0x1234);
+    zm_machine_free(&m);
+    zm_memory_free(&mem);
+
+    /* Spec §15 storew: the address must be in dynamic memory. */
+    story_init(&s, 3);
+    EMIT(&s, 0xe1, 0x17, CODE >> 8, CODE & 0xff, 0, 1);         /* storew CODE 0 1 */
+    expect_fault(&s, "outside dynamic memory", &out);
+}
+
+/*
+ * Objects (Spec §12, §15).
+ */
+
+/* Property tables for the objects below. */
+#define PROPS1 0x2c0u
+#define PROPS2 0x2e0u
+#define PROPS3 0x300u
+#define PROPS4 0x320u
+
+/* A Version 3 object table at OBJECTS: 1 ("a") holds 2 ("b") and 3
+ * ("c"); 4 ("d") stands alone. Object 2 has attribute 3 set and
+ * properties 5 (word $0102), 3 (byte 7), and 2 (four bytes). Property 4
+ * defaults to $44. */
+static void build_objects(story *s)
+{
+    static const uint8_t entries[4][9] = {
+        /* attributes            parent sibling child  properties */
+        { 0x00, 0x00, 0x00, 0x00, 0,     0,      2,     PROPS1 >> 8, PROPS1 & 0xff },
+        { 0x10, 0x00, 0x00, 0x00, 1,     3,      0,     PROPS2 >> 8, PROPS2 & 0xff },
+        { 0x00, 0x00, 0x00, 0x00, 1,     0,      0,     PROPS3 >> 8, PROPS3 & 0xff },
+        { 0x00, 0x00, 0x00, 0x00, 0,     0,      0,     PROPS4 >> 8, PROPS4 & 0xff },
+    };
+
+    put_word(s->bytes, ZM_HEADER_OBJECTS, OBJECTS);
+    put_word(s->bytes, OBJECTS + 2 * 3, 0x0044);                /* default for property 4 */
+    memcpy(s->bytes + OBJECTS + 62, entries, sizeof entries);   /* Spec §12.3.1: after 31 defaults */
+
+    /* Names are one-word Z-strings: "a" is Z-characters 6 5 5 with the
+     * end bit, and so on through the alphabet (Spec §3.5.3). */
+    at(s, PROPS1); EMIT(s, 0x01, 0x98, 0xa5, 0x00);
+    at(s, PROPS2); EMIT(s, 0x01, 0x9c, 0xa5,
+                        0x25, 0x01, 0x02,                       /* property 5, 2 bytes */
+                        0x03, 0x07,                             /* property 3, 1 byte */
+                        0x62, 0x0a, 0x0b, 0x0c, 0x0d,           /* property 2, 4 bytes */
+                        0x00);
+    at(s, PROPS3); EMIT(s, 0x01, 0xa0, 0xa5, 0x00);
+    at(s, PROPS4); EMIT(s, 0x01, 0xa4, 0xa5, 0x00);
+    at(s, CODE);
+}
+
+static void test_object_opcodes(void)
+{
+    story s;
+    output out;
+    zm_machine m;
+    zm_memory mem;
+    char expected[256];
+
+    story_init(&s, 3);
+    build_objects(&s);
+
+    /* The tree as built. */
+    EMIT(&s, 0x93, 2, G0);                                      /* get_parent 2 -> G0 */
+    EMIT(&s, 0xe6, 0xbf, G0, 0xe5, 0x7f, ' ');                  /* 1 */
+    EMIT(&s, 0x92, 1, G0, 0xc5);                                /* get_child 1 -> G0 ?+5 */
+    EMIT(&s, 0xe5, 0x7f, 'a');
+    EMIT(&s, 0xe6, 0xbf, G0, 0xe5, 0x7f, ' ');                  /* 2 */
+    EMIT(&s, 0x91, 2, G0, 0xc5);                                /* get_sibling 2 -> G0 ?+5 */
+    EMIT(&s, 0xe5, 0x7f, 'b');
+    EMIT(&s, 0xe6, 0xbf, G0, 0xe5, 0x7f, ' ');                  /* 3 */
+    EMIT(&s, 0x91, 3, G0, 0x45);                                /* get_sibling 3 -> G0 ?~+5 (none) */
+    EMIT(&s, 0xe5, 0x7f, 'c');
+    EMIT(&s, 0xe6, 0xbf, G0, 0xe5, 0x7f, ' ');                  /* 0 */
+    EMIT(&s, 0x06, 2, 1, 0xc5);                                 /* jin 2 1 ?+5 */
+    EMIT(&s, 0xe5, 0x7f, 'd');
+    EMIT(&s, 0x06, 3, 2, 0x45);                                 /* jin 3 2 ?~+5 */
+    EMIT(&s, 0xe5, 0x7f, 'e');
+
+    /* Attributes. */
+    EMIT(&s, 0x0a, 2, 3, 0xc5);                                 /* test_attr 2 3 ?+5 */
+    EMIT(&s, 0xe5, 0x7f, 'f');
+    EMIT(&s, 0x0a, 2, 4, 0x45);                                 /* test_attr 2 4 ?~+5 */
+    EMIT(&s, 0xe5, 0x7f, 'g');
+    EMIT(&s, 0x0b, 2, 4);                                       /* set_attr 2 4 */
+    EMIT(&s, 0x0a, 2, 4, 0xc5);                                 /* test_attr 2 4 ?+5 */
+    EMIT(&s, 0xe5, 0x7f, 'h');
+    EMIT(&s, 0x0c, 2, 3);                                       /* clear_attr 2 3 */
+    EMIT(&s, 0x0a, 2, 3, 0x45);                                 /* test_attr 2 3 ?~+5 */
+    EMIT(&s, 0xe5, 0x7f, 'i');
+
+    /* Moving objects. */
+    EMIT(&s, 0x0e, 4, 1);                                       /* insert_obj 4 1 */
+    EMIT(&s, 0x92, 1, G0, 0xc5);                                /* get_child 1 -> G0 ?+5 */
+    EMIT(&s, 0xe5, 0x7f, 'j');
+    EMIT(&s, 0xe6, 0xbf, G0, 0xe5, 0x7f, ' ');                  /* 4 */
+    EMIT(&s, 0x91, 4, G0, 0xc5);                                /* get_sibling 4 -> G0 ?+5 */
+    EMIT(&s, 0xe5, 0x7f, 'k');
+    EMIT(&s, 0xe6, 0xbf, G0, 0xe5, 0x7f, ' ');                  /* 2 */
+    EMIT(&s, 0x99, 2);                                          /* remove_obj 2 */
+    EMIT(&s, 0x91, 4, G0, 0xc5);                                /* get_sibling 4 -> G0 ?+5 */
+    EMIT(&s, 0xe5, 0x7f, 'l');
+    EMIT(&s, 0xe6, 0xbf, G0, 0xe5, 0x7f, ' ');                  /* 3 */
+    EMIT(&s, 0x93, 2, G0);                                      /* get_parent 2 -> G0 */
+    EMIT(&s, 0xe6, 0xbf, G0, 0xe5, 0x7f, ' ');                  /* 0 */
+
+    /* Names. */
+    EMIT(&s, 0x9a, 1);                                          /* print_obj 1 */
+    EMIT(&s, 0x9a, 3);                                          /* print_obj 3 */
+    EMIT(&s, 0xe5, 0x7f, ' ');                                  /* "ac " */
+
+    /* Properties. */
+    EMIT(&s, 0x11, 2, 5, G0);                                   /* get_prop 2 5 -> G0 */
+    EMIT(&s, 0xe6, 0xbf, G0, 0xe5, 0x7f, ' ');                  /* 258 */
+    EMIT(&s, 0x11, 2, 3, G0);                                   /* get_prop 2 3 -> G0 */
+    EMIT(&s, 0xe6, 0xbf, G0, 0xe5, 0x7f, ' ');                  /* 7 */
+    EMIT(&s, 0x11, 2, 4, G0);                                   /* get_prop 2 4 -> G0 (default) */
+    EMIT(&s, 0xe6, 0xbf, G0, 0xe5, 0x7f, ' ');                  /* 68 */
+    EMIT(&s, 0x11, 0, 4, G0);                                   /* get_prop 0 4 -> G0 (nothing: default) */
+    EMIT(&s, 0xe6, 0xbf, G0, 0xe5, 0x7f, ' ');                  /* 68 */
+    EMIT(&s, 0x12, 2, 3, G0);                                   /* get_prop_addr 2 3 -> G0 */
+    EMIT(&s, 0xe6, 0xbf, G0, 0xe5, 0x7f, ' ');                  /* PROPS2 + 7 */
+    EMIT(&s, 0xa4, G0, G0);                                     /* get_prop_len G0 -> G0 */
+    EMIT(&s, 0xe6, 0xbf, G0, 0xe5, 0x7f, ' ');                  /* 1 */
+    EMIT(&s, 0x12, 2, 4, G0);                                   /* get_prop_addr 2 4 -> G0 (absent) */
+    EMIT(&s, 0xe6, 0xbf, G0, 0xe5, 0x7f, ' ');                  /* 0 */
+    EMIT(&s, 0xa4, G0, G0);                                     /* get_prop_len 0 -> G0 */
+    EMIT(&s, 0xe6, 0xbf, G0, 0xe5, 0x7f, ' ');                  /* 0 */
+    EMIT(&s, 0x12, 2, 2, G0);                                   /* get_prop_addr 2 2 -> G0 */
+    EMIT(&s, 0xa4, G0, G0);                                     /* get_prop_len -> G0 */
+    EMIT(&s, 0xe6, 0xbf, G0, 0xe5, 0x7f, ' ');                  /* 4 */
+    EMIT(&s, 0x13, 2, 0, G0);                                   /* get_next_prop 2 0 -> G0 */
+    EMIT(&s, 0xe6, 0xbf, G0, 0xe5, 0x7f, ' ');                  /* 5 */
+    EMIT(&s, 0x13, 2, 5, G0);                                   /* get_next_prop 2 5 -> G0 */
+    EMIT(&s, 0xe6, 0xbf, G0, 0xe5, 0x7f, ' ');                  /* 3 */
+    EMIT(&s, 0x13, 2, 3, G0);                                   /* get_next_prop 2 3 -> G0 */
+    EMIT(&s, 0xe6, 0xbf, G0, 0xe5, 0x7f, ' ');                  /* 2 */
+    EMIT(&s, 0x13, 2, 2, G0);                                   /* get_next_prop 2 2 -> G0 */
+    EMIT(&s, 0xe6, 0xbf, G0, 0xe5, 0x7f, ' ');                  /* 0 */
+    EMIT(&s, 0xe3, 0x53, 2, 5, 0xbe, 0xef);                     /* put_prop 2 5 $beef */
+    EMIT(&s, 0x11, 2, 5, G0);                                   /* get_prop 2 5 -> G0 */
+    EMIT(&s, 0xe6, 0xbf, G0, 0xe5, 0x7f, ' ');                  /* -16657 */
+    EMIT(&s, 0xe3, 0x53, 2, 3, 0x01, 0xff);                     /* put_prop 2 3 $1ff (low byte kept) */
+    EMIT(&s, 0x11, 2, 3, G0);                                   /* get_prop 2 3 -> G0 */
+    EMIT(&s, 0xe6, 0xbf, G0, 0xe5, 0x7f, ' ');                  /* 255 */
+
+    /* Enquiries about nothing. */
+    EMIT(&s, 0x93, 0, G0);                                      /* get_parent 0 -> G0 */
+    EMIT(&s, 0xe6, 0xbf, G0);                                   /* 0 */
+    EMIT(&s, 0x92, 0, G0, 0x45);                                /* get_child 0 -> G0 ?~+5 */
+    EMIT(&s, 0xe5, 0x7f, 'm');
+    EMIT(&s, 0x0a, 0, 3, 0x45);                                 /* test_attr 0 3 ?~+5 */
+    EMIT(&s, 0xe5, 0x7f, 'n');
+    EMIT(&s, 0xba);
+
+    run(&s, &out, &m, &mem);
+    snprintf(expected, sizeof expected,
+             "1 2 3 0 4 2 3 0 ac 258 7 68 68 %u 1 0 0 4 5 3 2 0 -16657 255 0", (unsigned)(PROPS2 + 7));
+    CHECK_EQ_STR(out.text, expected);
+
+    /* The table itself reflects the moves and writes. */
+    CHECK_EQ_INT(zm_read_byte(&mem, OBJECTS + 62 + 9 + 4), 0);         /* object 2's parent */
+    CHECK_EQ_INT(zm_read_byte(&mem, OBJECTS + 62 + 27 + 4), 1);        /* object 4's parent */
+    CHECK_EQ_INT(zm_read_byte(&mem, OBJECTS + 62 + 9), 0x08);          /* object 2: attribute 4 only */
+    CHECK_EQ_INT(zm_read_word(&mem, PROPS2 + 4), 0xbeef);
+    CHECK_EQ_INT(zm_read_byte(&mem, PROPS2 + 7), 0xff);
+
+    zm_machine_free(&m);
+    zm_memory_free(&mem);
+}
+
+static void test_object_faults(void)
+{
+    story s;
+    output out;
+
+    /* Spec §15 print_obj: an invalid object halts. */
+    story_init(&s, 3);
+    build_objects(&s);
+    EMIT(&s, 0x9a, 0);                                          /* print_obj 0 */
+    expect_fault(&s, "print_obj", &out);
+
+    /* Spec §15 put_prop: no such property. */
+    story_init(&s, 3);
+    build_objects(&s);
+    EMIT(&s, 0xe3, 0x57, 2, 4, 1);                              /* put_prop 2 4 1 */
+    expect_fault(&s, "no property 4", &out);
+
+    /* Spec §15 get_prop: longer than two bytes. */
+    story_init(&s, 3);
+    build_objects(&s);
+    EMIT(&s, 0x11, 2, 2, G0);                                   /* get_prop 2 2 -> G0 */
+    expect_fault(&s, "4 bytes", &out);
+
+    /* Spec §15 get_next_prop: following a property the object lacks. */
+    story_init(&s, 3);
+    build_objects(&s);
+    EMIT(&s, 0x13, 2, 4, G0);                                   /* get_next_prop 2 4 -> G0 */
+    expect_fault(&s, "get_next_prop", &out);
+
+    /* Property numbers that no object can have. */
+    story_init(&s, 3);
+    build_objects(&s);
+    EMIT(&s, 0x11, 2, 40, G0);                                  /* get_prop 2 40 -> G0 */
+    expect_fault(&s, "property 40", &out);
+
+    /* Changing nothing. */
+    story_init(&s, 3);
+    build_objects(&s);
+    EMIT(&s, 0x0e, 0, 1);                                       /* insert_obj 0 1 */
+    expect_fault(&s, "object 0", &out);
+
+    story_init(&s, 3);
+    build_objects(&s);
+    EMIT(&s, 0x0b, 1, 32);                                      /* set_attr 1 32 */
+    expect_fault(&s, "attribute 32", &out);
+
+    /* Spec §2.3.1. */
+    story_init(&s, 3);
+    EMIT(&s, 0x17, 1, 0, G0);                                   /* div 1 0 -> G0 */
+    expect_fault(&s, "division by zero", &out);
+
+    story_init(&s, 3);
+    EMIT(&s, 0x18, 1, 0, G0);                                   /* mod 1 0 -> G0 */
+    expect_fault(&s, "remainder", &out);
+}
+
+/*
+ * Random numbers (Spec §2.4), shifts, and the odd ones out.
+ */
+
+static void test_random_numbers(void)
+{
+    story s;
+    output out;
+    zm_machine m;
+    zm_memory mem;
+    int seen[7] = { 0 };
+
+    /* Spec §2 Remarks: a seed below 1000 gives the sequence 1, 2, ...,
+     * seed, each reduced to the range asked for. Seeding stores 0. */
+    story_init(&s, 3);
+    EMIT(&s, 0xe7, 0x3f, 0xff, 0xfb, G0);                       /* random -5 -> G0 */
+    EMIT(&s, 0xe6, 0xbf, G0);                                   /* 0 */
+    for (int i = 0; i < 8; i++) {
+        EMIT(&s, 0xe7, 0x7f, 3, G0);                            /* random 3 -> G0 */
+        EMIT(&s, 0xe6, 0xbf, G0);
+    }
+    EMIT(&s, 0xe7, 0x7f, 0, G0);                                /* random 0 -> G0 (back to random mode) */
+    EMIT(&s, 0xe6, 0xbf, G0);                                   /* 0 */
+    EMIT(&s, 0xba);
+
+    run(&s, &out, &m, &mem);
+    CHECK_EQ_STR(out.text, "0123121230");
+    CHECK_EQ_INT(m.random_interval, 0);
+
+    /* In random mode every draw is in range, and over enough draws every
+     * value turns up (Spec §2.4.1). */
+    for (int i = 0; i < 1000; i++) {
+        uint16_t value = zm_machine_random(&m, 6);
+
+        if (value >= 1 && value <= 6) {
+            seen[value] = 1;
+        } else {
+            CHECK(0 && "random value out of range");
+        }
+    }
+    CHECK(seen[1] && seen[2] && seen[3] && seen[4] && seen[5] && seen[6]);
+
+    /* Spec §2.4.2: the same large seed gives the same sequence. */
+    {
+        uint16_t first[8], second[8];
+
+        zm_machine_seed_random(&m, 4321);
+        for (int i = 0; i < 8; i++) first[i] = zm_machine_random(&m, 1000);
+        zm_machine_seed_random(&m, 4321);
+        for (int i = 0; i < 8; i++) second[i] = zm_machine_random(&m, 1000);
+        CHECK(memcmp(first, second, sizeof first) == 0);
+
+        zm_machine_seed_random(&m, 4322);
+        for (int i = 0; i < 8; i++) second[i] = zm_machine_random(&m, 1000);
+        CHECK(memcmp(first, second, sizeof first) != 0);
+    }
+
+    zm_machine_free(&m);
+    zm_memory_free(&mem);
+}
+
+static void test_shifts_and_argument_counts(void)
+{
+    story s;
+    output out;
+    zm_machine m;
+    zm_memory mem;
+
+    story_init(&s, 5);
+    EMIT(&s, 0xbe, 0x02, 0x5f, 1, 3, G0);                       /* log_shift 1 3 -> G0 */
+    EMIT(&s, 0xe6, 0xbf, G0, 0xe5, 0x7f, ' ');                  /* 8 */
+    EMIT(&s, 0xbe, 0x02, 0x0f, 0x80, 0x00, 0xff, 0xff, G0);     /* log_shift $8000 -1 -> G0 */
+    EMIT(&s, 0xe6, 0xbf, G0, 0xe5, 0x7f, ' ');                  /* 16384 */
+    EMIT(&s, 0xbe, 0x03, 0x0f, 0x80, 0x00, 0xff, 0xff, G0);     /* art_shift $8000 -1 -> G0 */
+    EMIT(&s, 0xe6, 0xbf, G0, 0xe5, 0x7f, ' ');                  /* -16384 */
+    EMIT(&s, 0xbe, 0x03, 0x0f, 0xff, 0xf8, 0xff, 0xfe, G0);     /* art_shift -8 -2 -> G0 */
+    EMIT(&s, 0xe6, 0xbf, G0, 0xe5, 0x7f, ' ');                  /* -2 */
+    EMIT(&s, 0xbe, 0x03, 0x5f, 1, 15, G0);                      /* art_shift 1 15 -> G0 */
+    EMIT(&s, 0xe6, 0xbf, G0, 0xe5, 0x7f, ' ');                  /* -32768 */
+    EMIT(&s, 0xf9, 0x17); emit_packed(&s, R1); EMIT(&s, 1, 2);  /* call_vn R1 1 2 */
+    EMIT(&s, 0xbf, 0xc5);                                       /* piracy ?+5 */
+    EMIT(&s, 0xe5, 0x7f, 'p');
+    EMIT(&s, 0xba);
+
+    at(&s, R1);
+    EMIT(&s, 0x03);                                             /* 3 locals */
+    EMIT(&s, 0xff, 0x7f, 2, 0xc5);                              /* check_arg_count 2 ?+5 */
+    EMIT(&s, 0xe5, 0x7f, 'x');
+    EMIT(&s, 0xff, 0x7f, 3, 0x45);                              /* check_arg_count 3 ?~+5 */
+    EMIT(&s, 0xe5, 0x7f, 'y');
+    EMIT(&s, 0xe5, 0x7f, '!');
+    EMIT(&s, 0xb0);                                             /* rtrue */
+
+    run(&s, &out, &m, &mem);
+    CHECK_EQ_STR(out.text, "8 16384 -16384 -2 -32768 !");
+
+    zm_machine_free(&m);
+    zm_memory_free(&mem);
+}
+
+static void test_verify_checks_the_checksum(void)
+{
+    story s;
+    output out;
+    zm_machine m;
+    zm_memory mem;
+    uint32_t sum = 0;
+
+    /* Spec §15 verify: the sum of the bytes from $40 to the file length
+     * in the header, which here is the whole story. The branch is "on
+     * false", so 'v' prints only when the checksum agrees. */
+    story_init(&s, 3);
+    put_word(s.bytes, ZM_HEADER_FILE_LENGTH, STORY_SIZE / 2);
+    /* Writing to dynamic memory first must not disturb the sum, which is
+     * of the file as loaded. */
+    EMIT(&s, 0xe1, 0x13, 0x02, 0x20, 0, 0x12, 0x34);            /* storew TABLE 0 $1234 */
+    EMIT(&s, 0xbd, 0x45);                                       /* verify ?~+5 */
+    EMIT(&s, 0xe5, 0x7f, 'v');
+    EMIT(&s, 0xba);
+    for (uint32_t i = 0x40; i < STORY_SIZE; i++) {
+        sum += s.bytes[i];
+    }
+    put_word(s.bytes, ZM_HEADER_CHECKSUM, (uint16_t)sum);
+
+    run(&s, &out, &m, &mem);
+    CHECK_EQ_STR(out.text, "v");
+    zm_machine_free(&m);
+    zm_memory_free(&mem);
+
+    put_word(s.bytes, ZM_HEADER_CHECKSUM, (uint16_t)(sum + 1));
+    run(&s, &out, &m, &mem);
+    CHECK_EQ_STR(out.text, "");
+    zm_machine_free(&m);
+    zm_memory_free(&mem);
+}
+
 int main(void)
 {
     RUN_TEST(test_simple_test_files_say_hello);
@@ -661,5 +1184,14 @@ int main(void)
     RUN_TEST(test_version_5_call_variants);
     RUN_TEST(test_version_6_starts_in_main_routine);
     RUN_TEST(test_faults);
+    RUN_TEST(test_arithmetic_is_signed_and_wraps);
+    RUN_TEST(test_comparisons_and_bitwise_logic);
+    RUN_TEST(test_inc_chk_and_dec_chk);
+    RUN_TEST(test_memory_access);
+    RUN_TEST(test_object_opcodes);
+    RUN_TEST(test_object_faults);
+    RUN_TEST(test_random_numbers);
+    RUN_TEST(test_shifts_and_argument_counts);
+    RUN_TEST(test_verify_checks_the_checksum);
     return CHECK_SUMMARY();
 }

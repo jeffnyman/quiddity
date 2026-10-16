@@ -98,7 +98,9 @@ static const opcode_row table[] = {
     { ZM_OP_0OP,  9, 5, 8, { "catch",         ST } },
     { ZM_OP_0OP, 10, 1, 8, { "quit",          PLAIN } },
     { ZM_OP_0OP, 11, 1, 8, { "new_line",      PLAIN } },
-    { ZM_OP_0OP, 12, 1, 3, { "show_status",   PLAIN } },
+    /* show_status is a Version 3 opcode, but Spec §15 asks later Versions
+     * to accept it as a nop for 'Wishbringer' release 23. */
+    { ZM_OP_0OP, 12, 1, 8, { "show_status",   PLAIN } },
     { ZM_OP_0OP, 13, 3, 8, { "verify",        BR } },
     /* 0OP:14 is the first byte of an extended opcode in Version 5 and
      * later (Spec §4.3) and illegal before that. */
