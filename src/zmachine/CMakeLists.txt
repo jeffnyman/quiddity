@@ -9,6 +9,8 @@
 add_library(zmachine STATIC
     fatal.c
     header.c
+    instruction.c
+    machine.c
     memory.c
     status.c
     text.c

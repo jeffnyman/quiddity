@@ -2,8 +2,8 @@
  * Quiddity: an interactive fiction interpreter for the Z-Machine and Glulx.
  *
  * This file is the terminal front end's entry point. It handles the command
- * line, loads the story file, and reports what it finds. Execution arrives
- * in a later increment.
+ * line, loads the story file, and either describes it or runs it on the
+ * terminal.
  *
  * Copyright (C) 2026 Jeff Nyman
  *
@@ -18,10 +18,12 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "zm/machine.h"
 #include "zm/memory.h"
 #include "zm/status.h"
 
 #include "info.h"
+#include "terminal.h"
 
 /* Exit status for a command-line usage error, following the BSD sysexits
  * convention (EX_USAGE). Kept local so <sysexits.h>, which MSVC lacks, is
@@ -63,6 +65,9 @@ int main(int argc, char **argv)
     int i = 1;
     const char *path;
     zm_memory mem;
+    zm_machine machine;
+    terminal term;
+    zm_io io;
     zm_status status;
 
     /* Options come first and are only recorded here. The loop stops at the
@@ -117,9 +122,19 @@ int main(int argc, char **argv)
         return EXIT_SUCCESS;
     }
 
-    /* The story loaded, but there is nothing to run it with yet. */
-    fprintf(stderr, "quiddity: %s: loaded (Version %u, %u bytes), but execution is not implemented yet\n",
-            path, mem.version, mem.size);
+    terminal_init(&term, &mem, &io);
+    status = zm_machine_init(&machine, &mem, &io);
+    if (status != ZM_OK) {
+        fprintf(stderr, "quiddity: %s\n", zm_status_message(status));
+        zm_memory_free(&mem);
+        return EXIT_FAILURE;
+    }
+
+    /* Runs until the game quits. A fault inside the machine goes through
+     * zm_fatal(), whose default handler reports it and exits. */
+    zm_machine_run(&machine);
+
+    zm_machine_free(&machine);
     zm_memory_free(&mem);
-    return EXIT_FAILURE;
+    return EXIT_SUCCESS;
 }

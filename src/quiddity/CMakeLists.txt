@@ -7,6 +7,7 @@
 add_executable(quiddity
     info.c
     main.c
+    terminal.c
 )
 
 target_compile_definitions(quiddity PRIVATE
