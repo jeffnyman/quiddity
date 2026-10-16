@@ -8,6 +8,7 @@
 
 add_library(zmachine STATIC
     fatal.c
+    dictionary.c
     header.c
     instruction.c
     machine.c

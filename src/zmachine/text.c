@@ -11,6 +11,8 @@
 
 #include "zm/text.h"
 
+#include <stddef.h>
+
 #include "zm/fatal.h"
 #include "zm/header.h"
 
@@ -330,4 +332,156 @@ uint16_t zm_zscii_to_unicode(const zm_memory *mem, uint16_t zscii)
         return 0;
     }
     return zm_read_word(mem, table + 1u + 2u * index);
+}
+
+/*
+ * Encoding (Spec §3.7): turning what the player typed into the form the
+ * dictionary stores, so the two can be compared byte for byte.
+ */
+
+/* Which alphabet holds a ZSCII character, and as which Z-character.
+ * Returns -1 if none does, in which case the ZSCII escape is needed. */
+static int alphabet_find(const decoder *d, uint16_t zscii, uint8_t *z)
+{
+    for (unsigned alphabet = A0; alphabet <= A2; alphabet++) {
+        /* Z-character 6 of A2 is the escape (Spec §3.4) and 7 is new-line
+         * from Version 2 (Spec §3.5.3), whatever the table says there. */
+        unsigned first = alphabet == A2 ? (d->version == 1 ? 7u : 8u) : 6u;
+
+        for (unsigned candidate = first; candidate <= 31; candidate++) {
+            if (alphabet_lookup(d, alphabet, (uint8_t)candidate) == zscii) {
+                *z = (uint8_t)candidate;
+                return (int)alphabet;
+            }
+        }
+    }
+    return -1;
+}
+
+/* The alphabet a character will be encoded from, with A2 for one that
+ * needs the escape, or -1 for a space, which is Z-character 0 in any
+ * alphabet. Used for the look-ahead of Spec §3.7.1. */
+static int alphabet_of(const decoder *d, uint16_t zscii)
+{
+    uint8_t z;
+    int alphabet;
+
+    if (zscii == ZM_ZSCII_SPACE) {
+        return -1;
+    }
+    alphabet = alphabet_find(d, zscii, &z);
+    return alphabet < 0 ? A2 : alphabet;
+}
+
+typedef struct {
+    uint8_t zchars[9];
+    unsigned count;
+    unsigned limit;
+
+    /* Versions 1 and 2 only: the alphabet the shift lock is on. Later
+     * Versions have no locks and always return to A0 (Spec §3.2.3). */
+    unsigned locked;
+} encoder;
+
+static void put_zchar(encoder *e, uint8_t z)
+{
+    if (e->count < e->limit) {
+        e->zchars[e->count++] = z;
+    }
+}
+
+/* Emit whatever shift brings the next character from the given
+ * alphabet. */
+static void shift_to(encoder *e, const decoder *d, unsigned alphabet, int next_alphabet)
+{
+    if (d->version >= 3) {
+        /* Spec §3.2.3: 4 and 5 are single shifts to A1 and A2. */
+        if (alphabet == A1) {
+            put_zchar(e, 4);
+        } else if (alphabet == A2) {
+            put_zchar(e, 5);
+        }
+        return;
+    }
+
+    /* Spec §3.2.2: in Versions 1 and 2, shifts are relative to the
+     * current alphabet, 2 and 3 for one character, 4 and 5 to lock. Spec
+     * §3.7.1: a dictionary word locks when the following character comes
+     * from the same alphabet. */
+    if (alphabet == e->locked) {
+        return;
+    }
+    {
+        int lock = next_alphabet == (int)alphabet;
+        unsigned up = (e->locked + 1u) % 3u;
+
+        if (alphabet == up) {
+            put_zchar(e, lock ? 4 : 2);
+        } else {
+            put_zchar(e, lock ? 5 : 3);
+        }
+        if (lock) {
+            e->locked = alphabet;
+        }
+    }
+}
+
+unsigned zm_text_encoded_length(const zm_memory *mem)
+{
+    return mem->version <= 3 ? 4u : 6u;
+}
+
+unsigned zm_text_encode(const zm_memory *mem, const uint16_t *zscii, unsigned length, uint8_t *out)
+{
+    decoder d;
+    encoder e;
+    unsigned words;
+
+    decoder_init(&d, mem, NULL, NULL);
+    e.count = 0;
+    e.limit = mem->version <= 3 ? 6u : 9u;
+    e.locked = A0;
+
+    for (unsigned i = 0; i < length && e.count < e.limit; i++) {
+        uint16_t c = zscii[i];
+        uint8_t z;
+        int alphabet;
+        int next = i + 1 < length ? alphabet_of(&d, zscii[i + 1]) : -1;
+
+        if (c == ZM_ZSCII_SPACE) {
+            put_zchar(&e, 0);                       /* Spec §3.5.1 */
+            continue;
+        }
+
+        alphabet = alphabet_find(&d, c, &z);
+        if (alphabet < 0) {
+            /* Spec §3.4: the ten-bit ZSCII code after A2's Z-character
+             * 6, high five bits first. */
+            shift_to(&e, &d, A2, next);
+            put_zchar(&e, 6);
+            put_zchar(&e, (uint8_t)(c >> 5));
+            put_zchar(&e, (uint8_t)(c & 31u));
+        } else {
+            shift_to(&e, &d, (unsigned)alphabet, next);
+            put_zchar(&e, z);
+        }
+    }
+
+    /* Spec §3.7: pad with 5s. */
+    while (e.count < e.limit) {
+        e.zchars[e.count++] = 5;
+    }
+
+    /* Spec §3.2: three Z-characters to a word, end bit on the last. */
+    words = e.limit / 3u;
+    for (unsigned w = 0; w < words; w++) {
+        uint16_t word = (uint16_t)((e.zchars[3 * w] << 10) | (e.zchars[3 * w + 1] << 5) | e.zchars[3 * w + 2]);
+
+        if (w == words - 1) {
+            word |= 0x8000u;
+        }
+        out[2 * w] = (uint8_t)(word >> 8);
+        out[2 * w + 1] = (uint8_t)(word & 0xffu);
+    }
+    return 2u * words;
 }

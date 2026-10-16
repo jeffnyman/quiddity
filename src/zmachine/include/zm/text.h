@@ -67,4 +67,20 @@ void zm_text_decode_abbreviation(const zm_memory *mem, unsigned number, zm_text_
  * caller must handle those before asking here. */
 uint16_t zm_zscii_to_unicode(const zm_memory *mem, uint16_t zscii);
 
+/* The length in bytes of a word encoded for the dictionary: 4 in Versions
+ * 1 to 3 (6 Z-characters), 6 after (9 Z-characters) (Spec §3.7, §13.3,
+ * §13.4). */
+#define ZM_TEXT_ENCODED_MAX 6u
+unsigned zm_text_encoded_length(const zm_memory *mem);
+
+/* Encode ZSCII text as a dictionary word (Spec §3.7): the first 6 or 9
+ * Z-characters of the text's encoding, padded with Z-character 5 and
+ * packed into words with the end bit on the last. Writes
+ * zm_text_encoded_length() bytes to out and returns that length. Text
+ * that does not fit is cut off mid-construction rather than tidied, as
+ * §3.7 requires; a dictionary word longer than fits is simply never
+ * matched. The caller lower-cases the text first if it wants
+ * dictionary matching to work. */
+unsigned zm_text_encode(const zm_memory *mem, const uint16_t *zscii, unsigned length, uint8_t *out);
+
 #endif /* ZM_TEXT_H */

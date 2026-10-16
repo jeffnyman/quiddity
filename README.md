@@ -76,7 +76,7 @@ Every build puts its executables under `build/<preset>/bin`. The Visual Studio g
 build/gcc/bin/quiddity path/to/story.z3
 ```
 
-The story runs on the terminal until it quits. The instruction set is still being filled in, so a story that reaches an opcode Quiddity does not implement yet stops with a message naming it; that message is the to-do list.
+The story runs on the terminal until it quits, reading commands from standard input. When standard input is a file rather than a keyboard, each command is echoed after the prompt so the transcript reads as a session would, and the game ends when the file does. In Versions 1 to 3 the status line is printed above each prompt. The instruction set is still being filled in, so a story that reaches an opcode Quiddity does not implement yet stops with a message naming it; that message is the to-do list.
 
 The `--info` option prints what the story file's header says about it, including its Version, release, serial code, memory map, and whether its checksum verifies, and then exits without running it.
 

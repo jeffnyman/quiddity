@@ -69,7 +69,89 @@ static void collect(void *context, uint16_t zscii)
     }
 }
 
-static zm_io io = { NULL, collect };
+static zm_io io = { .print_char = collect };
+
+/* Scripted input: lines and keys the "player" types, and a record of
+ * the status lines shown. */
+static const char *script_lines[8];
+static unsigned script_next;
+static int script_keys[8];
+static unsigned script_key_next;
+
+typedef struct {
+    char name[64];
+    int time_game;
+    int a, b;
+    unsigned shown;
+} status_record;
+static status_record status;
+
+static int script_read_line(void *context, uint16_t *buffer, unsigned max, uint16_t *terminator)
+{
+    const char *line;
+    unsigned count = 0;
+
+    (void)context;
+    line = script_lines[script_next];
+    if (line == NULL) {
+        return -1;
+    }
+    script_next++;
+    while (line[count] != '\0' && count < max) {
+        buffer[count] = (uint8_t)line[count];
+        count++;
+    }
+    *terminator = ZM_ZSCII_NEWLINE;
+    return (int)count;
+}
+
+static int script_read_char(void *context)
+{
+    (void)context;
+    if (script_keys[script_key_next] == 0) {
+        return -1;
+    }
+    return script_keys[script_key_next++];
+}
+
+static void record_status(void *context, const uint16_t *name, unsigned name_length,
+                          int time_game, int16_t a, int16_t b)
+{
+    (void)context;
+    memset(status.name, 0, sizeof status.name);
+    for (unsigned i = 0; i < name_length && i < sizeof status.name - 1; i++) {
+        status.name[i] = (char)name[i];
+    }
+    status.time_game = time_game;
+    status.a = a;
+    status.b = b;
+    status.shown++;
+}
+
+/* Install scripted lines and keys, or remove them with NULL, NULL. */
+static void script(const char *const *lines, const int *keys)
+{
+    for (unsigned i = 0; i < 8; i++) {
+        script_lines[i] = NULL;
+        script_keys[i] = 0;
+    }
+    memset(&status, 0, sizeof status);
+    script_next = 0;
+    script_key_next = 0;
+    if (lines != NULL) {
+        for (unsigned i = 0; lines[i] != NULL && i < 7; i++) {
+            script_lines[i] = lines[i];
+        }
+    }
+    if (keys != NULL) {
+        for (unsigned i = 0; keys[i] != 0 && i < 7; i++) {
+            script_keys[i] = keys[i];
+        }
+    }
+    io.read_line = lines != NULL ? script_read_line : NULL;
+    io.read_char = keys != NULL ? script_read_char : NULL;
+    io.show_status = lines != NULL || keys != NULL ? record_status : NULL;
+}
 
 /* A handler that records the fault and jumps back to the test. */
 static jmp_buf fault_jump;
@@ -599,6 +681,28 @@ static void test_faults(void)
     EMIT(&s, 0x00, 0xb8);                                       /* ret_popped */
     expect_fault(&s, "underflow", &out);
 
+    /* A routine with locals that pops its empty stack reads its last
+     * local instead, as Infocom's interpreters did (see underflow_slot
+     * in machine.c): Zork I release 2 depends on it. Here L2 starts as 77
+     * from the routine header, and "pull L1" on an empty stack copies it. */
+    {
+        zm_machine m;
+        zm_memory mem;
+
+        story_init(&s, 3);
+        EMIT(&s, 0xe0, 0x3f); emit_packed(&s, R1); EMIT(&s, G0);    /* call R1 -> G0 */
+        EMIT(&s, 0xe6, 0xbf, G0);                                   /* print_num G0 */
+        EMIT(&s, 0xba);
+        at(&s, R1);
+        EMIT(&s, 0x02, 0x00, 0x00, 0x00, 77);                       /* 2 locals: 0, 77 */
+        EMIT(&s, 0xe9, 0x7f, L1);                                   /* pull L1 (stack empty) */
+        EMIT(&s, 0xab, L1);                                         /* ret L1 */
+        run(&s, &out, &m, &mem);
+        CHECK_EQ_STR(out.text, "77");
+        zm_machine_free(&m);
+        zm_memory_free(&mem);
+    }
+
     /* Spec §4.2.2: a local the routine does not have. */
     story_init(&s, 3);
     EMIT(&s, 0xe6, 0xbf, L1);                                   /* print_num L1 */
@@ -611,8 +715,8 @@ static void test_faults(void)
 
     /* An opcode that exists but is not implemented yet is named. */
     story_init(&s, 3);
-    EMIT(&s, 0xbc);                                             /* show_status */
-    expect_fault(&s, "show_status", &out);
+    EMIT(&s, 0xf3, 0x7f, 0x01);                                 /* output_stream 1 */
+    expect_fault(&s, "output_stream", &out);
 
     /* Spec §15 je: one operand is not permitted. */
     story_init(&s, 3);
@@ -1170,6 +1274,279 @@ static void test_verify_checks_the_checksum(void)
     zm_memory_free(&mem);
 }
 
+/*
+ * Input (Spec §10, §13, §15 read) and the status line (Spec §8.2).
+ */
+
+#define DICT 0x600u
+#define PARSE 0x2a8u
+
+/* The dictionary of test_dictionary.c: separators '.' ',' '"', and the
+ * words "go", "look", "open" with three data bytes each. */
+static void build_dictionary(story *s)
+{
+    static const uint8_t v3[] = {
+        3, '.', ',', '"', 7, 0x00, 0x03,
+        0x32, 0x85, 0x94, 0xa5, 0, 0, 0,                   /* go   at DICT + 7 */
+        0x46, 0x94, 0xc0, 0xa5, 0, 0, 0,                   /* look at DICT + 14 */
+        0x52, 0xaa, 0xcc, 0xa5, 0, 0, 0,                   /* open at DICT + 21 */
+    };
+    static const uint8_t v5[] = {
+        3, '.', ',', '"', 9, 0x00, 0x03,
+        0x32, 0x85, 0x14, 0xa5, 0x94, 0xa5, 0, 0, 0,       /* go   at DICT + 7 */
+        0x46, 0x94, 0x40, 0xa5, 0x94, 0xa5, 0, 0, 0,       /* look at DICT + 16 */
+        0x52, 0xaa, 0x4c, 0xa5, 0x94, 0xa5, 0, 0, 0,       /* open at DICT + 25 */
+    };
+
+    put_word(s->bytes, ZM_HEADER_DICTIONARY, DICT);
+    if (s->version <= 3) {
+        memcpy(s->bytes + DICT, v3, sizeof v3);
+    } else {
+        memcpy(s->bytes + DICT, v5, sizeof v5);
+    }
+}
+
+static void test_read_in_version_3(void)
+{
+    static const char *const lines[] = { "Open mailbox, LOOK", NULL };
+    story s;
+    output out;
+    zm_machine m;
+    zm_memory mem;
+
+    story_init(&s, 3);
+    build_objects(&s);
+    build_dictionary(&s);
+    s.bytes[TABLE] = 20;                                        /* text buffer: 19 letters and the terminator */
+    s.bytes[PARSE] = 4;                                         /* parse buffer: 4 words */
+    EMIT(&s, 0x0d, G0, 1);                                      /* store G0 1 (the location, object "a") */
+    EMIT(&s, 0x0d, G1, 5);                                      /* store G1 5 (score) */
+    EMIT(&s, 0x0d, G2, 7);                                      /* store G2 7 (turns) */
+    EMIT(&s, 0xe4, 0x0f, TABLE >> 8, TABLE & 0xff, PARSE >> 8, PARSE & 0xff);  /* sread TEXT PARSE */
+    EMIT(&s, 0xe5, 0x7f, '!');
+    EMIT(&s, 0xe4, 0x0f, TABLE >> 8, TABLE & 0xff, PARSE >> 8, PARSE & 0xff);  /* sread again: input runs out */
+    EMIT(&s, 0xe5, 0x7f, '?');
+    EMIT(&s, 0xba);
+
+    script(lines, NULL);
+    run(&s, &out, &m, &mem);
+
+    /* The second read found no input, so the game ended there. */
+    CHECK_EQ_STR(out.text, "!");
+    CHECK_EQ_INT(m.running, 0);
+
+    /* Spec §15 read: lower-cased text from byte 1, zero-terminated. */
+    CHECK(memcmp(mem.bytes + TABLE + 1, "open mailbox, look", 19) == 0);
+
+    /* Spec §13.6.3: four words, with positions counted from byte 0. */
+    CHECK_EQ_INT(zm_read_byte(&mem, PARSE + 1), 4);
+    CHECK_EQ_INT(zm_read_word(&mem, PARSE + 2), DICT + 21);     /* open */
+    CHECK_EQ_INT(zm_read_byte(&mem, PARSE + 4), 4);
+    CHECK_EQ_INT(zm_read_byte(&mem, PARSE + 5), 1);
+    CHECK_EQ_INT(zm_read_word(&mem, PARSE + 6), 0);             /* mailbox */
+    CHECK_EQ_INT(zm_read_byte(&mem, PARSE + 8), 7);
+    CHECK_EQ_INT(zm_read_byte(&mem, PARSE + 9), 6);
+    CHECK_EQ_INT(zm_read_word(&mem, PARSE + 10), 0);            /* , */
+    CHECK_EQ_INT(zm_read_byte(&mem, PARSE + 12), 1);
+    CHECK_EQ_INT(zm_read_byte(&mem, PARSE + 13), 13);
+    CHECK_EQ_INT(zm_read_word(&mem, PARSE + 14), DICT + 14);    /* look */
+    CHECK_EQ_INT(zm_read_byte(&mem, PARSE + 16), 4);
+    CHECK_EQ_INT(zm_read_byte(&mem, PARSE + 17), 15);
+
+    /* Spec §8.2.4: the status line was shown before each read, from the
+     * first three globals. */
+    CHECK_EQ_INT(status.shown, 2);
+    CHECK_EQ_STR(status.name, "a");
+    CHECK_EQ_INT(status.time_game, 0);
+    CHECK_EQ_INT(status.a, 5);
+    CHECK_EQ_INT(status.b, 7);
+
+    /* Spec §11.1.4: a front end with a status line has bit 4 clear. */
+    CHECK_EQ_INT(zm_read_byte(&mem, ZM_HEADER_FLAGS1) & ZM_FLAGS1_V3_NO_STATUS_LINE, 0);
+
+    script(NULL, NULL);
+    zm_machine_free(&m);
+    zm_memory_free(&mem);
+}
+
+static void test_read_in_version_5(void)
+{
+    static const char *const lines[] = { "look", "Hi There", "xyz", NULL };
+    story s;
+    output out;
+    zm_machine m;
+    zm_memory mem;
+
+    story_init(&s, 5);
+    build_dictionary(&s);
+    s.bytes[TABLE] = 20;
+    s.bytes[PARSE] = 4;
+    EMIT(&s, 0xe4, 0x0f, TABLE >> 8, TABLE & 0xff, PARSE >> 8, PARSE & 0xff, G0);  /* aread TEXT PARSE -> G0 */
+    EMIT(&s, 0xe6, 0xbf, G0, 0xe5, 0x7f, ' ');
+    /* Spec §15 read: byte 1 counts characters left over from an
+     * interrupted read, which the new input follows, so a game clears
+     * it before an ordinary read, as the Inform library does. */
+    EMIT(&s, 0xe2, 0x17, TABLE >> 8, TABLE & 0xff, 1, 0);      /* storeb TEXT 1 0 */
+    EMIT(&s, 0xe4, 0x1f, TABLE >> 8, TABLE & 0xff, 0, G0);     /* aread TEXT 0 -> G0: no lexing */
+    EMIT(&s, 0xe6, 0xbf, G0, 0xe5, 0x7f, ' ');
+    EMIT(&s, 0xe2, 0x17, TABLE >> 8, TABLE & 0xff, 1, 2);      /* storeb TEXT 1 2: pretend "hi" is left over */
+    EMIT(&s, 0xe4, 0x1f, TABLE >> 8, TABLE & 0xff, 0, G0);     /* aread TEXT 0 -> G0 */
+    EMIT(&s, 0xe6, 0xbf, G0);
+    EMIT(&s, 0xba);
+
+    script(lines, NULL);
+    run(&s, &out, &m, &mem);
+
+    /* Each read stores its terminator, 13 for a new-line. */
+    CHECK_EQ_STR(out.text, "13 13 13");
+
+    /* After the last read: "hi" left over plus "xyz". */
+    CHECK_EQ_INT(zm_read_byte(&mem, TABLE + 1), 5);
+    CHECK(memcmp(mem.bytes + TABLE + 2, "hixyz", 5) == 0);
+
+    /* The parse buffer still holds the first read's analysis, since the
+     * later reads asked for none: one word, "look", at position 2. */
+    CHECK_EQ_INT(zm_read_byte(&mem, PARSE + 1), 1);
+    CHECK_EQ_INT(zm_read_word(&mem, PARSE + 2), DICT + 16);
+    CHECK_EQ_INT(zm_read_byte(&mem, PARSE + 4), 4);
+    CHECK_EQ_INT(zm_read_byte(&mem, PARSE + 5), 2);
+
+    /* No status line in Version 5 (Spec §8.2). */
+    CHECK_EQ_INT(status.shown, 0);
+
+    script(NULL, NULL);
+    zm_machine_free(&m);
+    zm_memory_free(&mem);
+}
+
+static void test_read_char_tokenise_and_encode_text(void)
+{
+    static const int keys[] = { 'y', 0 };
+    static const uint8_t look_encoded[6] = { 0x46, 0x94, 0x40, 0xa5, 0x94, 0xa5 };
+    story s;
+    output out;
+    zm_machine m;
+    zm_memory mem;
+
+    story_init(&s, 5);
+    build_dictionary(&s);
+    s.bytes[TABLE] = 20;
+    s.bytes[TABLE + 1] = 7;
+    memcpy(s.bytes + TABLE + 2, "go look", 7);
+    s.bytes[PARSE] = 4;
+    EMIT(&s, 0xf6, 0x7f, 1, G0);                                /* read_char 1 -> G0 */
+    EMIT(&s, 0xe6, 0xbf, G0);                                   /* 121 */
+    EMIT(&s, 0xfb, 0x0f, TABLE >> 8, TABLE & 0xff, PARSE >> 8, PARSE & 0xff);  /* tokenise TEXT PARSE */
+    EMIT(&s, 0xfc, 0x14, (TABLE + 2) >> 8, (TABLE + 2) & 0xff, 4, 3, 0x02, 0x30);  /* encode_text TEXT+2 4 3 $230 */
+    EMIT(&s, 0xf6, 0x7f, 1, G0);                                /* read_char 1 -> G0: input runs out */
+    EMIT(&s, 0xe5, 0x7f, '?');
+    EMIT(&s, 0xba);
+
+    script(NULL, keys);
+    run(&s, &out, &m, &mem);
+    CHECK_EQ_STR(out.text, "121");
+    CHECK_EQ_INT(m.running, 0);
+
+    CHECK_EQ_INT(zm_read_byte(&mem, PARSE + 1), 2);
+    CHECK_EQ_INT(zm_read_word(&mem, PARSE + 2), DICT + 7);      /* go */
+    CHECK_EQ_INT(zm_read_byte(&mem, PARSE + 5), 2);
+    CHECK_EQ_INT(zm_read_word(&mem, PARSE + 6), DICT + 16);     /* look */
+    CHECK_EQ_INT(zm_read_byte(&mem, PARSE + 9), 5);
+
+    /* "look" as the dictionary stores it. */
+    CHECK(memcmp(mem.bytes + 0x230, look_encoded, 6) == 0);
+
+    script(NULL, NULL);
+    zm_machine_free(&m);
+    zm_memory_free(&mem);
+}
+
+static void test_header_flags_are_set_at_start(void)
+{
+    story s;
+    output out;
+    zm_machine m;
+    zm_memory mem;
+
+    /* Spec §11.1.4: without a status line, bit 4 of Flags 1 is set; the
+     * screen-splitting and variable-pitch bits are cleared. */
+    story_init(&s, 3);
+    s.bytes[ZM_HEADER_FLAGS1] = 0x60;
+    EMIT(&s, 0xba);
+    script(NULL, NULL);
+    run(&s, &out, &m, &mem);
+    CHECK_EQ_INT(zm_read_byte(&mem, ZM_HEADER_FLAGS1), ZM_FLAGS1_V3_NO_STATUS_LINE);
+    zm_machine_free(&m);
+    zm_memory_free(&mem);
+
+    /* Spec §11.1.4, §11.1.2: from Version 4, every capability bit is
+     * cleared for now, and the requests in Flags 2 the interpreter cannot
+     * grant are cleared while the others stay. */
+    story_init(&s, 5);
+    s.bytes[ZM_HEADER_FLAGS1] = 0xff;
+    put_word(s.bytes, ZM_HEADER_FLAGS2, 0x01fb);
+    EMIT(&s, 0xba);
+    run(&s, &out, &m, &mem);
+    CHECK_EQ_INT(zm_read_byte(&mem, ZM_HEADER_FLAGS1), 0x40);
+    CHECK_EQ_INT(zm_read_word(&mem, ZM_HEADER_FLAGS2), ZM_FLAGS2_TRANSCRIPT | ZM_FLAGS2_FORCE_FIXED | ZM_FLAGS2_COLOURS);
+    zm_machine_free(&m);
+    zm_memory_free(&mem);
+}
+
+static void test_input_faults(void)
+{
+    static const char *const lines[] = { "look", NULL };
+    story s;
+    output out;
+
+    script(lines, NULL);
+
+    /* Spec §15 read: implausibly small buffers halt. */
+    story_init(&s, 3);
+    build_dictionary(&s);
+    s.bytes[TABLE] = 2;
+    s.bytes[PARSE] = 4;
+    EMIT(&s, 0xe4, 0x0f, TABLE >> 8, TABLE & 0xff, PARSE >> 8, PARSE & 0xff);
+    expect_fault(&s, "room for 2 bytes", &out);
+
+    story_init(&s, 3);
+    build_dictionary(&s);
+    s.bytes[TABLE] = 20;
+    s.bytes[PARSE] = 0;
+    EMIT(&s, 0xe4, 0x0f, TABLE >> 8, TABLE & 0xff, PARSE >> 8, PARSE & 0xff);
+    expect_fault(&s, "no words", &out);
+
+    /* Spec §8.2.2.1: the status line needs a real object in global 0. */
+    story_init(&s, 3);
+    build_objects(&s);
+    build_dictionary(&s);
+    s.bytes[TABLE] = 20;
+    s.bytes[PARSE] = 4;
+    EMIT(&s, 0xe4, 0x0f, TABLE >> 8, TABLE & 0xff, PARSE >> 8, PARSE & 0xff);
+    expect_fault(&s, "global 0, is object 0", &out);
+
+    /* Timed input is declared rather than ignored. */
+    story_init(&s, 5);
+    build_dictionary(&s);
+    s.bytes[TABLE] = 20;
+    EMIT(&s, 0xe4, 0x15, TABLE >> 8, TABLE & 0xff, 0, 10, 1, G0);  /* aread TEXT 0 10 1 -> G0 */
+    expect_fault(&s, "timed input", &out);
+
+    /* Spec §15 read_char: only device 1. */
+    story_init(&s, 5);
+    EMIT(&s, 0xf6, 0x7f, 2, G0);                                /* read_char 2 -> G0 */
+    expect_fault(&s, "device 2", &out);
+
+    script(NULL, NULL);
+
+    /* A front end with no keyboard at all. */
+    story_init(&s, 5);
+    build_dictionary(&s);
+    s.bytes[TABLE] = 20;
+    EMIT(&s, 0xe4, 0x1f, TABLE >> 8, TABLE & 0xff, 0, G0);
+    expect_fault(&s, "cannot read a line", &out);
+}
+
 int main(void)
 {
     RUN_TEST(test_simple_test_files_say_hello);
@@ -1193,5 +1570,10 @@ int main(void)
     RUN_TEST(test_random_numbers);
     RUN_TEST(test_shifts_and_argument_counts);
     RUN_TEST(test_verify_checks_the_checksum);
+    RUN_TEST(test_read_in_version_3);
+    RUN_TEST(test_read_in_version_5);
+    RUN_TEST(test_read_char_tokenise_and_encode_text);
+    RUN_TEST(test_header_flags_are_set_at_start);
+    RUN_TEST(test_input_faults);
     return CHECK_SUMMARY();
 }

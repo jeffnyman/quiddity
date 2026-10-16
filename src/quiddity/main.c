@@ -133,6 +133,7 @@ int main(int argc, char **argv)
     /* Runs until the game quits. A fault inside the machine goes through
      * zm_fatal(), whose default handler reports it and exits. */
     zm_machine_run(&machine);
+    terminal_finish(&term);
 
     zm_machine_free(&machine);
     zm_memory_free(&mem);

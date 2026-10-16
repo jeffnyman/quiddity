@@ -16,6 +16,7 @@
 #include <string.h>
 #include <time.h>
 
+#include "zm/dictionary.h"
 #include "zm/fatal.h"
 #include "zm/header.h"
 #include "zm/instruction.h"
@@ -39,12 +40,34 @@ static void push(zm_machine *m, uint16_t value)
     m->stack[m->sp++] = value;
 }
 
+/* What a routine finds when it pops its own empty stack.
+ *
+ * Spec §6.3.1 says the stack is empty at the start of each routine, so a
+ * routine cannot pull what its caller pushed, and a game that tries has a
+ * bug. Infocom's games have a few. Zork I release 2 pops a routine's
+ * result with "je (sp)+ 1" at $5851 and then, at $585b, pulls it again
+ * from the now-empty stack. It got away with this because Infocom's
+ * interpreters, and Frotz after them, keep a routine's local variables
+ * on the game stack directly above its working area (see variable.c in
+ * Frotz, where local n is at fp - n and pull reads *sp without a check),
+ * so the pop quietly read the routine's highest-numbered local. Quiddity
+ * keeps locals in the frame, so to run those games it supplies the same
+ * word on purpose, one word deep. A routine with no locals has nothing
+ * there, and faults. */
+static uint16_t *underflow_slot(zm_machine *m)
+{
+    zm_frame *f = current_frame(m);
+
+    if (f->local_count == 0) {
+        zm_fatal("stack underflow at $%05x", (unsigned)m->pc);
+    }
+    return &f->locals[f->local_count - 1];
+}
+
 static uint16_t pop(zm_machine *m)
 {
-    /* Spec §6.3.1: the stack is empty at the start of each routine, so a
-     * routine cannot pull what its caller pushed. */
     if (m->sp <= current_frame(m)->stack_base) {
-        zm_fatal("stack underflow at $%05x", (unsigned)m->pc);
+        return *underflow_slot(m);
     }
     return m->stack[--m->sp];
 }
@@ -53,7 +76,7 @@ static uint16_t pop(zm_machine *m)
 static uint16_t *stack_top(zm_machine *m)
 {
     if (m->sp <= current_frame(m)->stack_base) {
-        zm_fatal("stack is empty at $%05x", (unsigned)m->pc);
+        return underflow_slot(m);
     }
     return &m->stack[m->sp - 1];
 }
@@ -461,6 +484,235 @@ static void check_property_is_a_value(const zm_instruction *inst, uint16_t objec
 }
 
 /*
+ * The status line (Spec §8.2) and input (Spec §10, §13, §15 read).
+ */
+
+typedef struct {
+    uint16_t zscii[256];
+    unsigned count;
+} zscii_buffer;
+
+static void buffer_sink(void *context, uint16_t zscii)
+{
+    zscii_buffer *b = context;
+
+    if (b->count < 256) {
+        b->zscii[b->count++] = zscii;
+    }
+}
+
+static void show_status_line(zm_machine *m)
+{
+    zscii_buffer name;
+    uint16_t object;
+    int time_game;
+
+    if (m->io->show_status == NULL) {
+        return;
+    }
+
+    /* Spec §8.2.2: the first global holds the location; Spec §8.2.3: the
+     * next two hold the score and turns, or the hours and minutes. Spec
+     * §8.2.2.1 asks interpreters to protect themselves against a global
+     * that is not an object, and a fault naming it is that protection. */
+    object = zm_read_word(m->mem, m->globals);
+    if (object == 0 || object > zm_object_max(m->mem)) {
+        zm_fatal("the status line's location, global 0, is object %u, which does not exist", (unsigned)object);
+    }
+    name.count = 0;
+    if (zm_object_name_length(m->mem, object) > 0) {
+        zm_text_decode(m->mem, zm_object_name(m->mem, object), buffer_sink, &name);
+    }
+
+    /* Spec §8.2.1: Versions 1 and 2 are score games; Version 3 says which
+     * it is in Flags 1. */
+    time_game = m->mem->version == 3
+             && (zm_read_byte(m->mem, ZM_HEADER_FLAGS1) & ZM_FLAGS1_V3_STATUS_TIME) != 0;
+
+    m->io->show_status(m->io->context, name.zscii, name.count, time_game,
+                       as_signed(zm_read_word(m->mem, m->globals + 2u)),
+                       as_signed(zm_read_word(m->mem, m->globals + 4u)));
+}
+
+/* The front end has no more input to give, so the game ends as if it
+ * had quit. A story driven from a file of commands ends this way. */
+static void end_of_input(zm_machine *m)
+{
+    m->running = 0;
+}
+
+static void check_not_timed(const zm_instruction *inst, const uint16_t *ops, unsigned count, unsigned time_index)
+{
+    /* Spec §15 read: a time and a routine ask for the routine to be
+     * called every time/10 seconds while waiting, which needs a front
+     * end that can wait with a clock. Until there is one, saying so beats
+     * quietly never calling the routine. */
+    if (count > time_index + 1 && ops[time_index] != 0 && ops[time_index + 1] != 0) {
+        zm_fatal("%s at $%05x asks for timed input, which is not implemented yet",
+                 inst->info->name, (unsigned)inst->address);
+    }
+}
+
+static void read_line_opcode(zm_machine *m, const zm_instruction *inst, const uint16_t *ops, unsigned count)
+{
+    uint32_t text = ops[0];
+    uint32_t parse = count > 1 ? ops[1] : 0;
+    unsigned room;
+    unsigned letters;
+    unsigned have = 0;
+    uint16_t line[256];
+    uint16_t terminator = ZM_ZSCII_NEWLINE;
+    int got;
+
+    check_not_timed(inst, ops, count, 2);
+    if (m->io->read_line == NULL) {
+        zm_fatal("%s at $%05x: the front end cannot read a line", inst->info->name, (unsigned)inst->address);
+    }
+
+    /* Spec §15 read: byte 0 of the text buffer is its room. Before
+     * Version 5 it counts the zero terminator, so one fewer letter fits.
+     * The Standard asks for a halt on buffers too small to be
+     * plausible, since they are usually the wreckage of an overrun. */
+    room = zm_read_byte(m->mem, text);
+    if (m->mem->version <= 4) {
+        if (room < 3) {
+            zm_fatal("%s at $%05x: text buffer at $%04x has room for %u bytes",
+                     inst->info->name, (unsigned)inst->address, (unsigned)text, room);
+        }
+        letters = room - 1u;
+        if (parse == 0) {
+            zm_fatal("%s at $%05x has no parse buffer", inst->info->name, (unsigned)inst->address);
+        }
+    } else {
+        if (room < 1) {
+            zm_fatal("%s at $%05x: text buffer at $%04x has room for nothing",
+                     inst->info->name, (unsigned)inst->address, (unsigned)text);
+        }
+        letters = room;
+
+        /* Spec §15 read: from Version 5, byte 1 may already count
+         * characters left over from an interrupted read; the new ones go
+         * after them. */
+        have = zm_read_byte(m->mem, text + 1u);
+        if (have > letters) {
+            have = letters;
+        }
+    }
+    if (parse != 0 && zm_read_byte(m->mem, parse) == 0) {
+        zm_fatal("%s at $%05x: parse buffer at $%04x has room for no words",
+                 inst->info->name, (unsigned)inst->address, (unsigned)parse);
+    }
+
+    /* Spec §8.2.4, §10.5.1. */
+    if (m->mem->version <= 3) {
+        show_status_line(m);
+    }
+
+    got = m->io->read_line(m->io->context, line, letters - have, &terminator);
+    if (got < 0) {
+        end_of_input(m);
+        return;
+    }
+
+    /* Spec §15 read: the text is reduced to lower case. Only the ASCII
+     * letters are folded here; what lower case means for the extra
+     * characters (Spec §3.8.5) depends on the story's Unicode table, and
+     * no game is known to need it. */
+    for (unsigned i = 0; i < (unsigned)got; i++) {
+        if (line[i] >= 'A' && line[i] <= 'Z') {
+            line[i] = (uint16_t)(line[i] + 32u);
+        }
+    }
+
+    if (m->mem->version <= 4) {
+        for (unsigned i = 0; i < (unsigned)got; i++) {
+            zm_write_byte(m->mem, text + 1u + i, (uint8_t)line[i]);
+        }
+        zm_write_byte(m->mem, text + 1u + (unsigned)got, 0);
+    } else {
+        for (unsigned i = 0; i < (unsigned)got; i++) {
+            zm_write_byte(m->mem, text + 2u + have + i, (uint8_t)line[i]);
+        }
+        zm_write_byte(m->mem, text + 1u, (uint8_t)(have + (unsigned)got));
+    }
+
+    /* Spec §13.6: lexical analysis, with the game's own dictionary. From
+     * Version 5 a parse buffer of 0 asks for none. */
+    if (parse != 0) {
+        zm_dictionary dict;
+
+        zm_dictionary_read(m->mem, m->dictionary, &dict);
+        zm_lexer_tokenise(m->mem, text, parse, &dict, 0);
+    }
+
+    /* Spec §15 read: from Version 5 the result is the terminating
+     * character, 13 for a new-line however the keyboard spelt it. */
+    if (m->mem->version >= 5) {
+        store_result(m, inst, terminator);
+    }
+}
+
+static void read_char_opcode(zm_machine *m, const zm_instruction *inst, const uint16_t *ops, unsigned count)
+{
+    int c;
+
+    /* Spec §15 read_char: the first operand is the input device, and
+     * only the keyboard, 1, was ever built. */
+    if (count < 1 || ops[0] != 1) {
+        zm_fatal("read_char at $%05x from device %u; only device 1 exists",
+                 (unsigned)inst->address, count < 1 ? 0u : (unsigned)ops[0]);
+    }
+    check_not_timed(inst, ops, count, 1);
+    if (m->io->read_char == NULL) {
+        zm_fatal("read_char at $%05x: the front end cannot read a key", (unsigned)inst->address);
+    }
+
+    c = m->io->read_char(m->io->context);
+    if (c < 0) {
+        end_of_input(m);
+        return;
+    }
+    store_result(m, inst, (uint16_t)c);
+}
+
+/*
+ * The header fields the interpreter owns (Spec §11.1, columns "Int" and
+ * "Rst"), set after loading and again after a restart or restore. Only
+ * what this interpreter can answer for is written; the screen fields wait
+ * on the screen model.
+ */
+static void write_header(zm_machine *m)
+{
+    zm_memory *mem = m->mem;
+    unsigned flags1 = zm_read_byte(mem, ZM_HEADER_FLAGS1);
+    unsigned flags2 = zm_read_word(mem, ZM_HEADER_FLAGS2);
+
+    if (mem->version <= 3) {
+        /* Spec §8.2, §11.1.4: bit 4 is set when no status line can be
+         * shown. Bits 5 and 6 would claim screen splitting and a
+         * variable-pitch default font, neither offered yet. */
+        if (m->io->show_status != NULL) {
+            flags1 &= ~(unsigned)ZM_FLAGS1_V3_NO_STATUS_LINE;
+        } else {
+            flags1 |= (unsigned)ZM_FLAGS1_V3_NO_STATUS_LINE;
+        }
+        flags1 &= ~(unsigned)(ZM_FLAGS1_V3_SCREEN_SPLITTING | ZM_FLAGS1_V3_VARIABLE_PITCH);
+    } else {
+        /* Spec §11.1.4: colours, pictures, text styles, sound, and timed
+         * input are all still to come. */
+        flags1 &= ~(unsigned)(ZM_FLAGS1_COLOURS | ZM_FLAGS1_PICTURES | ZM_FLAGS1_BOLD | ZM_FLAGS1_ITALIC
+                              | ZM_FLAGS1_FIXED_PITCH | ZM_FLAGS1_SOUND | ZM_FLAGS1_TIMED_INPUT);
+    }
+    zm_write_byte(mem, ZM_HEADER_FLAGS1, (uint8_t)flags1);
+
+    /* Spec §11.1.2: the game sets these bits to ask for a feature and the
+     * interpreter clears the ones it cannot provide. Undo arrives with
+     * save and restore. */
+    flags2 &= ~(unsigned)(ZM_FLAGS2_PICTURES | ZM_FLAGS2_UNDO | ZM_FLAGS2_MOUSE | ZM_FLAGS2_SOUND | ZM_FLAGS2_MENUS);
+    zm_write_word(mem, ZM_HEADER_FLAGS2, (uint16_t)flags2);
+}
+
+/*
  * Dispatch. Each function receives the decoded instruction and its
  * operand values, already fetched in order (Spec §4.5.2).
  */
@@ -498,10 +750,9 @@ static void execute_0op(zm_machine *m, const zm_instruction *inst)
         break;
     case 12: /* show_status: Version 3 only, but Spec §15 asks that it be
               * a nop in later Versions for the sake of 'Wishbringer'
-              * release 23. The status line itself comes with the screen
-              * model. */
+              * release 23. */
         if (m->mem->version <= 3) {
-            not_implemented(m, inst);
+            show_status_line(m);
         }
         break;
     case 13: /* verify: compare the checksum of the file with the header's
@@ -765,6 +1016,12 @@ static void execute_var(zm_machine *m, const zm_instruction *inst, const uint16_
             }
         }
         break;
+    case 4:  /* sread / aread */
+        if (count == 0) {
+            zm_fatal("%s with no text buffer at $%05x", inst->info->name, (unsigned)inst->address);
+        }
+        read_line_opcode(m, inst, ops, count);
+        break;
     case 5:  /* print_char */
         print_zscii(m, ops[0]);
         break;
@@ -812,8 +1069,45 @@ static void execute_var(zm_machine *m, const zm_instruction *inst, const uint16_
         }
         call_routine(m, ops[0], ops + 1, count - 1, -1);
         break;
+    case 22: /* read_char */
+        read_char_opcode(m, inst, ops, count);
+        break;
     case 24: /* not, moved here from 1OP:15 in Version 5 */
         store_result(m, inst, (uint16_t)~ops[0]);
+        break;
+    case 27: /* tokenise: lexical analysis on demand, with the game's
+              * dictionary or one of its own, optionally leaving words it
+              * does not know alone (Spec §15 tokenise) */
+        {
+            zm_dictionary dict;
+
+            if (count < 2) {
+                zm_fatal("tokenise with %u operand(s) at $%05x", count, (unsigned)inst->address);
+            }
+            zm_dictionary_read(m->mem, count > 2 && ops[2] != 0 ? ops[2] : m->dictionary, &dict);
+            zm_lexer_tokenise(m->mem, ops[0], ops[1], &dict, count > 3 && ops[3] != 0);
+        }
+        break;
+    case 28: /* encode_text: length characters of ZSCII at text + from,
+              * encoded as a dictionary word into coded-text */
+        {
+            uint16_t zscii[256];
+            uint8_t encoded[ZM_TEXT_ENCODED_MAX];
+            unsigned length;
+            unsigned bytes;
+
+            if (count < 4) {
+                zm_fatal("encode_text with %u operand(s) at $%05x", count, (unsigned)inst->address);
+            }
+            length = ops[1] > 255 ? 255u : ops[1];
+            for (unsigned i = 0; i < length; i++) {
+                zscii[i] = zm_read_byte(m->mem, (uint16_t)(ops[0] + ops[2] + i));
+            }
+            bytes = zm_text_encode(m->mem, zscii, length, encoded);
+            for (unsigned i = 0; i < bytes; i++) {
+                zm_write_byte(m->mem, (uint16_t)(ops[3] + i), encoded[i]);
+            }
+        }
         break;
     case 31: /* check_arg_count: branch if the current routine was given
               * at least that many arguments (Spec §6.4.4.1) */
@@ -912,6 +1206,8 @@ zm_status zm_machine_init(zm_machine *m, zm_memory *mem, const zm_io *io)
 
     zm_header_read(mem, &h);
     m->globals = h.globals;
+    m->dictionary = h.dictionary;
+    write_header(m);
 
     /* Spec §2.4: the generator starts in "random" mode. */
     zm_machine_seed_random(m, 0);

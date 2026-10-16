@@ -80,6 +80,9 @@ typedef struct zm_machine {
     /* Byte address of the global variables table (Spec §6.2). */
     uint32_t globals;
 
+    /* Byte address of the dictionary (Spec §13.1). */
+    uint32_t dictionary;
+
     /* The random number generator (Spec §2.4). In "random" mode the
      * state is a 64-bit generator seeded from the clock. In
      * "predictable" mode with a seed below 1000 the generator counts
