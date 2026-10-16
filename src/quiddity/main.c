@@ -1,9 +1,9 @@
 /*
  * Quiddity: an interactive fiction interpreter for the Z-Machine and Glulx.
  *
- * This file is the terminal front end's entry point. For now it does nothing
- * but recognise its own command line; story file loading arrives with the
- * Z-Machine header work in the next increment.
+ * This file is the terminal front end's entry point. It handles the command
+ * line, loads the story file, and reports what it finds. Execution arrives
+ * in a later increment.
  *
  * Copyright (C) 2026 Jeff Nyman
  *
@@ -13,9 +13,15 @@
  * any later version. See the LICENSE file for details.
  */
 
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+#include "zm/memory.h"
+#include "zm/status.h"
+
+#include "info.h"
 
 /* Exit status for a command-line usage error, following the BSD sysexits
  * convention (EX_USAGE). Kept local so <sysexits.h>, which MSVC lacks, is
@@ -27,6 +33,7 @@ static void print_usage(FILE *out)
     fputs("Usage: quiddity [options] <story-file>\n"
           "\n"
           "Options:\n"
+          "  -i, --info     Describe the story file's header and exit.\n"
           "  -h, --help     Show this help and exit.\n"
           "  -v, --version  Show the version and exit.\n",
           out);
@@ -37,11 +44,26 @@ static void print_version(void)
     printf("Quiddity %s\n", QUIDDITY_VERSION);
 }
 
+/* Explain a failed load. For an I/O failure the C library knows the real
+ * reason, so that is added. */
+static void report_load_failure(const char *path, zm_status status)
+{
+    if (status == ZM_ERROR_IO) {
+        fprintf(stderr, "quiddity: %s: %s\n", path, strerror(errno));
+    } else {
+        fprintf(stderr, "quiddity: %s: %s\n", path, zm_status_message(status));
+    }
+}
+
 int main(int argc, char **argv)
 {
     int show_help = 0;
     int show_version = 0;
+    int show_info = 0;
     int i = 1;
+    const char *path;
+    zm_memory mem;
+    zm_status status;
 
     /* Options come first and are only recorded here. The loop stops at the
      * first argument that does not begin with a dash, which is taken to be
@@ -58,6 +80,8 @@ int main(int argc, char **argv)
             show_help = 1;
         } else if (strcmp(arg, "-v") == 0 || strcmp(arg, "--version") == 0) {
             show_version = 1;
+        } else if (strcmp(arg, "-i") == 0 || strcmp(arg, "--info") == 0) {
+            show_info = 1;
         } else {
             fprintf(stderr, "quiddity: unknown option '%s'\n\n", arg);
             print_usage(stderr);
@@ -80,8 +104,22 @@ int main(int argc, char **argv)
         return EXIT_USAGE;
     }
 
-    /* There is nothing to load a story file with yet, so say so plainly
-     * rather than pretend. */
-    fprintf(stderr, "quiddity: story file loading is not implemented yet (%s)\n", argv[i]);
+    path = argv[i];
+    status = zm_memory_load_file(&mem, path);
+    if (status != ZM_OK) {
+        report_load_failure(path, status);
+        return EXIT_FAILURE;
+    }
+
+    if (show_info) {
+        print_story_info(stdout, path, &mem);
+        zm_memory_free(&mem);
+        return EXIT_SUCCESS;
+    }
+
+    /* The story loaded, but there is nothing to run it with yet. */
+    fprintf(stderr, "quiddity: %s: loaded (Version %u, %u bytes), but execution is not implemented yet\n",
+            path, mem.version, mem.size);
+    zm_memory_free(&mem);
     return EXIT_FAILURE;
 }

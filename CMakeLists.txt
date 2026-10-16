@@ -47,6 +47,7 @@ option(QUIDDITY_SANITIZE "Enable AddressSanitizer and UndefinedBehaviorSanitizer
 
 include(cmake/warnings.cmake)
 
+add_subdirectory(src/zmachine)
 add_subdirectory(src/quiddity)
 
 if(QUIDDITY_BUILD_TESTS)

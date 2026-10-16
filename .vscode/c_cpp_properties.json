@@ -4,6 +4,10 @@
     {
       "name": "CMake",
       "configurationProvider": "ms-vscode.cmake-tools",
+      "includePath": [
+        "${workspaceFolder}/src/zmachine/include",
+        "${workspaceFolder}/tests"
+      ],
       "cStandard": "c11"
     }
   ]

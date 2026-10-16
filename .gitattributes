@@ -19,6 +19,16 @@
 *.sln      text eol=crlf
 
 #
+# Story files and resource bundles are binary. Content detection would find
+# this anyway, but saying so keeps a short one from ever being normalized.
+#
+
+*.z[1-8]   binary
+*.[zbg]lb  binary
+*.*blorb   binary
+*.ulx      binary
+
+#
 # Diff drivers, so hunk headers name the enclosing type or member.
 #
 
