@@ -27,6 +27,11 @@
 /* Spec §1.1: dynamic memory must contain at least the 64-byte header. */
 #define ZM_HEADER_SIZE 64u
 
+/* The largest file the loader will read: a story wrapped in a Blorb
+ * (Blorb §5) brings its pictures with it, so this is far above the
+ * story file limits of Spec §1.1.4, which still apply to the story. */
+#define ZM_RESOURCE_FILE_MAX (64u * 1024u * 1024u)
+
 typedef struct zm_memory {
     uint8_t *bytes;
 
@@ -52,9 +57,10 @@ typedef struct zm_memory {
     uint8_t version;
 } zm_memory;
 
-/* Load a story file. On success the memory is ready to use and must later
- * be released with zm_memory_free(). On failure nothing is allocated and
- * the status says why; for ZM_ERROR_IO, errno holds the system's reason. */
+/* Load a story file, or the story inside a Blorb resource file (Blorb
+ * §5). On success the memory is ready to use and must later be released
+ * with zm_memory_free(). On failure nothing is allocated and the status
+ * says why; for ZM_ERROR_IO, errno holds the system's reason. */
 zm_status zm_memory_load_file(zm_memory *mem, const char *path);
 
 /* Load a story from a byte array, copying it. Applies the same checks as

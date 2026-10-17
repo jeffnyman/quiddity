@@ -682,6 +682,7 @@ static void show_status_line(zm_machine *m)
  * had quit. A story driven from a file of commands ends this way. */
 static void end_of_input(zm_machine *m)
 {
+    zm_screen_flush(&m->screen);
     m->running = 0;
 }
 
@@ -779,7 +780,9 @@ static void read_line_opcode(zm_machine *m, const zm_instruction *inst, const ui
     }
 
     /* Spec §15 read: the wait is broken up by the timer, if there is
-     * one, and goes on after an interrupt routine that returns false. */
+     * one, and goes on after an interrupt routine that returns false.
+     * Spec §8.8.3.2.7: anything still buffered is shown first. */
+    zm_screen_flush(&m->screen);
     for (;;) {
         int got = m->io->read_line(m->io->context, line, &typed, letters, &terminator, timeout);
 
@@ -801,6 +804,10 @@ static void read_line_opcode(zm_machine *m, const zm_instruction *inst, const ui
             return;
         }
     }
+
+    /* Spec §7.1.1.1: in Version 6 the interpreter shows the input in the
+     * window, as typed; the line ends if the input did. */
+    zm_screen_show_input(&m->screen, line + have, typed - have, !interrupted && terminator == ZM_ZSCII_NEWLINE);
 
     if (interrupted) {
         /* Spec §15 read: the input stops with terminator 0. What was
@@ -859,10 +866,12 @@ static void read_char_opcode(zm_machine *m, const zm_instruction *inst, const ui
     int c;
 
     /* Spec §15 read_char: the first operand is the input device, and
-     * only the keyboard, 1, was ever built. */
-    if (count < 1 || ops[0] != 1) {
+     * only the keyboard, 1, was ever built. 'Wyrmward' leaves the
+     * operand out altogether, and since there is nothing else it could
+     * mean, so may anyone. */
+    if (count >= 1 && ops[0] != 1) {
         zm_fatal("read_char at $%05x from device %u; only device 1 exists",
-                 (unsigned)inst->address, count < 1 ? 0u : (unsigned)ops[0]);
+                 (unsigned)inst->address, (unsigned)ops[0]);
     }
     if (m->io->read_char == NULL) {
         zm_fatal("read_char at $%05x: the front end cannot read a key", (unsigned)inst->address);
@@ -870,6 +879,7 @@ static void read_char_opcode(zm_machine *m, const zm_instruction *inst, const ui
 
     /* Spec §15 read_char: the timer works as for read, and a wait the
      * routine ends gives 0. */
+    zm_screen_flush(&m->screen);
     for (;;) {
         c = m->io->read_char(m->io->context, timeout);
         if (c == ZM_INPUT_END) {
@@ -897,60 +907,274 @@ static void read_char_opcode(zm_machine *m, const zm_instruction *inst, const ui
  * The screen and the output streams (Spec §7, §8), whose state lives in
  * zm/screen.h. The opcodes here check their operands and pass the
  * decision on. Version 6 gives most of them extra operands and other
- * meanings (Spec §8.8), which are not modelled yet.
+ * meanings (Spec §8.8): a window to act on, where -3 is the current one,
+ * coordinates in units instead of lines and columns, and more windows
+ * than two.
  */
 
-static void check_not_version_6(zm_machine *m, const zm_instruction *inst)
+static int is_v6(const zm_machine *m)
 {
-    if (m->mem->version == 6) {
-        zm_fatal("opcode %s at $%05x: the Version 6 screen model is not implemented yet",
-                 inst->info->name, (unsigned)inst->address);
+    return m->mem->version == 6;
+}
+
+/* Spec §8.8.3: a window operand is 0 to 7, or -3 for the current window,
+ * which an absent optional operand also means. */
+static unsigned window_operand(zm_machine *m, const zm_instruction *inst, const uint16_t *ops, unsigned count,
+                               unsigned index)
+{
+    int16_t window = count > index ? as_signed(ops[index]) : (int16_t)ZM_WINDOW_CURRENT;
+
+    if (window == ZM_WINDOW_CURRENT) {
+        return m->screen.window;
     }
+    if (window < 0 || window >= ZM_WINDOWS) {
+        zm_fatal("%s at $%05x: window %d does not exist", inst->info->name, (unsigned)inst->address, (int)window);
+    }
+    return (unsigned)window;
 }
 
 static void output_stream_opcode(zm_machine *m, const zm_instruction *inst, const uint16_t *ops, unsigned count)
 {
     int16_t stream = count > 0 ? as_signed(ops[0]) : 0;
 
-    check_not_version_6(m, inst);
     if (stream < -4 || stream > 4) {
         zm_fatal("output_stream %d at $%05x: there is no such stream", (int)stream, (unsigned)inst->address);
     }
     if (stream == 3 && count < 2) {
         zm_fatal("output_stream 3 at $%05x names no table to write to", (unsigned)inst->address);
     }
-    zm_screen_select_stream(&m->screen, stream, count > 1 ? ops[1] : 0);
+    /* Spec §15 output_stream: the Version 6 form may add a width, which
+     * formats the table into lines. */
+    zm_screen_select_stream(&m->screen, stream, count > 1 ? ops[1] : 0,
+                            count > 2 ? as_signed(ops[2]) : 0, is_v6(m) && count > 2);
 }
 
 static void set_colour_opcode(zm_machine *m, const zm_instruction *inst, const uint16_t *ops, unsigned count)
 {
-    check_not_version_6(m, inst);
+    unsigned window;
+
     if (count < 2) {
         zm_fatal("set_colour with %u operand(s) at $%05x", count, (unsigned)inst->address);
     }
-    /* Spec §8.3.1: codes 0 to 12; see zm/screen.h on the greys. */
+    window = is_v6(m) ? window_operand(m, inst, ops, count, 2) : m->screen.window;
+
+    /* Spec §8.3.1: codes 0 to 12, and in Version 6 also -1, the colour
+     * under the cursor, and 15, transparent; see zm/screen.h on the
+     * greys. 13 and 14 are reserved. */
     for (unsigned i = 0; i < 2; i++) {
-        if (ops[i] > ZM_COLOUR_DARK_GREY) {
-            zm_fatal("set_colour at $%05x: colour %d is only available in Version 6",
-                     (unsigned)inst->address, (int)as_signed(ops[i]));
+        int16_t colour = as_signed(ops[i]);
+        int allowed = (colour >= 0 && colour <= ZM_COLOUR_DARK_GREY)
+                   || (is_v6(m) && (colour == -1 || colour == ZM_COLOUR_TRANSPARENT));
+
+        if (!allowed) {
+            zm_fatal("set_colour at $%05x: %d is not a colour%s", (unsigned)inst->address, (int)colour,
+                     is_v6(m) ? "" : " before Version 6");
         }
     }
-    zm_screen_set_colour(&m->screen, ops[0], ops[1]);
+    zm_screen_set_colour(&m->screen, window, as_signed(ops[0]), as_signed(ops[1]));
+}
+
+static void set_true_colour_opcode(zm_machine *m, const zm_instruction *inst, const uint16_t *ops, unsigned count)
+{
+    unsigned window;
+
+    if (count < 2) {
+        zm_fatal("set_true_colour with %u operand(s) at $%05x", count, (unsigned)inst->address);
+    }
+    window = is_v6(m) ? window_operand(m, inst, ops, count, 2) : m->screen.window;
+
+    /* Spec §8.3.7: -1 and -2 are requests in every Version; -3 and -4,
+     * the colour under the cursor and transparent, in Version 6 only. */
+    for (unsigned i = 0; i < 2; i++) {
+        int16_t colour = as_signed(ops[i]);
+
+        if (colour < (is_v6(m) ? -4 : -2)) {
+            zm_fatal("set_true_colour at $%05x: %d is not a colour%s", (unsigned)inst->address, (int)colour,
+                     is_v6(m) ? "" : " before Version 6");
+        }
+    }
+    zm_screen_set_true_colour(&m->screen, window, as_signed(ops[0]), as_signed(ops[1]));
 }
 
 static void set_cursor_opcode(zm_machine *m, const zm_instruction *inst, const uint16_t *ops, unsigned count)
 {
-    check_not_version_6(m, inst);
-    if (count < 2) {
+    /* Spec §15 set_cursor: the Version 6 forms that turn the cursor off
+     * and on may come with the one operand ("set_cursor -1"). */
+    if (count < 1 || (count < 2 && !(is_v6(m) && as_signed(ops[0]) < 0))) {
         zm_fatal("set_cursor with %u operand(s) at $%05x", count, (unsigned)inst->address);
     }
+    if (is_v6(m)) {
+        zm_screen_set_cursor(&m->screen, window_operand(m, inst, ops, count, 2), as_signed(ops[0]),
+                             count > 1 ? as_signed(ops[1]) : 0);
+        return;
+    }
+
     /* Spec §15 set_cursor: a negative row turns the cursor off or on,
      * in Version 6 only. */
     if (as_signed(ops[0]) < 0) {
         zm_fatal("set_cursor at $%05x: row %d is only meaningful in Version 6",
                  (unsigned)inst->address, (int)as_signed(ops[0]));
     }
-    zm_screen_set_cursor(&m->screen, ops[0], ops[1]);
+    zm_screen_set_cursor(&m->screen, m->screen.window, as_signed(ops[0]), as_signed(ops[1]));
+}
+
+static void erase_window_opcode(zm_machine *m, const zm_instruction *inst, const uint16_t *ops)
+{
+    int16_t window = as_signed(ops[0]);
+
+    if (is_v6(m)) {
+        /* Spec §15 erase_window: -1, -2, a window, or -3 for the current
+         * one. */
+        if (window == ZM_WINDOW_CURRENT) {
+            window = (int16_t)m->screen.window;
+        } else if (window < -2 || window >= ZM_WINDOWS) {
+            zm_fatal("erase_window %d at $%05x: there is no such window", (int)window, (unsigned)inst->address);
+        }
+    } else if (window < -2 || window > ZM_WINDOW_UPPER) {
+        zm_fatal("erase_window %d at $%05x: only -2, -1, 0 and 1 are meaningful before Version 6",
+                 (int)window, (unsigned)inst->address);
+    }
+    zm_screen_erase_window(&m->screen, window);
+}
+
+static void set_window_opcode(zm_machine *m, const zm_instruction *inst, const uint16_t *ops, unsigned count)
+{
+    if (is_v6(m)) {
+        zm_screen_set_window(&m->screen, window_operand(m, inst, ops, count, 0));
+        return;
+    }
+    if (ops[0] > ZM_WINDOW_UPPER) {
+        zm_fatal("set_window %u at $%05x: only windows 0 and 1 exist before Version 6",
+                 (unsigned)ops[0], (unsigned)inst->address);
+    }
+    zm_screen_set_window(&m->screen, ops[0]);
+}
+
+/*
+ * Version 6 windows and pictures (Spec §8.8, §15).
+ */
+
+static void picture_data_opcode(zm_machine *m, const zm_instruction *inst, const uint16_t *ops, unsigned count)
+{
+    uint16_t height;
+    uint16_t width;
+    int available;
+
+    if (count < 2) {
+        zm_fatal("picture_data with %u operand(s) at $%05x", count, (unsigned)inst->address);
+    }
+    /* Spec §15 picture_data: the height and width of a picture, or for
+     * picture 0 the count and the release; the branch says whether
+     * there was anything to report. */
+    available = zm_screen_picture_data(&m->screen, ops[0], &height, &width);
+    zm_write_word(m->mem, ops[1], height);
+    zm_write_word(m->mem, (uint16_t)(ops[1] + 2u), width);
+    branch(m, inst, available);
+}
+
+static void window_style_opcode(zm_machine *m, const zm_instruction *inst, const uint16_t *ops, unsigned count)
+{
+    if (count < 2) {
+        zm_fatal("window_style with %u operand(s) at $%05x", count, (unsigned)inst->address);
+    }
+    if (count > 2 && ops[2] > 3) {
+        zm_fatal("window_style at $%05x: operation %u does not exist", (unsigned)inst->address, (unsigned)ops[2]);
+    }
+    zm_screen_style_window(&m->screen, window_operand(m, inst, ops, count, 0), ops[1], count > 2 ? ops[2] : 0u);
+}
+
+/* Spec §15 print_form: lines of text as a formatted stream 3 wrote them,
+ * each a count word and that many characters, ended by a count of 0. */
+static void print_form_opcode(zm_machine *m, const uint16_t *ops)
+{
+    uint32_t address = ops[0];
+    int first = 1;
+
+    for (;;) {
+        uint16_t length = zm_read_word(m->mem, address);
+
+        address += 2;
+        if (length == 0) {
+            break;
+        }
+        if (!first) {
+            print_zscii(m, ZM_ZSCII_NEWLINE);
+        }
+        for (unsigned i = 0; i < length; i++) {
+            print_zscii(m, zm_read_byte(m->mem, address++));
+        }
+        first = 0;
+    }
+}
+
+/* Spec §15 read_mouse: the mouse's position, buttons, and menu choice.
+ * No front end has a mouse yet, and the header says so, so there is
+ * nothing to report. */
+static void read_mouse_opcode(zm_machine *m, const uint16_t *ops)
+{
+    for (unsigned i = 0; i < 4; i++) {
+        zm_write_word(m->mem, (uint16_t)(ops[0] + 2u * i), 0);
+    }
+}
+
+/*
+ * User stacks (Spec §6.6): a table of words in dynamic memory whose
+ * first word counts the spare slots, so that pushing fills the table
+ * from its far end towards the count.
+ */
+
+static void push_stack_opcode(zm_machine *m, const zm_instruction *inst, const uint16_t *ops, unsigned count)
+{
+    uint16_t spare;
+
+    if (count < 2) {
+        zm_fatal("push_stack with %u operand(s) at $%05x", count, (unsigned)inst->address);
+    }
+    /* Spec §15 push_stack: a full stack takes nothing and the branch is
+     * not made; "this is not an error condition". */
+    spare = zm_read_word(m->mem, ops[1]);
+    if (spare == 0) {
+        branch(m, inst, 0);
+        return;
+    }
+    zm_write_word(m->mem, (uint16_t)(ops[1] + 2u * spare), ops[0]);
+    zm_write_word(m->mem, ops[1], (uint16_t)(spare - 1u));
+    branch(m, inst, 1);
+}
+
+static uint16_t pull_user_stack(zm_machine *m, uint16_t table)
+{
+    /* Spec §6.6: "The Z-machine makes no check on stack under-flow",
+     * so a pull from an empty user stack reads whatever follows it. */
+    uint16_t spare = (uint16_t)(zm_read_word(m->mem, table) + 1u);
+
+    zm_write_word(m->mem, table, spare);
+    return zm_read_word(m->mem, (uint16_t)(table + 2u * spare));
+}
+
+static void pop_stack_opcode(zm_machine *m, const zm_instruction *inst, const uint16_t *ops, unsigned count)
+{
+    /* Spec §15 pop_stack: so many items off a user stack, or off the
+     * game stack, which must have them (Spec §6.3.1). */
+    if (count > 1) {
+        zm_write_word(m->mem, ops[1], (uint16_t)(zm_read_word(m->mem, ops[1]) + ops[0]));
+        return;
+    }
+    if (ops[0] > m->sp - current_frame(m)->stack_base) {
+        zm_fatal("pop_stack %u at $%05x: the stack holds only %u word(s)",
+                 (unsigned)ops[0], (unsigned)inst->address, (unsigned)(m->sp - current_frame(m)->stack_base));
+    }
+    m->sp -= ops[0];
+}
+
+/* Spec §8.8.3.2.2: the new-line interrupt routine is run like a timed
+ * input's, on top of the game's stack, in the middle of whatever was
+ * being printed. Its result is not wanted. */
+static int run_interrupt(zm_machine *m, uint16_t routine);
+
+static void newline_interrupt(void *context, uint16_t routine)
+{
+    run_interrupt(context, routine);
 }
 
 static void sound_effect_opcode(zm_machine *m, const uint16_t *ops, unsigned count)
@@ -984,15 +1208,19 @@ static void print_table_opcode(zm_machine *m, const zm_instruction *inst, const 
 
     /* Spec §15 print_table: each line starts under the first, which in
      * the upper window means moving the cursor back; in the lower window
-     * only one line is legal, and a new-line is the nearest thing. */
+     * only one line is legal, and a new-line is the nearest thing. In
+     * Version 6 every window has a cursor to move, a line down. */
     zm_screen_get_cursor(&m->screen, &row, &column);
     for (unsigned r = 0; r < height; r++) {
         for (unsigned c = 0; c < width; c++) {
             print_zscii(m, zm_read_byte(m->mem, (uint16_t)(ops[0] + r * (width + skip) + c)));
         }
         if (r + 1 < height) {
-            if (m->screen.window == ZM_WINDOW_UPPER) {
-                zm_screen_set_cursor(&m->screen, row + r + 1, column);
+            if (is_v6(m)) {
+                zm_screen_set_cursor(&m->screen, m->screen.window,
+                                     (int16_t)(row + (r + 1) * m->screen.font_height), (int16_t)column);
+            } else if (m->screen.window == ZM_WINDOW_UPPER) {
+                zm_screen_set_cursor(&m->screen, m->screen.window, (int16_t)(row + r + 1), (int16_t)column);
             } else {
                 print_zscii(m, ZM_ZSCII_NEWLINE);
             }
@@ -1211,9 +1439,12 @@ static void restore_opcode(zm_machine *m, const zm_instruction *inst, const uint
         free(data);
         if (status == ZM_OK) {
             /* Spec §8.6.1.3: the upper window collapses on a restore;
-             * the game draws it again if it wants one. */
-            zm_screen_split(&m->screen, 0);
-            zm_screen_set_window(&m->screen, ZM_WINDOW_LOWER);
+             * the game draws it again if it wants one. A Version 6 game
+             * lays its windows out again itself. */
+            if (!is_v6(m)) {
+                zm_screen_split(&m->screen, 0);
+                zm_screen_set_window(&m->screen, ZM_WINDOW_LOWER);
+            }
             resume_after_restore(m);
             return;
         }
@@ -1303,7 +1534,9 @@ static void execute_0op(zm_machine *m, const zm_instruction *inst)
             pop(m);
         }
         break;
-    case 10: /* quit */
+    case 10: /* quit: whatever is still buffered for the screen (Spec
+              * §8.8.3.1.2) is shown on the way out */
+        zm_screen_flush(&m->screen);
         m->running = 0;
         break;
     case 11: /* new_line */
@@ -1619,13 +1852,10 @@ static void execute_var(zm_machine *m, const zm_instruction *inst, const uint16_
         push(m, ops[0]);
         break;
     case 9:  /* pull */
-        if (m->mem->version == 6) {
+        if (is_v6(m)) {
             /* Version 6 pulls from a user stack if one is given (Spec
              * §6.6) and stores the result. */
-            if (count > 0) {
-                not_implemented(m, inst);
-            }
-            store_result(m, inst, pop(m));
+            store_result(m, inst, count > 0 ? pull_user_stack(m, ops[0]) : pop(m));
         } else {
             /* The pop happens first, so pulling to the stack replaces
              * the new top in place (Spec §6.3.4). */
@@ -1633,17 +1863,11 @@ static void execute_var(zm_machine *m, const zm_instruction *inst, const uint16_
             write_variable(m, variable_reference(inst, ops[0]), value, 1);
         }
         break;
-    case 10: /* split_window */
-        check_not_version_6(m, inst);
+    case 10: /* split_window: lines, or units in Version 6 */
         zm_screen_split(&m->screen, ops[0]);
         break;
     case 11: /* set_window */
-        check_not_version_6(m, inst);
-        if (ops[0] > ZM_WINDOW_UPPER) {
-            zm_fatal("set_window %u at $%05x: only windows 0 and 1 exist before Version 6",
-                     (unsigned)ops[0], (unsigned)inst->address);
-        }
-        zm_screen_set_window(&m->screen, ops[0]);
+        set_window_opcode(m, inst, ops, count);
         break;
     case 12: /* call_vs2 */
         if (count == 0) {
@@ -1652,19 +1876,10 @@ static void execute_var(zm_machine *m, const zm_instruction *inst, const uint16_
         call_routine(m, ops[0], ops + 1, count - 1, inst->store);
         break;
     case 13: /* erase_window */
-        check_not_version_6(m, inst);
-        if (as_signed(ops[0]) < -2 || as_signed(ops[0]) > ZM_WINDOW_UPPER) {
-            zm_fatal("erase_window %d at $%05x: only -2, -1, 0 and 1 are meaningful before Version 6",
-                     (int)as_signed(ops[0]), (unsigned)inst->address);
-        }
-        zm_screen_erase_window(&m->screen, as_signed(ops[0]));
+        erase_window_opcode(m, inst, ops);
         break;
-    case 14: /* erase_line: only the value 1 does anything before
-              * Version 6 (Spec §15 erase_line) */
-        check_not_version_6(m, inst);
-        if (ops[0] == 1) {
-            zm_screen_erase_line(&m->screen);
-        }
+    case 14: /* erase_line */
+        zm_screen_erase_line(&m->screen, ops[0]);
         break;
     case 15: /* set_cursor */
         set_cursor_opcode(m, inst, ops, count);
@@ -1675,7 +1890,6 @@ static void execute_var(zm_machine *m, const zm_instruction *inst, const uint16_
             unsigned row;
             unsigned column;
 
-            check_not_version_6(m, inst);
             zm_screen_get_cursor(&m->screen, &row, &column);
             zm_write_word(m->mem, ops[0], (uint16_t)row);
             zm_write_word(m->mem, (uint16_t)(ops[0] + 2u), (uint16_t)column);
@@ -1785,9 +1999,24 @@ static void execute_ext(zm_machine *m, const zm_instruction *inst, const uint16_
     case 3:  /* art_shift */
         store_result(m, inst, shift(inst, ops[0], ops[1], 1));
         break;
-    case 4:  /* set_font */
-        check_not_version_6(m, inst);
-        store_result(m, inst, (uint16_t)zm_screen_set_font(&m->screen, ops[0]));
+    case 4:  /* set_font, for a window in Version 6 */
+        store_result(m, inst, (uint16_t)zm_screen_set_font(&m->screen,
+                     is_v6(m) ? window_operand(m, inst, ops, count, 1) : m->screen.window, ops[0]));
+        break;
+    case 5:  /* draw_picture */
+        zm_screen_draw_picture(&m->screen, ops[0], count > 1 ? ops[1] : 0u, count > 2 ? ops[2] : 0u);
+        break;
+    case 6:  /* picture_data */
+        picture_data_opcode(m, inst, ops, count);
+        break;
+    case 7:  /* erase_picture */
+        zm_screen_erase_picture(&m->screen, ops[0], count > 1 ? ops[1] : 0u, count > 2 ? ops[2] : 0u);
+        break;
+    case 8:  /* set_margins */
+        if (count < 2) {
+            zm_fatal("set_margins with %u operand(s) at $%05x", count, (unsigned)inst->address);
+        }
+        zm_screen_set_margins(&m->screen, window_operand(m, inst, ops, count, 2), ops[0], ops[1]);
         break;
     case 9:  /* save_undo: 1 for saved, 0 for not; -1 would mean the
               * interpreter cannot, and it can */
@@ -1807,18 +2036,76 @@ static void execute_ext(zm_machine *m, const zm_instruction *inst, const uint16_
     case 12: /* check_unicode */
         store_result(m, inst, zm_screen_check_unicode(&m->screen, ops[0]));
         break;
-    case 13: /* set_true_colour: the Version 6 form adds a window, and
-              * values below -2 are Version 6 requests (Spec §8.3.7) */
-        check_not_version_6(m, inst);
-        if (as_signed(ops[0]) < -2 || as_signed(ops[1]) < -2) {
-            zm_fatal("set_true_colour at $%05x: %d is only meaningful in Version 6",
-                     (unsigned)inst->address, (int)(as_signed(ops[0]) < -2 ? as_signed(ops[0]) : as_signed(ops[1])));
+    case 13: /* set_true_colour */
+        set_true_colour_opcode(m, inst, ops, count);
+        break;
+    case 16: /* move_window */
+        if (count < 3) {
+            zm_fatal("move_window with %u operand(s) at $%05x", count, (unsigned)inst->address);
         }
-        zm_screen_set_true_colour(&m->screen, as_signed(ops[0]), as_signed(ops[1]));
+        zm_screen_move_window(&m->screen, window_operand(m, inst, ops, count, 0), ops[1], ops[2]);
+        break;
+    case 17: /* window_size */
+        if (count < 3) {
+            zm_fatal("window_size with %u operand(s) at $%05x", count, (unsigned)inst->address);
+        }
+        zm_screen_size_window(&m->screen, window_operand(m, inst, ops, count, 0), ops[1], ops[2]);
+        break;
+    case 18: /* window_style */
+        window_style_opcode(m, inst, ops, count);
+        break;
+    case 19: /* get_wind_prop */
+        if (count < 2) {
+            zm_fatal("get_wind_prop with %u operand(s) at $%05x", count, (unsigned)inst->address);
+        }
+        store_result(m, inst, zm_screen_window_property(&m->screen, window_operand(m, inst, ops, count, 0), ops[1]));
+        break;
+    case 20: /* scroll_window */
+        if (count < 2) {
+            zm_fatal("scroll_window with %u operand(s) at $%05x", count, (unsigned)inst->address);
+        }
+        zm_screen_scroll_window(&m->screen, window_operand(m, inst, ops, count, 0), as_signed(ops[1]));
+        break;
+    case 21: /* pop_stack */
+        pop_stack_opcode(m, inst, ops, count);
+        break;
+    case 22: /* read_mouse */
+        read_mouse_opcode(m, ops);
+        break;
+    case 23: /* mouse_window: a window, or -1 for the whole screen */
+        zm_screen_mouse_window(&m->screen, as_signed(ops[0]) == -1 ? -1 : (int)window_operand(m, inst, ops, count, 0));
+        break;
+    case 24: /* push_stack */
+        push_stack_opcode(m, inst, ops, count);
+        break;
+    case 25: /* put_wind_prop */
+        if (count < 3) {
+            zm_fatal("put_wind_prop with %u operand(s) at $%05x", count, (unsigned)inst->address);
+        }
+        zm_screen_put_window_property(&m->screen, window_operand(m, inst, ops, count, 0), ops[1], ops[2]);
+        break;
+    case 26: /* print_form */
+        print_form_opcode(m, ops);
+        break;
+    case 27: /* make_menu: menus "with numbers greater than 2" are the
+              * front end's to show, and none shows them, so the branch
+              * for success is never made */
+        branch(m, inst, 0);
+        break;
+    case 28: /* picture_table: "the interpreter may if it wishes" cache
+              * the pictures named; this one finds them quickly enough */
+        break;
+    case 29: /* buffer_screen */
+        store_result(m, inst, zm_screen_buffer_screen(&m->screen, as_signed(ops[0])));
         break;
     default:
         not_implemented(m, inst);
     }
+}
+
+void zm_machine_use_resources(zm_machine *m, const zm_blorb *resources)
+{
+    zm_screen_use_resources(&m->screen, resources);
 }
 
 void zm_machine_step(zm_machine *m)
@@ -1897,6 +2184,7 @@ zm_status zm_machine_init(zm_machine *m, zm_memory *mem, const zm_io *io)
     m->globals = h.globals;
     m->dictionary = h.dictionary;
     zm_screen_init(&m->screen, mem, io);
+    zm_screen_set_interrupt(&m->screen, newline_interrupt, m);
 
     /* Spec §2.4: the generator starts in "random" mode. */
     zm_machine_seed_random(m, 0);

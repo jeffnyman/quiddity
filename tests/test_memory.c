@@ -87,16 +87,23 @@ static void test_load_rejects_bad_static_base(void)
     zm_memory_free(&mem);
 }
 
-static void test_load_rejects_blorb(void)
+static void test_load_rejects_blorb_without_a_story(void)
 {
     uint8_t bytes[128];
     zm_memory mem;
 
+    /* A Blorb with no resource index at all is damaged (Blorb §1); one
+     * whose index holds no Z-code has nothing to run (Blorb §5). The
+     * stories inside well-formed Blorbs are loaded in test_blorb.c. */
     memset(bytes, 0, sizeof bytes);
     memcpy(bytes, "FORM", 4);
     memcpy(bytes + 8, "IFRS", 4);
+    CHECK_EQ_INT(zm_memory_load_bytes(&mem, bytes, sizeof bytes), ZM_ERROR_BAD_BLORB);
 
-    CHECK_EQ_INT(zm_memory_load_bytes(&mem, bytes, sizeof bytes), ZM_ERROR_BLORB_UNSUPPORTED);
+    bytes[7] = 12;
+    memcpy(bytes + 12, "RIdx", 4);
+    bytes[19] = 4;
+    CHECK_EQ_INT(zm_memory_load_bytes(&mem, bytes, 24), ZM_ERROR_BLORB_NO_STORY);
 }
 
 static void test_max_size_follows_version(void)
@@ -342,7 +349,7 @@ int main(void)
     RUN_TEST(test_load_rejects_short_file);
     RUN_TEST(test_load_rejects_bad_version);
     RUN_TEST(test_load_rejects_bad_static_base);
-    RUN_TEST(test_load_rejects_blorb);
+    RUN_TEST(test_load_rejects_blorb_without_a_story);
     RUN_TEST(test_max_size_follows_version);
     RUN_TEST(test_load_rejects_oversized_story);
     RUN_TEST(test_load_records_memory_map);

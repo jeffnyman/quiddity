@@ -13,6 +13,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "zm/blorb.h"
 #include "zm/screen.h"
 #include "zm/text.h"
 
@@ -346,6 +347,222 @@ static void terminal_set_buffering(void *context, int on)
 }
 
 /*
+ * The Version 6 canvas (Spec §8.8).
+ */
+
+/* Print the columns from one to another of a row of the canvas, without
+ * trailing blanks, and count the row as seen. */
+static void emit_row(terminal *t, unsigned row, unsigned from, unsigned to)
+{
+    unsigned end = to < TERMINAL_WIDTH ? to : TERMINAL_WIDTH;
+
+    while (end > from && t->cells[row][end - 1] == ' ') {
+        end--;
+    }
+    for (unsigned c = 0; c < end; c++) {
+        put_utf8(stdout, c < from ? ' ' : t->cells[row][c]);
+    }
+    putchar('\n');
+    t->row_changed[row] = 0;
+}
+
+static int row_is_blank(const terminal *t, unsigned row)
+{
+    for (unsigned c = 0; c < TERMINAL_WIDTH; c++) {
+        if (t->cells[row][c] != ' ') {
+            return 0;
+        }
+    }
+    return 1;
+}
+
+/* Print every row that has changed since it was last printed, in order,
+ * with a run of blank rows reduced to one empty line. */
+static void show_canvas(terminal *t)
+{
+    int blank_pending = 0;
+
+    for (unsigned r = 0; r < TERMINAL_HEIGHT; r++) {
+        if (!t->row_changed[r]) {
+            continue;
+        }
+        if (row_is_blank(t, r)) {
+            blank_pending = 1;
+            t->row_changed[r] = 0;
+            continue;
+        }
+        if (blank_pending) {
+            putchar('\n');
+            blank_pending = 0;
+        }
+        emit_row(t, r, 0, TERMINAL_WIDTH);
+    }
+    fflush(stdout);
+}
+
+static void set_cell(terminal *t, unsigned row, unsigned column, uint16_t c)
+{
+    if (row < TERMINAL_HEIGHT && column < TERMINAL_WIDTH && t->cells[row][column] != c) {
+        t->cells[row][column] = c;
+        t->row_changed[row] = 1;
+    }
+}
+
+static void terminal_plot_text(void *context, unsigned y, unsigned x, const uint16_t *unicode, unsigned count,
+                               const zm_pen *pen)
+{
+    terminal *t = context;
+    int seen = y - 1 < TERMINAL_HEIGHT && !t->row_changed[y - 1];
+
+    (void)pen;
+    for (unsigned i = 0; i < count; i++) {
+        set_cell(t, y - 1, x - 1 + i, unicode[i]);
+    }
+
+    /* The line the player typed is plotted back by the machine, and
+     * need not be printed again on their account. */
+    if (t->echo_pending) {
+        t->echo_pending = 0;
+        if (seen && y - 1 < TERMINAL_HEIGHT) {
+            t->row_changed[y - 1] = 0;
+        }
+    }
+}
+
+static void terminal_erase_area(void *context, unsigned y, unsigned x, unsigned height, unsigned width,
+                                const zm_pen *pen)
+{
+    terminal *t = context;
+
+    (void)pen;
+    for (unsigned r = 0; r < height; r++) {
+        for (unsigned c = 0; c < width; c++) {
+            set_cell(t, y - 1 + r, x - 1 + c, ' ');
+        }
+    }
+}
+
+static void terminal_scroll_area(void *context, unsigned y, unsigned x, unsigned height, unsigned width, int units,
+                                 const zm_pen *pen)
+{
+    terminal *t = context;
+    unsigned top = y - 1;
+    unsigned bottom = y - 1 + height;      /* one past the last row */
+    unsigned by = units < 0 ? (unsigned)-units : (unsigned)units;
+
+    (void)pen;
+    if (bottom > TERMINAL_HEIGHT) {
+        bottom = TERMINAL_HEIGHT;
+    }
+    if (top >= bottom || by == 0) {
+        return;
+    }
+    if (by > bottom - top) {
+        by = bottom - top;
+    }
+
+    /* What a row holds moves with it, and so does whether it has been
+     * printed: a line already seen is not seen again for having moved.
+     * A row leaving at the top unseen is printed as it goes, its part
+     * inside the window only, which is how running text in a scrolling
+     * window reaches the player before the game next stops. */
+    if (units > 0) {
+        for (unsigned r = top; r < top + by; r++) {
+            if (t->row_changed[r] && !row_is_blank(t, r)) {
+                emit_row(t, r, x - 1, x - 1 + width);
+            }
+        }
+        for (unsigned r = top; r + by < bottom; r++) {
+            for (unsigned c = 0; c < width && x - 1 + c < TERMINAL_WIDTH; c++) {
+                t->cells[r][x - 1 + c] = t->cells[r + by][x - 1 + c];
+            }
+            t->row_changed[r] = t->row_changed[r + by];
+        }
+        for (unsigned r = bottom - by; r < bottom; r++) {
+            t->row_changed[r] = 0;
+            terminal_erase_area(t, r + 1, x, 1, width, pen);
+        }
+    } else {
+        for (unsigned r = bottom; r-- > top + by;) {
+            for (unsigned c = 0; c < width && x - 1 + c < TERMINAL_WIDTH; c++) {
+                t->cells[r][x - 1 + c] = t->cells[r - by][x - 1 + c];
+            }
+            t->row_changed[r] = t->row_changed[r - by];
+        }
+        for (unsigned r = top; r < top + by; r++) {
+            t->row_changed[r] = 0;
+            terminal_erase_area(t, r + 1, x, 1, width, pen);
+        }
+    }
+}
+
+/* A picture is a box: its edges, its number inside the bottom right
+ * corner if there is room, and blank within, since it covers what was
+ * there. The number sits at the bottom because the top row of a tall
+ * picture beside a text window is printed again with every line that
+ * scrolls out of that window. */
+static void terminal_draw_picture(void *context, const zm_picture *picture, unsigned y, unsigned x,
+                                  unsigned height, unsigned width)
+{
+    terminal *t = context;
+    char number[16];
+    size_t digits;
+
+    if (height == 0 || width == 0) {
+        return;
+    }
+    terminal_erase_area(t, y, x, height, width, NULL);
+    for (unsigned c = 0; c < width; c++) {
+        set_cell(t, y - 1, x - 1 + c, '-');
+        set_cell(t, y - 2 + height, x - 1 + c, '-');
+    }
+    for (unsigned r = 0; r < height; r++) {
+        set_cell(t, y - 1 + r, x - 1, '|');
+        set_cell(t, y - 1 + r, x - 2 + width, '|');
+    }
+    set_cell(t, y - 1, x - 1, '+');
+    set_cell(t, y - 1, x - 2 + width, '+');
+    set_cell(t, y - 2 + height, x - 1, '+');
+    set_cell(t, y - 2 + height, x - 2 + width, '+');
+
+    digits = (size_t)snprintf(number, sizeof number, "%u", picture->number);
+    if (height >= 3 && width >= digits + 2) {
+        for (size_t i = 0; i < digits; i++) {
+            set_cell(t, y - 3 + height, x - 2 + width - (unsigned)digits + (unsigned)i, (uint16_t)number[i]);
+        }
+    }
+}
+
+/* Spec §8.8.6, Blorb §11.2: on a screen of character cells the Blorb
+ * rule, which scales pictures by the room the standard window has, would
+ * leave them a dozen cells wide; cells are twice as tall as they are
+ * wide besides. So the standard window is taken to fill this screen,
+ * and a picture is scaled to its share of that, in each direction
+ * separately, and to a cell at least. The Infocom picture files name a
+ * 320 by 200 window; a file with no resolution chunk is given that. */
+static void terminal_picture_size(void *context, const zm_picture *picture, unsigned *height, unsigned *width)
+{
+    unsigned standard_width = picture->standard_width != 0 ? picture->standard_width : 320;
+    unsigned standard_height = picture->standard_height != 0 ? picture->standard_height : 200;
+
+    (void)context;
+    *width = (picture->width * TERMINAL_WIDTH + standard_width / 2) / standard_width;
+    *height = (picture->height * TERMINAL_HEIGHT + standard_height / 2) / standard_height;
+    if (*width == 0 && picture->width > 0) {
+        *width = 1;
+    }
+    if (*height == 0 && picture->height > 0) {
+        *height = 1;
+    }
+    if (*width > TERMINAL_WIDTH) {
+        *width = TERMINAL_WIDTH;
+    }
+    if (*height > TERMINAL_HEIGHT) {
+        *height = TERMINAL_HEIGHT;
+    }
+}
+
+/*
  * Files.
  */
 
@@ -462,10 +679,15 @@ static uint16_t unicode_to_zscii(const terminal *t, uint32_t unicode)
 }
 
 /* The game is about to wait: everything it has drawn should be visible,
- * the upper window above the unfinished line. */
+ * the upper window above the unfinished line, or the canvas as it now
+ * stands. */
 static void before_input(terminal *t)
 {
-    show_upper(t);
+    if (t->canvas) {
+        show_canvas(t);
+    } else {
+        show_upper(t);
+    }
     flush_line(t);
 }
 
@@ -578,6 +800,7 @@ static int terminal_read_line(void *context, uint16_t *buffer, unsigned *count, 
         }
     }
     *terminator = ZM_ZSCII_NEWLINE;
+    t->echo_pending = t->canvas && *count > 0;
     return 0;
 }
 
@@ -821,6 +1044,12 @@ void terminal_init(terminal *t, const zm_memory *mem, zm_io *io, const char *sto
     t->transcript_path = transcript_path;
     t->record_path = record_path;
     clear_upper_rows(t, 0, TERMINAL_HEIGHT);
+    t->canvas = mem->version == 6;
+    for (unsigned r = 0; r < TERMINAL_HEIGHT; r++) {
+        for (unsigned c = 0; c < TERMINAL_WIDTH; c++) {
+            t->cells[r][c] = ' ';
+        }
+    }
 
     /* Standard input is read as it arrives rather than in buffered
      * chunks, so that input_ready() sees everything there is to see:
@@ -859,6 +1088,13 @@ void terminal_init(terminal *t, const zm_memory *mem, zm_io *io, const char *sto
     }
     io->write_file = terminal_write_file;
     io->read_file = terminal_read_file;
+    if (t->canvas) {
+        io->plot_text = terminal_plot_text;
+        io->erase_area = terminal_erase_area;
+        io->scroll_area = terminal_scroll_area;
+        io->draw_picture = terminal_draw_picture;
+        io->picture_size = terminal_picture_size;
+    }
 
 #ifdef _WIN32
     /* The Windows console decodes output in its own code page unless told
@@ -870,7 +1106,11 @@ void terminal_init(terminal *t, const zm_memory *mem, zm_io *io, const char *sto
 
 void terminal_finish(terminal *t)
 {
-    show_upper(t);
+    if (t->canvas) {
+        show_canvas(t);
+    } else {
+        show_upper(t);
+    }
     flush_line(t);
     if (t->transcript != NULL) {
         fclose(t->transcript);

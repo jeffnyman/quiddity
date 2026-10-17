@@ -24,6 +24,17 @@
  * each prompt, as in Version 3; for a menu or a map it means the whole
  * thing, once per keypress.
  *
+ * A Version 6 story (Spec §8.8) treats the whole screen as a canvas of
+ * eight overlapping windows, so for one of those the terminal keeps the
+ * whole screen as a grid of character cells instead. The machine lays
+ * the text out and says where each piece goes; this file plots it, and
+ * prints the rows that have changed whenever the game stops for input,
+ * so that the player sees the screen as it would be, a row at a time.
+ * A row that scrolls out of a window before it has been printed is
+ * printed as it goes, so that running text is never lost. Pictures are
+ * drawn as boxes with their numbers in them, and sized as if the
+ * standard window of the picture file filled this screen.
+ *
  * Saved games (Spec §15 save and restore) go to files the player names
  * at a prompt, with the story's own name offered as the default; the
  * machine supplies the bytes (zm/quetzal.h) and this file only puts them
@@ -81,6 +92,14 @@ typedef struct terminal {
 
     /* Whether the grid has been printed since it last changed. */
     int upper_shown;
+
+    /* Version 6: the whole screen as cells, which rows hold something
+     * not yet printed, and whether the next text plotted is the line
+     * the player just typed, which they have seen already. */
+    int canvas;
+    uint16_t cells[TERMINAL_HEIGHT][TERMINAL_WIDTH];
+    unsigned char row_changed[TERMINAL_HEIGHT];
+    int echo_pending;
 
     /* Output stream 2 and output stream 4 (Spec §7.1.1, §7.1.2.3), when
      * the player asked for them on the command line. */

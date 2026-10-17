@@ -8,6 +8,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "zm/blorb.h"
 #include "zm/fatal.h"
 
 /* Header offsets this layer needs in order to lay out the memory map. The
@@ -39,15 +40,29 @@ uint32_t zm_memory_max_size(uint8_t version)
     }
 }
 
-/* Is this the start of a Blorb file? Blorb is an IFF container: the file
- * begins "FORM", then a 4-byte length, then the form type "IFRS". The
- * story inside has not been unwrapped yet; we only recognise the wrapper
- * so the error can say what the file is. */
-static int looks_like_blorb(const uint8_t *bytes, uint32_t size)
+/* A story may arrive wrapped in a Blorb resource file (Blorb §5, a
+ * .zblorb). The story is the "Exec" resource inside; it is lifted out
+ * into a buffer of its own, which replaces the wrapper. The pictures and
+ * sounds around it are the business of zm/blorb.h, not of memory. */
+static zm_status unwrap(uint8_t **bytes, uint32_t *size)
 {
-    return size >= 12
-        && memcmp(bytes, "FORM", 4) == 0
-        && memcmp(bytes + 8, "IFRS", 4) == 0;
+    uint32_t offset;
+    uint32_t length;
+    uint8_t *story;
+    zm_status status = zm_blorb_find_story(*bytes, *size, &offset, &length);
+
+    if (status != ZM_OK) {
+        return status;
+    }
+    story = malloc(length > 0 ? length : 1);
+    if (story == NULL) {
+        return ZM_ERROR_OUT_OF_MEMORY;
+    }
+    memcpy(story, *bytes + offset, length);
+    free(*bytes);
+    *bytes = story;
+    *size = length;
+    return ZM_OK;
 }
 
 /* Check that a buffer can be a story file and fill in the memory map.
@@ -56,10 +71,6 @@ static zm_status establish(zm_memory *mem, uint8_t *bytes, uint32_t size)
 {
     uint8_t version;
     uint32_t static_base;
-
-    if (looks_like_blorb(bytes, size)) {
-        return ZM_ERROR_BLORB_UNSUPPORTED;
-    }
 
     /* Spec §1.1: dynamic memory, and so the file, holds at least the
      * header. */
@@ -117,6 +128,13 @@ zm_status zm_memory_load_bytes(zm_memory *mem, const uint8_t *bytes, uint32_t si
     }
     memcpy(copy, bytes, size);
 
+    if (zm_blorb_looks_like(copy, size)) {
+        status = unwrap(&copy, &size);
+        if (status != ZM_OK) {
+            free(copy);
+            return status;
+        }
+    }
     status = establish(mem, copy, size);
     if (status != ZM_OK) {
         free(copy);
@@ -152,8 +170,10 @@ zm_status zm_memory_load_file(zm_memory *mem, const char *path)
     }
 
     /* Refuse anything beyond the largest limit of any Version before
-     * allocating for it; establish() applies the per-Version limit. */
-    if ((unsigned long)length > zm_memory_max_size(8)) {
+     * allocating for it; establish() applies the per-Version limit. A
+     * Blorb file is as large as its pictures, so it gets the room a
+     * resource file needs. */
+    if ((unsigned long)length > ZM_RESOURCE_FILE_MAX) {
         fclose(file);
         return ZM_ERROR_TOO_LARGE;
     }
@@ -171,6 +191,20 @@ zm_status zm_memory_load_file(zm_memory *mem, const char *path)
         return ZM_ERROR_IO;
     }
 
+    if (zm_blorb_looks_like(bytes, (uint32_t)length)) {
+        uint32_t size = (uint32_t)length;
+
+        status = unwrap(&bytes, &size);
+        if (status != ZM_OK) {
+            free(bytes);
+            return status;
+        }
+        length = (long)size;
+    }
+    if ((unsigned long)length > zm_memory_max_size(8)) {
+        free(bytes);
+        return ZM_ERROR_TOO_LARGE;
+    }
     status = establish(mem, bytes, (uint32_t)length);
     if (status != ZM_OK) {
         free(bytes);

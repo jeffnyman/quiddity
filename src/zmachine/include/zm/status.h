@@ -34,9 +34,15 @@ typedef enum zm_status {
      * memory map (Spec §1.1). */
     ZM_ERROR_BAD_MEMORY_MAP,
 
-    /* The file is a Blorb resource collection. Reading the story file out
-     * of a Blorb wrapper is not supported yet. */
-    ZM_ERROR_BLORB_UNSUPPORTED,
+    /* Offered as a resource file, the bytes are not a Blorb (Blorb §0). */
+    ZM_ERROR_NOT_A_BLORB,
+
+    /* The Blorb file's resource index is damaged (Blorb §1). */
+    ZM_ERROR_BAD_BLORB,
+
+    /* The Blorb file holds no Z-code story (Blorb §5), so there is
+     * nothing in it to run. */
+    ZM_ERROR_BLORB_NO_STORY,
 
     /* Offered as a saved game, the bytes are not a Quetzal file at all
      * (Quetzal §2.1, §8.5). */

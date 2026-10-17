@@ -19,6 +19,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "zm/blorb.h"
 #include "zm/fatal.h"
 #include "zm/header.h"
 #include "zm/machine.h"
@@ -351,6 +352,112 @@ static void screen_hooks(int on)
     io.screen_height = 0;
 }
 
+/* The Version 6 canvas (Spec §8.8): a small screen of character cells
+ * the machine plots into, the pen it last used, and a log of the
+ * erasing, scrolling, and picture drawing it asked for. */
+#define CANVAS_WIDTH 40
+#define CANVAS_HEIGHT 8
+
+static char canvas[CANVAS_HEIGHT][CANVAS_WIDTH + 1];
+static zm_pen last_pen;
+
+static void canvas_clear(void)
+{
+    for (unsigned r = 0; r < CANVAS_HEIGHT; r++) {
+        memset(canvas[r], ' ', CANVAS_WIDTH);
+        canvas[r][CANVAS_WIDTH] = '\0';
+    }
+}
+
+/* A row of the canvas without its trailing blanks. */
+static const char *canvas_row(unsigned row)
+{
+    static char text[CANVAS_WIDTH + 1];
+    size_t end = CANVAS_WIDTH;
+
+    memcpy(text, canvas[row - 1], CANVAS_WIDTH + 1);
+    while (end > 0 && text[end - 1] == ' ') {
+        end--;
+    }
+    text[end] = '\0';
+    return text;
+}
+
+static void hook_plot_text(void *context, unsigned y, unsigned x, const uint16_t *unicode, unsigned count,
+                           const zm_pen *pen)
+{
+    (void)context;
+    last_pen = *pen;
+    for (unsigned i = 0; i < count; i++) {
+        if (y >= 1 && y <= CANVAS_HEIGHT && x + i >= 1 && x + i <= CANVAS_WIDTH) {
+            canvas[y - 1][x + i - 1] = unicode[i] < 127 ? (char)unicode[i] : '?';
+        }
+    }
+}
+
+static void hook_erase_area(void *context, unsigned y, unsigned x, unsigned height, unsigned width,
+                            const zm_pen *pen)
+{
+    char text[48];
+    (void)context;
+    snprintf(text, sizeof text, "erase %u,%u %ux%u bg%u", y, x, height, width, pen->background);
+    log_call(text);
+    for (unsigned r = y; r < y + height && r <= CANVAS_HEIGHT; r++) {
+        for (unsigned c = x; c < x + width && c <= CANVAS_WIDTH; c++) {
+            canvas[r - 1][c - 1] = ' ';
+        }
+    }
+}
+
+static void hook_scroll_area(void *context, unsigned y, unsigned x, unsigned height, unsigned width, int units,
+                             const zm_pen *pen)
+{
+    char text[48];
+    (void)context;
+    (void)pen;
+    snprintf(text, sizeof text, "scroll %u,%u %ux%u by %d", y, x, height, width, units);
+    log_call(text);
+    if (units > 0) {
+        for (unsigned r = y; r + (unsigned)units < y + height && r + (unsigned)units <= CANVAS_HEIGHT; r++) {
+            memcpy(canvas[r - 1] + x - 1, canvas[r - 1 + (unsigned)units] + x - 1, width);
+        }
+        for (unsigned r = y + height - (unsigned)units; r < y + height && r <= CANVAS_HEIGHT; r++) {
+            memset(canvas[r - 1] + x - 1, ' ', width);
+        }
+    }
+}
+
+static void hook_draw_picture(void *context, const zm_picture *picture, unsigned y, unsigned x,
+                              unsigned height, unsigned width)
+{
+    char text[48];
+    (void)context;
+    snprintf(text, sizeof text, "picture %u at %u,%u %ux%u", picture->number, y, x, height, width);
+    log_call(text);
+}
+
+/* Install the canvas, with colours and the fixed-pitch font on offer, or
+ * remove it. */
+static void canvas_hooks(int on)
+{
+    screen_log[0] = '\0';
+    canvas_clear();
+    memset(&last_pen, 0, sizeof last_pen);
+    io.plot_text = on ? hook_plot_text : NULL;
+    io.erase_area = on ? hook_erase_area : NULL;
+    io.scroll_area = on ? hook_scroll_area : NULL;
+    io.draw_picture = on ? hook_draw_picture : NULL;
+    io.picture_size = NULL;
+    io.transcript_char = on ? hook_transcript_char : NULL;
+    io.set_transcript = on ? hook_set_transcript : NULL;
+    io.colours = on;
+    io.fonts = on ? (1u << 4) : 0;
+    io.screen_width = on ? CANVAS_WIDTH : 0;
+    io.screen_height = on ? CANVAS_HEIGHT : 0;
+    transcript_text[0] = '\0';
+    transcript_allowed = 1;
+}
+
 /* Files kept in memory for the save and restore hooks (Spec §15): one
  * saved game, handed back as many times as saved_game_reads allows, and
  * one auxiliary file, with the name and prompt the game gave for it. */
@@ -495,6 +602,7 @@ static void run(const story *s, output *out, zm_machine *m, zm_memory *mem)
     screen_log[0] = '\0';
     transcript_text[0] = '\0';
     record_text[0] = '\0';
+    canvas_clear();
     io.context = out;
 
     CHECK_EQ_INT(zm_memory_load_bytes(mem, s->bytes, STORY_SIZE), ZM_OK);
@@ -980,14 +1088,6 @@ static void test_faults(void)
     story_init(&s, 3);
     EMIT(&s, 0xbe);
     expect_fault(&s, "illegal opcode", &out);
-
-    /* An opcode that exists but is not implemented yet is named. */
-    story_init(&s, 6);
-    put_word(s.bytes, ZM_HEADER_INITIAL_PC, (uint16_t)(R1 / 4));
-    at(&s, R1);
-    EMIT(&s, 0x00);                                             /* no locals */
-    EMIT(&s, 0xbe, 0x05, 0x5f, 0x01, 0x02);                     /* draw_picture 1 2 */
-    expect_fault(&s, "draw_picture", &out);
 
     /* Spec §15 je: one operand is not permitted. */
     story_init(&s, 3);
@@ -2384,15 +2484,570 @@ static void test_screen_faults(void)
     /* Spec §8.3.1, §8.3.7: Version 6 colour requests. */
     story_init(&s, 5);
     EMIT(&s, 0x1b, 0x0f, 0x02);                                 /* set_colour 15 2 */
-    expect_fault(&s, "colour 15", &out);
+    expect_fault(&s, "15 is not a colour before Version 6", &out);
 
     story_init(&s, 5);
     EMIT(&s, 0xbe, 0x0d, 0x0f, 0xff, 0xfd, 0x00, 0x00);         /* set_true_colour -3 0 */
-    expect_fault(&s, "-3 is only meaningful in Version 6", &out);
+    expect_fault(&s, "-3 is not a colour before Version 6", &out);
 
     story_init(&s, 5);
     EMIT(&s, 0xf1, 0x7f, 0x10);                                 /* set_text_style 16 */
     expect_fault(&s, "styles are 0 to 15", &out);
+}
+
+/*
+ * Version 6 (Spec §8.8).
+ */
+
+/* A Version 6 story with no locals in its main routine, assembling at
+ * R1 (Spec §5.4). */
+static void story_init_v6(story *s)
+{
+    story_init(s, 6);
+    put_word(s->bytes, ZM_HEADER_INITIAL_PC, (uint16_t)(R1 / 4));
+    at(s, R1);
+    EMIT(s, 0x00);
+}
+
+/* print_char for each character of a string. */
+static void emit_text(story *s, const char *text)
+{
+    for (; *text != '\0'; text++) {
+        EMIT(s, 0xe5, 0x7f, (uint8_t)*text);
+    }
+}
+
+static void test_v6_text_is_laid_out_in_windows(void)
+{
+    story s;
+    output out;
+    zm_machine m;
+    zm_memory mem;
+
+    canvas_hooks(1);
+
+    /* Spec §8.8.3.3: window 0 is the whole screen, wrapping and
+     * scrolling, with buffered printing; its cursor is observable
+     * (Spec §8.8.3.2, properties 4 and 5) once the buffer is flushed
+     * (Spec §8.8.3.2.7). Spec §8.8.3.1.2.2: a word that would cross the
+     * right margin goes on the next line. */
+    story_init_v6(&s);
+    emit_text(&s, "The quick brown fox jumps over the lazy dog");
+    EMIT(&s, 0xbe, 0x13, 0x1f, 0xff, 0xfd, 0x04, G0);           /* get_wind_prop -3 4 -> G0 */
+    EMIT(&s, 0xbe, 0x13, 0x1f, 0xff, 0xfd, 0x05, G1);           /* get_wind_prop -3 5 -> G1 */
+    EMIT(&s, 0xbb);                                             /* new_line */
+    EMIT(&s, 0xbe, 0x13, 0x1f, 0xff, 0xfd, 0x0f, G2);           /* get_wind_prop -3 15 -> G2 */
+    EMIT(&s, 0xba);
+    run(&s, &out, &m, &mem);
+    CHECK_EQ_STR(canvas_row(1), "The quick brown fox jumps over the lazy");
+    CHECK_EQ_STR(canvas_row(2), "dog");
+    CHECK_EQ_INT(zm_read_word(&mem, GLOBALS), 2);
+    CHECK_EQ_INT(zm_read_word(&mem, GLOBALS + 2), 4);
+    CHECK_EQ_INT(zm_read_word(&mem, GLOBALS + 4), 2);
+    CHECK_EQ_INT(m.screen.windows[0].cursor_y, 3);
+    CHECK_EQ_INT(m.screen.windows[0].cursor_x, 1);
+    CHECK_EQ_STR(out.text, "");
+    zm_machine_free(&m);
+    zm_memory_free(&mem);
+
+    /* Spec §8.8.3.1.1: without wrapping, text is clipped at the right
+     * margin and the cursor stays there; Spec §15 window_style turns
+     * wrapping on; Spec §8.8.3.4: a window is moved and sized in units;
+     * Spec §8.8.3.2.1: margins narrow the text. */
+    story_init_v6(&s);
+    EMIT(&s, 0xbe, 0x10, 0x57, 0x01, 0x02, 0x14);               /* move_window 1 2 20 */
+    EMIT(&s, 0xbe, 0x11, 0x57, 0x01, 0x03, 0x0a);               /* window_size 1 3 10 */
+    EMIT(&s, 0xeb, 0x7f, 0x01);                                 /* set_window 1 */
+    emit_text(&s, "abc def ghi");
+    EMIT(&s, 0xbe, 0x13, 0x5f, 0x01, 0x05, G0);                 /* get_wind_prop 1 5 -> G0 */
+    EMIT(&s, 0xbe, 0x12, 0x57, 0x01, 0x01, 0x01);               /* window_style 1 1 1 (wrapping on) */
+    EMIT(&s, 0xed, 0x7f, 0x01);                                 /* erase_window 1 */
+    emit_text(&s, "abc def ghi");
+    EMIT(&s, 0xf0, 0x3f, ARRAY >> 8, ARRAY & 0xff);             /* get_cursor ARRAY */
+    EMIT(&s, 0xbe, 0x08, 0x57, 0x02, 0x01, 0x01);               /* set_margins 2 1 1 */
+    EMIT(&s, 0xbb);                                             /* new_line */
+    emit_text(&s, "mnopqrs");
+    EMIT(&s, 0xf0, 0x3f, (ARRAY + 4) >> 8, (ARRAY + 4) & 0xff); /* get_cursor ARRAY+4 */
+    EMIT(&s, 0xba);
+    run(&s, &out, &m, &mem);
+    CHECK_EQ_INT(zm_read_word(&mem, GLOBALS), 10);
+    CHECK_EQ_STR(canvas_row(2), "                   abc def");
+    CHECK_EQ_STR(canvas_row(3), "                   ghi");
+    CHECK_EQ_INT(zm_read_word(&mem, ARRAY), 2);
+    CHECK_EQ_INT(zm_read_word(&mem, ARRAY + 2), 4);
+    CHECK_EQ_STR(canvas_row(4), "                     mnopqrs");
+    CHECK_EQ_INT(zm_read_word(&mem, ARRAY + 4), 3);
+    CHECK_EQ_INT(zm_read_word(&mem, ARRAY + 6), 10);
+    CHECK_EQ_INT(m.screen.windows[1].attributes, ZM_WINDOW_WRAPPING | ZM_WINDOW_BUFFERING);
+    CHECK_EQ_STR(screen_log, "erase 2,20 3x10 bg2");
+    zm_machine_free(&m);
+    zm_memory_free(&mem);
+
+    /* Spec §8.8.3.1: a scrolling window scrolls when a new-line would
+     * leave no room, by the height of a line, in its own area; one that
+     * does not scroll starts again at the top. Spec §8.8.3.2.6: the
+     * line count counts the new-lines unless it is -999. */
+    story_init_v6(&s);
+    EMIT(&s, 0xbe, 0x11, 0x57, 0x00, 0x03, 0x08);               /* window_size 0 3 8 */
+    emit_text(&s, "one");
+    EMIT(&s, 0xbb);                                             /* new_line */
+    emit_text(&s, "two");
+    EMIT(&s, 0xbb);
+    emit_text(&s, "three");
+    EMIT(&s, 0xbb);
+    emit_text(&s, "four");
+    EMIT(&s, 0xbe, 0x13, 0x5f, 0x00, 0x0f, G0);                 /* get_wind_prop 0 15 -> G0 */
+    EMIT(&s, 0xbe, 0x19, 0x53, 0x00, 0x0f, 0xfc, 0x19);         /* put_wind_prop 0 15 -999 */
+    EMIT(&s, 0xbb);
+    EMIT(&s, 0xbe, 0x13, 0x5f, 0x00, 0x0f, G1);                 /* get_wind_prop 0 15 -> G1 */
+    EMIT(&s, 0xbe, 0x12, 0x57, 0x00, 0x02, 0x02);               /* window_style 0 2 2 (scrolling off) */
+    EMIT(&s, 0xbb);
+    emit_text(&s, "topmost");
+    EMIT(&s, 0xbe, 0x13, 0x5f, 0x00, 0x04, G2);                 /* get_wind_prop 0 4 -> G2 */
+    EMIT(&s, 0xba);
+    run(&s, &out, &m, &mem);
+    CHECK_EQ_STR(canvas_row(1), "topmost");
+    CHECK_EQ_STR(canvas_row(2), "four");
+    CHECK_EQ_STR(canvas_row(3), "");
+    CHECK_EQ_INT(zm_read_word(&mem, GLOBALS), 3);
+    CHECK_EQ_INT((int16_t)zm_read_word(&mem, GLOBALS + 2), -999);
+    CHECK_EQ_INT(zm_read_word(&mem, GLOBALS + 4), 1);
+    CHECK_EQ_STR(screen_log, "scroll 1,1 3x8 by 1;scroll 1,1 3x8 by 1");
+    zm_machine_free(&m);
+    zm_memory_free(&mem);
+
+    /* Spec §15 erase_line: to the right margin, or so many units less
+     * one; Spec §15 erase_window -1 and -2; Spec §8.8.4.1: split_window
+     * tiles windows 0 and 1. */
+    story_init_v6(&s);
+    emit_text(&s, "abcdefghij");
+    EMIT(&s, 0xef, 0x5f, 0x01, 0x03);                           /* set_cursor 1 3 */
+    EMIT(&s, 0xee, 0x7f, 0x04);                                 /* erase_line 4 */
+    EMIT(&s, 0xef, 0x5f, 0x01, 0x08);                           /* set_cursor 1 8 */
+    EMIT(&s, 0xee, 0x7f, 0x01);                                 /* erase_line 1 */
+    EMIT(&s, 0xea, 0x7f, 0x02);                                 /* split_window 2 */
+    EMIT(&s, 0xbe, 0x13, 0x5f, 0x00, 0x00, G0);                 /* get_wind_prop 0 0 -> G0 */
+    EMIT(&s, 0xbe, 0x13, 0x5f, 0x00, 0x02, G1);                 /* get_wind_prop 0 2 -> G1 */
+    EMIT(&s, 0xbe, 0x13, 0x5f, 0x01, 0x02, G2);                 /* get_wind_prop 1 2 -> G2 */
+    EMIT(&s, 0xed, 0x3f, 0xff, 0xfe);                           /* erase_window -2 */
+    EMIT(&s, 0xed, 0x3f, 0xff, 0xff);                           /* erase_window -1 */
+    EMIT(&s, 0xba);
+    run(&s, &out, &m, &mem);
+    CHECK_EQ_STR(screen_log, "erase 1,3 1x3 bg2;erase 1,8 1x33 bg2;erase 1,1 8x40 bg2;erase 1,1 8x40 bg2");
+    CHECK_EQ_INT(zm_read_word(&mem, GLOBALS), 3);
+    CHECK_EQ_INT(zm_read_word(&mem, GLOBALS + 2), 6);
+    CHECK_EQ_INT(zm_read_word(&mem, GLOBALS + 4), 2);
+    CHECK_EQ_INT(m.screen.windows[0].y, 1);
+    CHECK_EQ_INT(m.screen.windows[0].height, 8);
+    CHECK_EQ_INT(m.screen.windows[1].height, 0);
+    CHECK_EQ_INT(m.screen.window, 0);
+    zm_machine_free(&m);
+    zm_memory_free(&mem);
+    canvas_hooks(0);
+}
+
+static void test_v6_window_properties_and_appearance(void)
+{
+    story s;
+    output out;
+    zm_machine m;
+    zm_memory mem;
+
+    canvas_hooks(1);
+
+    /* Spec §8.3: each window has its own colours, which set_colour may
+     * name a window for; Spec §8.8.3.2.4: property 11 packs them;
+     * Spec §8.8.3.2.8: properties 16 and 17 give the true colours; Spec
+     * §15 set_font: a window may be given a font the front end has,
+     * and refuses one it has not; Spec §8.8.3.2.3: the style property
+     * is the combination in use; the pen carries all of it. */
+    story_init_v6(&s);
+    EMIT(&s, 0xdb, 0x57, 0x03, 0x04, 0x01);                     /* set_colour 3 4 1 */
+    EMIT(&s, 0x1b, 0x06, 0x00);                                 /* set_colour 6 0 (current window) */
+    EMIT(&s, 0xbe, 0x13, 0x5f, 0x01, 0x0b, G0);                 /* get_wind_prop 1 11 -> G0 */
+    EMIT(&s, 0xbe, 0x13, 0x5f, 0x00, 0x0b, G1);                 /* get_wind_prop 0 11 -> G1 */
+    EMIT(&s, 0xbe, 0x13, 0x5f, 0x00, 0x10, G2);                 /* get_wind_prop 0 16 -> G2 */
+    EMIT(&s, 0xbe, 0x04, 0x5f, 0x04, 0x01, 0x13);               /* set_font 4 1 -> G3 */
+    EMIT(&s, 0xbe, 0x04, 0x5f, 0x03, 0x00, 0x14);               /* set_font 3 0 -> G4 */
+    EMIT(&s, 0xbe, 0x04, 0x7f, 0x00, 0x15);                     /* set_font 0 -> G5 */
+    EMIT(&s, 0xf1, 0x7f, 0x02);                                 /* set_text_style 2 */
+    EMIT(&s, 0xf1, 0x7f, 0x01);                                 /* set_text_style 1 */
+    EMIT(&s, 0xbe, 0x13, 0x1f, 0xff, 0xfd, 0x0a, 0x16);         /* get_wind_prop -3 10 -> G6 */
+    EMIT(&s, 0xbe, 0x13, 0x5f, 0x01, 0x0c, 0x17);               /* get_wind_prop 1 12 -> G7 */
+    EMIT(&s, 0xbe, 0x13, 0x5f, 0x01, 0x0d, 0x18);               /* get_wind_prop 1 13 -> G8 */
+    emit_text(&s, "x");
+    EMIT(&s, 0xbe, 0x0d, 0x4f, 0x01, 0x03, 0xbd);               /* set_true_colour 1 $03bd (yellow) */
+    EMIT(&s, 0xbe, 0x13, 0x5f, 0x00, 0x11, 0x19);               /* get_wind_prop 0 17 -> G9 */
+    EMIT(&s, 0xba);
+    run(&s, &out, &m, &mem);
+    CHECK_EQ_INT(zm_read_word(&mem, GLOBALS), 0x0403);
+    CHECK_EQ_INT(zm_read_word(&mem, GLOBALS + 2), 0x0206);
+    CHECK_EQ_INT(zm_read_word(&mem, GLOBALS + 4), 0x59a0);
+    CHECK_EQ_INT(zm_read_word(&mem, GLOBALS + 6), 1);
+    CHECK_EQ_INT(zm_read_word(&mem, GLOBALS + 8), 0);
+    CHECK_EQ_INT(zm_read_word(&mem, GLOBALS + 10), 1);
+    CHECK_EQ_INT(zm_read_word(&mem, GLOBALS + 12), 3);
+    CHECK_EQ_INT(zm_read_word(&mem, GLOBALS + 14), 4);
+    CHECK_EQ_INT(zm_read_word(&mem, GLOBALS + 16), 0x0101);
+    CHECK_EQ_INT(zm_read_word(&mem, GLOBALS + 18), 0x03bd);
+    CHECK_EQ_INT(last_pen.style, 3);
+    CHECK_EQ_INT(last_pen.foreground, ZM_COLOUR_BLUE);
+    CHECK_EQ_INT(last_pen.background, ZM_COLOUR_BLACK);
+    CHECK_EQ_INT(last_pen.font, 1);
+    CHECK_EQ_INT(m.screen.windows[0].background, ZM_COLOUR_YELLOW);
+    zm_machine_free(&m);
+    zm_memory_free(&mem);
+
+    /* Spec §15 put_wind_prop and the opcodes with nothing behind them
+     * yet: scroll_window reaches the front end; mouse_window is noted;
+     * read_mouse reports nothing; make_menu fails; buffer_screen is
+     * always 0; picture_data finds no pictures without a resource file;
+     * picture_table is nothing; set_cursor -1 and -2 hide and show the
+     * cursor. Spec §15 move_window and window_size put a cursor left
+     * outside its window at the top left. */
+    story_init_v6(&s);
+    EMIT(&s, 0xbe, 0x19, 0x57, 0x02, 0x09, 0x07);               /* put_wind_prop 2 9 7 */
+    EMIT(&s, 0xbe, 0x13, 0x5f, 0x02, 0x09, G0);                 /* get_wind_prop 2 9 -> G0 */
+    EMIT(&s, 0xbe, 0x14, 0x4f, 0x00, 0xff, 0xfe);               /* scroll_window 0 -2 */
+    EMIT(&s, 0xbe, 0x17, 0x7f, 0x03);                           /* mouse_window 3 */
+    EMIT(&s, 0xbe, 0x16, 0x3f, ARRAY >> 8, ARRAY & 0xff);       /* read_mouse ARRAY */
+    EMIT(&s, 0xbe, 0x1b, 0x5f, 0x03, 0x00, 0x40 | 5);           /* make_menu 3 0 ?~+3 */
+    EMIT(&s, 0xe5, 0x7f, 'M');                                  /* print_char 'M' (skipped) */
+    EMIT(&s, 0xbe, 0x1d, 0x7f, 0x01, G1);                       /* buffer_screen 1 -> G1 */
+    EMIT(&s, 0xbe, 0x1d, 0x3f, 0xff, 0xff, G2);                 /* buffer_screen -1 -> G2 */
+    EMIT(&s, 0xbe, 0x06, 0x4f, 0x00, TABLE >> 8, TABLE & 0xff, 0x40 | 5); /* picture_data 0 TABLE ?~+3 */
+    EMIT(&s, 0xe5, 0x7f, 'P');                                  /* print_char 'P' (skipped) */
+    EMIT(&s, 0xbe, 0x1c, 0x3f, TABLE >> 8, TABLE & 0xff);       /* picture_table TABLE */
+    EMIT(&s, 0xef, 0x3f, 0xff, 0xff);                           /* set_cursor -1 */
+    EMIT(&s, 0xef, 0x5f, 0x02, 0x05);                           /* set_cursor 2 5 */
+    EMIT(&s, 0xbe, 0x11, 0x57, 0x00, 0x01, 0x03);               /* window_size 0 1 3 */
+    EMIT(&s, 0xf0, 0x3f, (ARRAY + 8) >> 8, (ARRAY + 8) & 0xff); /* get_cursor ARRAY+8 */
+    EMIT(&s, 0xba);
+    put_word(s.bytes, TABLE, 0x1234);
+    run(&s, &out, &m, &mem);
+    CHECK_EQ_INT(zm_read_word(&mem, GLOBALS), 7);
+    CHECK_EQ_INT(m.screen.mouse_window, 3);
+    CHECK_EQ_INT(zm_read_word(&mem, ARRAY), 0);
+    CHECK_EQ_INT(zm_read_word(&mem, ARRAY + 6), 0);
+    CHECK_EQ_INT(zm_read_word(&mem, GLOBALS + 2), 0);
+    CHECK_EQ_INT(zm_read_word(&mem, GLOBALS + 4), 0);
+    CHECK_EQ_INT(zm_read_word(&mem, TABLE), 0);
+    CHECK_EQ_INT(zm_read_word(&mem, TABLE + 2), 0);
+    CHECK_EQ_INT(m.screen.cursor_shown, 0);
+    CHECK_EQ_INT(zm_read_word(&mem, ARRAY + 8), 1);
+    CHECK_EQ_INT(zm_read_word(&mem, ARRAY + 10), 1);
+    CHECK_EQ_STR(out.text, "");
+    CHECK_EQ_STR(canvas_row(1), "");
+    CHECK_EQ_STR(screen_log, "scroll 1,1 8x40 by -2");
+    zm_machine_free(&m);
+    zm_memory_free(&mem);
+
+    /* Spec §11.1 for Version 6: the IBM PC's interpreter number, the
+     * screen in units, the font bytes the other way round, colours on
+     * and pictures off; bit 6 belongs to nobody and is left alone. */
+    story_init_v6(&s);
+    s.bytes[ZM_HEADER_FLAGS1] = 0xff;
+    put_word(s.bytes, ZM_HEADER_FLAGS2, 0x01f8);
+    EMIT(&s, 0xba);
+    run(&s, &out, &m, &mem);
+    CHECK_EQ_INT(zm_read_byte(&mem, ZM_HEADER_FLAGS1), ZM_FLAGS1_COLOURS | 0x40);
+    CHECK_EQ_INT(zm_read_word(&mem, ZM_HEADER_FLAGS2), ZM_FLAGS2_UNDO | ZM_FLAGS2_COLOURS);
+    CHECK_EQ_INT(zm_read_byte(&mem, ZM_HEADER_INTERPRETER_NUMBER), 6);
+    CHECK_EQ_INT(zm_read_byte(&mem, ZM_HEADER_SCREEN_HEIGHT), CANVAS_HEIGHT);
+    CHECK_EQ_INT(zm_read_byte(&mem, ZM_HEADER_SCREEN_WIDTH), CANVAS_WIDTH);
+    CHECK_EQ_INT(zm_read_word(&mem, ZM_HEADER_SCREEN_WIDTH_UNITS), CANVAS_WIDTH);
+    CHECK_EQ_INT(zm_read_word(&mem, ZM_HEADER_SCREEN_HEIGHT_UNITS), CANVAS_HEIGHT);
+    CHECK_EQ_INT(zm_read_byte(&mem, ZM_HEADER_FONT_BYTE_26), 1);
+    CHECK_EQ_INT(zm_read_byte(&mem, ZM_HEADER_FONT_BYTE_27), 1);
+    zm_machine_free(&m);
+    zm_memory_free(&mem);
+    canvas_hooks(0);
+}
+
+static void test_v6_newline_interrupt(void)
+{
+    story s;
+    output out;
+    zm_machine m;
+    zm_memory mem;
+
+    canvas_hooks(1);
+
+    /* Spec §8.8.3.2.2: with the countdown set, each new-line counts it
+     * down, and at zero the routine named in property 8 runs before
+     * printing goes on. R2 moves the left margin in, so the next lines
+     * start further right. */
+    story_init_v6(&s);
+    EMIT(&s, 0xbe, 0x19, 0x53, 0x00, 0x08);                     /* put_wind_prop 0 8 R2 */
+    emit_packed(&s, R2);
+    EMIT(&s, 0xbe, 0x19, 0x57, 0x00, 0x09, 0x02);               /* put_wind_prop 0 9 2 */
+    emit_text(&s, "a");
+    EMIT(&s, 0xbb);                                             /* new_line (countdown 1) */
+    emit_text(&s, "b");
+    EMIT(&s, 0xbb);                                             /* new_line (countdown 0: R2) */
+    emit_text(&s, "c");
+    EMIT(&s, 0xbb);
+    emit_text(&s, "d");
+    EMIT(&s, 0xbe, 0x13, 0x5f, 0x00, 0x09, G0);                 /* get_wind_prop 0 9 -> G0 */
+    EMIT(&s, 0xba);
+    at(&s, R2);
+    EMIT(&s, 0x00);                                             /* no locals */
+    EMIT(&s, 0xbe, 0x08, 0x57, 0x04, 0x00, 0x00);               /* set_margins 4 0 0 */
+    EMIT(&s, 0x95, G1);                                         /* inc G1 */
+    EMIT(&s, 0xb0);                                             /* rtrue */
+    run(&s, &out, &m, &mem);
+    CHECK_EQ_STR(canvas_row(1), "a");
+    CHECK_EQ_STR(canvas_row(2), "b");
+    CHECK_EQ_STR(canvas_row(3), "    c");
+    CHECK_EQ_STR(canvas_row(4), "    d");
+    CHECK_EQ_INT(zm_read_word(&mem, GLOBALS), 0);
+    CHECK_EQ_INT(zm_read_word(&mem, GLOBALS + 2), 1);
+    CHECK_EQ_INT(m.depth, 1);
+    zm_machine_free(&m);
+    zm_memory_free(&mem);
+    canvas_hooks(0);
+}
+
+static void test_v6_user_stacks(void)
+{
+    story s;
+    output out;
+    zm_machine m;
+    zm_memory mem;
+
+    /* Spec §6.6: a user stack's first word counts its spare slots;
+     * Spec §15 push_stack fills it from the far end and branches while
+     * there is room; pull with a stack operand takes from it; pop_stack
+     * discards from it or from the game stack. */
+    story_init_v6(&s);
+    put_word(s.bytes, TABLE, 2);                                /* two slots */
+    EMIT(&s, 0xbe, 0x18, 0x4f, 0x0a, TABLE >> 8, TABLE & 0xff, 0x80 | 0x40 | 5); /* push_stack 10 TABLE ?+3 */
+    EMIT(&s, 0xe5, 0x7f, '!');
+    EMIT(&s, 0xbe, 0x18, 0x4f, 0x0b, TABLE >> 8, TABLE & 0xff, 0x80 | 0x40 | 5); /* push_stack 11 TABLE ?+3 */
+    EMIT(&s, 0xe5, 0x7f, '!');
+    EMIT(&s, 0xbe, 0x18, 0x4f, 0x0c, TABLE >> 8, TABLE & 0xff, 0x40 | 5); /* push_stack 12 TABLE ?~+3 (full) */
+    EMIT(&s, 0xe5, 0x7f, '!');
+    EMIT(&s, 0xe9, 0x3f, TABLE >> 8, TABLE & 0xff, G0);         /* pull TABLE -> G0 */
+    EMIT(&s, 0xe8, 0x7f, 0x05);                                 /* push 5 */
+    EMIT(&s, 0xe8, 0x7f, 0x06);                                 /* push 6 */
+    EMIT(&s, 0xe8, 0x7f, 0x07);                                 /* push 7 */
+    EMIT(&s, 0xbe, 0x15, 0x7f, 0x02);                           /* pop_stack 2 */
+    EMIT(&s, 0xe9, 0xff, G1);                                   /* pull -> G1 (game stack) */
+    EMIT(&s, 0xbe, 0x15, 0x4f, 0x01, TABLE >> 8, TABLE & 0xff); /* pop_stack 1 TABLE */
+    EMIT(&s, 0xba);
+    run(&s, &out, &m, &mem);
+    CHECK_EQ_STR(out.text, "");
+    CHECK_EQ_INT(zm_read_word(&mem, GLOBALS), 11);
+    CHECK_EQ_INT(zm_read_word(&mem, GLOBALS + 2), 5);
+    CHECK_EQ_INT(zm_read_word(&mem, TABLE), 2);
+    CHECK_EQ_INT(zm_read_word(&mem, TABLE + 4), 10);
+    CHECK_EQ_INT(zm_read_word(&mem, TABLE + 2), 11);
+    CHECK_EQ_INT(m.sp, 0);
+    zm_machine_free(&m);
+    zm_memory_free(&mem);
+
+    /* Spec §6.3.1: the game stack cannot give up more than the routine
+     * pushed. */
+    story_init_v6(&s);
+    EMIT(&s, 0xe8, 0x7f, 0x05);                                 /* push 5 */
+    EMIT(&s, 0xbe, 0x15, 0x7f, 0x02);                           /* pop_stack 2 */
+    expect_fault(&s, "holds only 1", &out);
+}
+
+static void test_v6_formatted_stream_and_print_form(void)
+{
+    story s;
+    output out;
+    zm_machine m;
+    zm_memory mem;
+
+    canvas_hooks(1);
+
+    /* Spec §15 output_stream: with a width, stream 3 formats the text
+     * into lines, each a count and its characters, ended by a zero
+     * count (Spec §15 print_form), and the header word at $30 has the
+     * width of all of it (Spec §7.1.2.1); print_form prints it back,
+     * each line on its own. */
+    story_init_v6(&s);
+    EMIT(&s, 0xf3, 0x43, 0x03, TABLE >> 8, TABLE & 0xff, 0xff, 0xf4); /* output_stream 3 TABLE -12 */
+    emit_text(&s, "one two three four");
+    EMIT(&s, 0xf3, 0x3f, 0xff, 0xfd);                           /* output_stream -3 */
+    EMIT(&s, 0x0f, 0x00, 0x18, G0);                             /* loadw 0 $18 -> G0 (header $30) */
+    EMIT(&s, 0xbe, 0x1a, 0x3f, TABLE >> 8, TABLE & 0xff);       /* print_form TABLE */
+    EMIT(&s, 0xba);
+    run(&s, &out, &m, &mem);
+    CHECK_EQ_INT(zm_read_word(&mem, TABLE), 7);
+    CHECK(memcmp(mem.bytes + TABLE + 2, "one two", 7) == 0);
+    CHECK_EQ_INT(zm_read_word(&mem, TABLE + 9), 10);
+    CHECK(memcmp(mem.bytes + TABLE + 11, "three four", 10) == 0);
+    CHECK_EQ_INT(zm_read_word(&mem, TABLE + 21), 0);
+    CHECK_EQ_INT(zm_read_word(&mem, GLOBALS), 17);
+    CHECK_EQ_STR(canvas_row(1), "one two");
+    CHECK_EQ_STR(canvas_row(2), "three four");
+    zm_machine_free(&m);
+    zm_memory_free(&mem);
+
+    /* A plain stream 3 in Version 6 measures its last line in $30,
+     * which is how a game centres text. */
+    story_init_v6(&s);
+    EMIT(&s, 0xf3, 0x4f, 0x03, TABLE >> 8, TABLE & 0xff);       /* output_stream 3 TABLE */
+    emit_text(&s, "abcdef");
+    EMIT(&s, 0xbb);
+    emit_text(&s, "xyz");
+    EMIT(&s, 0xf3, 0x3f, 0xff, 0xfd);                           /* output_stream -3 */
+    EMIT(&s, 0x0f, 0x00, 0x18, G0);                             /* loadw 0 $18 -> G0 */
+    EMIT(&s, 0xba);
+    run(&s, &out, &m, &mem);
+    CHECK_EQ_INT(zm_read_word(&mem, TABLE), 10);
+    CHECK_EQ_INT(zm_read_byte(&mem, TABLE + 8), 13);
+    CHECK_EQ_INT(zm_read_word(&mem, GLOBALS), 3);
+    zm_machine_free(&m);
+    zm_memory_free(&mem);
+    canvas_hooks(0);
+}
+
+/* A resource file with one picture, 16 by 8 pixels, drawn for a window
+ * the size of the test canvas (Blorb §11.2), release 9. */
+static void build_resources(uint8_t *bytes, uint32_t *size)
+{
+    static const uint8_t png[24] = {
+        0x89, 'P', 'N', 'G', 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 13, 'I', 'H', 'D', 'R', 0, 0, 0, 16, 0, 0, 0, 8
+    };
+    uint32_t n = 0;
+
+    memset(bytes, 0, 160);
+    memcpy(bytes, "FORM", 4);
+    memcpy(bytes + 8, "IFRS", 4);
+    memcpy(bytes + 12, "RIdx", 4);
+    bytes[19] = 16;
+    bytes[23] = 1;
+    memcpy(bytes + 24, "Pict", 4);
+    bytes[31] = 1;
+    bytes[35] = 36;
+    n = 36;
+    memcpy(bytes + n, "PNG ", 4);
+    bytes[n + 7] = sizeof png;
+    memcpy(bytes + n + 8, png, sizeof png);
+    n += 8 + sizeof png;
+    memcpy(bytes + n, "RelN", 4);
+    bytes[n + 7] = 2;
+    bytes[n + 9] = 9;
+    n += 10;
+    memcpy(bytes + n, "Reso", 4);
+    bytes[n + 7] = 24 + 28;
+    bytes[n + 11] = CANVAS_WIDTH;
+    bytes[n + 15] = CANVAS_HEIGHT;
+    bytes[n + 35] = 1;                                          /* picture 1 */
+    bytes[n + 39] = 1;                                          /* ratio 1/1 */
+    bytes[n + 43] = 1;
+    n += 8 + 24 + 28;
+    bytes[7] = (uint8_t)(n - 8);
+    *size = n;
+}
+
+static void test_v6_pictures(void)
+{
+    story s;
+    output out;
+    zm_machine m;
+    zm_memory mem;
+    zm_blorb resources;
+    uint8_t bytes[160];
+    uint32_t size;
+
+    canvas_hooks(1);
+    build_resources(bytes, &size);
+    CHECK_EQ_INT(zm_blorb_load_bytes(&resources, bytes, size), ZM_OK);
+
+    /* Spec §15 picture_data: the count and release for picture 0, the
+     * size in units for a picture, and no branch for one that is not
+     * there; Spec §15 draw_picture at a position or at the cursor, and
+     * erase_picture over the same area; Spec §11.1.4: the header says
+     * there are pictures. */
+    story_init_v6(&s);
+    EMIT(&s, 0xbe, 0x06, 0x4f, 0x00, TABLE >> 8, TABLE & 0xff, 0x80 | 0x40 | 5); /* picture_data 0 TABLE ?+3 */
+    EMIT(&s, 0xe5, 0x7f, '0');                                  /* print_char '0' (skipped) */
+    EMIT(&s, 0xbe, 0x06, 0x4f, 0x01, (TABLE + 4) >> 8, (TABLE + 4) & 0xff, 0x80 | 0x40 | 5);
+    EMIT(&s, 0xe5, 0x7f, '1');                                  /* (skipped) */
+    EMIT(&s, 0xbe, 0x06, 0x4f, 0x02, (TABLE + 8) >> 8, (TABLE + 8) & 0xff, 0x40 | 5);
+    EMIT(&s, 0xe5, 0x7f, '2');                                  /* (skipped) */
+    EMIT(&s, 0xbe, 0x05, 0x57, 0x01, 0x02, 0x03);               /* draw_picture 1 2 3 */
+    EMIT(&s, 0xef, 0x5f, 0x04, 0x05);                           /* set_cursor 4 5 */
+    EMIT(&s, 0xbe, 0x05, 0x7f, 0x01);                           /* draw_picture 1 */
+    EMIT(&s, 0xbe, 0x07, 0x57, 0x01, 0x02, 0x03);               /* erase_picture 1 2 3 */
+    EMIT(&s, 0xba);
+    CHECK_EQ_INT(zm_memory_load_bytes(&mem, s.bytes, STORY_SIZE), ZM_OK);
+    CHECK_EQ_INT(zm_machine_init(&m, &mem, &io), ZM_OK);
+    CHECK_EQ_INT(zm_read_byte(&mem, ZM_HEADER_FLAGS1) & ZM_FLAGS1_PICTURES, 0);
+    zm_machine_use_resources(&m, &resources);
+    CHECK_EQ_INT(zm_read_byte(&mem, ZM_HEADER_FLAGS1) & ZM_FLAGS1_PICTURES, ZM_FLAGS1_PICTURES);
+    memset(&out, 0, sizeof out);
+    io.context = &out;
+    zm_machine_run(&m);
+    CHECK_EQ_STR(out.text, "");
+    CHECK_EQ_INT(zm_read_word(&mem, TABLE), 1);
+    CHECK_EQ_INT(zm_read_word(&mem, TABLE + 2), 9);
+    CHECK_EQ_INT(zm_read_word(&mem, TABLE + 4), 8);
+    CHECK_EQ_INT(zm_read_word(&mem, TABLE + 6), 16);
+    CHECK_EQ_INT(zm_read_word(&mem, TABLE + 8), 0);
+    CHECK_EQ_STR(screen_log, "picture 1 at 2,3 8x16;picture 1 at 4,5 8x16;erase 2,3 8x16 bg2");
+    zm_machine_free(&m);
+    zm_memory_free(&mem);
+
+    /* Spec §15 draw_picture: "It is illegal to call this with an invalid
+     * picture number." */
+    story_init_v6(&s);
+    EMIT(&s, 0xbe, 0x05, 0x57, 0x07, 0x01, 0x01);               /* draw_picture 7 1 1 */
+    CHECK_EQ_INT(zm_memory_load_bytes(&mem, s.bytes, STORY_SIZE), ZM_OK);
+    CHECK_EQ_INT(zm_machine_init(&m, &mem, &io), ZM_OK);
+    zm_machine_use_resources(&m, &resources);
+    zm_set_fatal_handler(trap_fault);
+    if (setjmp(fault_jump) == 0) {
+        zm_machine_run(&m);
+        CHECK(0 && "draw_picture of a missing picture did not fault");
+    } else {
+        CHECK(strstr(fault_message, "no picture 7") != NULL);
+    }
+    zm_set_fatal_handler(NULL);
+    zm_machine_free(&m);
+    zm_memory_free(&mem);
+    zm_blorb_free(&resources);
+    canvas_hooks(0);
+}
+
+static void test_v6_input_is_shown_by_the_interpreter(void)
+{
+    static const char *const lines[] = { "Take Lamp", NULL };
+    story s;
+    output out;
+    zm_machine m;
+    zm_memory mem;
+
+    canvas_hooks(1);
+    script(lines, NULL);
+
+    /* Spec §7.1.1.1: in Version 6 the interpreter shows what was typed
+     * in the window, and only there: the transcript gets the window's
+     * own text but not the command. The buffer still holds the text in
+     * lower case (Spec §15 read). */
+    story_init_v6(&s);
+    put_word(s.bytes, ZM_HEADER_FLAGS2, ZM_FLAGS2_TRANSCRIPT);
+    s.bytes[TABLE2] = 20;
+    EMIT(&s, 0xe5, 0x7f, '>');                                  /* print_char '>' */
+    EMIT(&s, 0xe4, 0x1f, TABLE2 >> 8, TABLE2 & 0xff, 0x00, G0); /* aread TABLE2 0 -> G0 */
+    emit_text(&s, "Taken.");
+    EMIT(&s, 0xba);
+    run(&s, &out, &m, &mem);
+    CHECK_EQ_STR(canvas_row(1), ">Take Lamp");
+    CHECK_EQ_STR(canvas_row(2), "Taken.");
+    CHECK_EQ_INT(zm_read_byte(&mem, TABLE2 + 1), 9);
+    CHECK(memcmp(mem.bytes + TABLE2 + 2, "take lamp", 9) == 0);
+    CHECK_EQ_INT(zm_read_word(&mem, GLOBALS), 13);
+    CHECK_EQ_STR(transcript_text, ">Taken.");
+    zm_machine_free(&m);
+    zm_memory_free(&mem);
+    canvas_hooks(0);
+    script(NULL, NULL);
 }
 
 /*
@@ -2747,6 +3402,13 @@ int main(void)
     RUN_TEST(test_table_opcodes);
     RUN_TEST(test_unicode_printing);
     RUN_TEST(test_screen_faults);
+    RUN_TEST(test_v6_text_is_laid_out_in_windows);
+    RUN_TEST(test_v6_window_properties_and_appearance);
+    RUN_TEST(test_v6_newline_interrupt);
+    RUN_TEST(test_v6_user_stacks);
+    RUN_TEST(test_v6_formatted_stream_and_print_form);
+    RUN_TEST(test_v6_pictures);
+    RUN_TEST(test_v6_input_is_shown_by_the_interpreter);
     RUN_TEST(test_save_and_restore_in_version_3);
     RUN_TEST(test_save_and_restore_in_version_5);
     RUN_TEST(test_auxiliary_files);

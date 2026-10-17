@@ -7,6 +7,7 @@
 # included as "zm/<name>.h".
 
 add_library(zmachine STATIC
+    blorb.c
     fatal.c
     dictionary.c
     header.c

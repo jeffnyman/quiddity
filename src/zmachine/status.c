@@ -21,8 +21,12 @@ const char *zm_status_message(zm_status status)
         return "story file has an unknown Version number";
     case ZM_ERROR_BAD_MEMORY_MAP:
         return "story file header describes an impossible memory map";
-    case ZM_ERROR_BLORB_UNSUPPORTED:
-        return "Blorb files are not supported yet";
+    case ZM_ERROR_NOT_A_BLORB:
+        return "not a Blorb resource file";
+    case ZM_ERROR_BAD_BLORB:
+        return "Blorb file is damaged";
+    case ZM_ERROR_BLORB_NO_STORY:
+        return "Blorb file holds no Z-code story";
     case ZM_ERROR_NOT_A_SAVE:
         return "not a Quetzal saved game";
     case ZM_ERROR_WRONG_STORY:

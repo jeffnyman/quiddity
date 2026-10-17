@@ -18,6 +18,15 @@
  *
  * The screen functions report decisions the core has already made (see
  * zm/screen.h); the front end's job is to make them visible.
+ *
+ * Version 6 (Spec §8.8) is different in kind: its eight windows, its
+ * margins, and its cursor positions are all observable by the game, so
+ * the core lays the text out itself, in units, and asks the front end
+ * only to plot, erase, scroll, and draw pictures at given coordinates.
+ * Those are the canvas functions at the end; the window functions above
+ * them are not called for Version 6 at all. A front end without a canvas
+ * still gets the text, through print_char in the order it was printed,
+ * which is what a teletype can do with eight windows.
  */
 
 #ifndef ZM_IO_H
@@ -38,6 +47,18 @@ enum {
     ZM_INPUT_END = -1,
     ZM_INPUT_TIMEOUT = -2
 };
+
+struct zm_picture;
+
+/* How text is to look on the Version 6 canvas: the style as ZM_STYLE_*
+ * bits, the colours as codes 2 to 12, and the font (Spec §8.1.2), all as
+ * the window being printed in has them (Spec §8.8.3.2). */
+typedef struct zm_pen {
+    unsigned style;
+    unsigned foreground;
+    unsigned background;
+    unsigned font;
+} zm_pen;
 
 typedef struct zm_io {
     void *context;
@@ -64,6 +85,24 @@ typedef struct zm_io {
      * §10.5.3), for the header's timed-input bit. A front end that
      * cannot keep time leaves this 0 and ignores the timeout. */
     int timed_input;
+
+    /* Whether the front end shows colours (Spec §8.3.3). A front end
+     * with a set_colour function is taken to, whatever this says. */
+    int colours;
+
+    /* The fonts of Spec §8.1.2 the front end can show besides font 1,
+     * as bits: bit 3 for the character graphics font, bit 4 for the
+     * fixed-pitch one. Consulted for Version 6, where the pen carries
+     * the font; earlier Versions ask set_font below. */
+    unsigned fonts;
+
+    /* Spec §8.4.2, §8.8.1: in Version 6 the screen is measured in units,
+     * and these say how many units wide and high a character of font 1
+     * is. 0 means 1, so that units are characters, which suits a front
+     * end made of them; a front end that draws pixels gives the size of
+     * its font. Earlier Versions always use 1 by 1. */
+    unsigned font_width;
+    unsigned font_height;
 
     /*
      * Output.
@@ -202,6 +241,49 @@ typedef struct zm_io {
      * zm/screen.h; volume 1 to 8 or 255 for loudest; repeats a count or
      * 255 for ever. Left NULL, the header says there is no sound. */
     void (*sound_effect)(void *context, unsigned number, unsigned effect, unsigned volume, unsigned repeats);
+
+    /*
+     * The Version 6 canvas (Spec §8.8).
+     *
+     * Every position is in units, with (1, 1) the top left of the
+     * screen, as the Standard counts them. The core has already clipped
+     * text to its window and kept the cursor inside the margins; the
+     * front end need only draw where it is told.
+     */
+
+    /* Draw count characters of Unicode text with their top left corner
+     * at (y, x), each character font_width units wide, in the pen's
+     * style, colours, and font. */
+    void (*plot_text)(void *context, unsigned y, unsigned x, const uint16_t *unicode, unsigned count,
+                      const zm_pen *pen);
+
+    /* Paint the rectangle of the given height and width whose top left
+     * corner is (y, x) in the pen's background colour (Spec §8.8.5). */
+    void (*erase_area)(void *context, unsigned y, unsigned x, unsigned height, unsigned width, const zm_pen *pen);
+
+    /* Move what is inside that rectangle up by the given number of
+     * units, or down if it is negative, filling the units uncovered
+     * with the pen's background colour (Spec §15 scroll_window, and
+     * the scrolling of §8.8.3.1 when a window is full). */
+    void (*scroll_area)(void *context, unsigned y, unsigned x, unsigned height, unsigned width, int units,
+                        const zm_pen *pen);
+
+    /* Draw a picture (Spec §15 draw_picture, §8.8.6) with its top left
+     * corner at (y, x), filling the given height and width in units,
+     * which is the size picture_data reported to the game. The picture
+     * is as the resource file holds it (zm/blorb.h): a PNG or JPEG to
+     * decode, or a placeholder rectangle, which draws nothing. Left
+     * NULL, the header says there are no pictures and picture_data
+     * finds none. */
+    void (*draw_picture)(void *context, const struct zm_picture *picture, unsigned y, unsigned x,
+                         unsigned height, unsigned width);
+
+    /* The size in units a picture takes on this front end's screen, if
+     * the front end wants a say: a front end made of character cells,
+     * which are not square, may scale pictures to fit its grid rather
+     * than by the pixel rule of Blorb §11.2 that zm_picture_scaled_size
+     * applies when this is left NULL. */
+    void (*picture_size)(void *context, const struct zm_picture *picture, unsigned *height, unsigned *width);
 } zm_io;
 
 #endif /* ZM_IO_H */

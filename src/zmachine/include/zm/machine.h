@@ -142,6 +142,10 @@ zm_status zm_machine_init(zm_machine *m, zm_memory *mem, const zm_io *io);
 /* Release what zm_machine_init() allocated. Does not free the memory. */
 void zm_machine_free(zm_machine *m);
 
+/* Give the machine the story's resource file (zm/blorb.h), where its
+ * pictures are, or NULL for none. The header's picture bits follow. */
+void zm_machine_use_resources(zm_machine *m, const zm_blorb *resources);
+
 /* Execute one instruction. */
 void zm_machine_step(zm_machine *m);
 

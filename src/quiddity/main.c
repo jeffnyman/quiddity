@@ -18,6 +18,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "zm/blorb.h"
 #include "zm/machine.h"
 #include "zm/memory.h"
 #include "zm/status.h"
@@ -59,6 +60,51 @@ static void report_load_failure(const char *path, zm_status status)
     }
 }
 
+/* Find the story's pictures and sounds (zm/blorb.h). A story file that is
+ * itself a Blorb carries them; a bare story file may have a resource
+ * file beside it with the same name and one of the Blorb suffixes, which
+ * must belong to it (Blorb §6). Returns whether one was loaded. */
+static int find_resources(const char *path, const zm_memory *mem, zm_blorb *resources)
+{
+    static const char *const suffixes[] = { ".blb", ".blorb", ".zblorb" };
+    size_t base_length = strlen(path);
+    char *sibling;
+
+    if (zm_blorb_load_file(resources, path) == ZM_OK) {
+        return 1;
+    }
+
+    /* The story's name up to its extension, if the extension is in the
+     * file name rather than a directory on the way to it. */
+    for (size_t i = base_length; i > 0; i--) {
+        if (path[i - 1] == '/' || path[i - 1] == '\\') {
+            break;
+        }
+        if (path[i - 1] == '.') {
+            base_length = i - 1;
+            break;
+        }
+    }
+    sibling = malloc(base_length + 8);
+    if (sibling == NULL) {
+        return 0;
+    }
+    for (size_t i = 0; i < sizeof suffixes / sizeof suffixes[0]; i++) {
+        memcpy(sibling, path, base_length);
+        strcpy(sibling + base_length, suffixes[i]);
+        if (zm_blorb_load_file(resources, sibling) == ZM_OK) {
+            if (zm_blorb_matches(resources, mem)) {
+                free(sibling);
+                return 1;
+            }
+            fprintf(stderr, "quiddity: %s belongs to a different story and is ignored\n", sibling);
+            zm_blorb_free(resources);
+        }
+    }
+    free(sibling);
+    return 0;
+}
+
 int main(int argc, char **argv)
 {
     int show_help = 0;
@@ -69,6 +115,8 @@ int main(int argc, char **argv)
     int i = 1;
     const char *path;
     zm_memory mem;
+    zm_blorb resources;
+    int have_resources;
     zm_machine machine;
     terminal term;
     zm_io io;
@@ -140,12 +188,19 @@ int main(int argc, char **argv)
         return EXIT_SUCCESS;
     }
 
+    have_resources = find_resources(path, &mem, &resources);
     terminal_init(&term, &mem, &io, path, transcript_path, record_path);
     status = zm_machine_init(&machine, &mem, &io);
     if (status != ZM_OK) {
         fprintf(stderr, "quiddity: %s\n", zm_status_message(status));
+        if (have_resources) {
+            zm_blorb_free(&resources);
+        }
         zm_memory_free(&mem);
         return EXIT_FAILURE;
+    }
+    if (have_resources) {
+        zm_machine_use_resources(&machine, &resources);
     }
 
     /* Runs until the game quits. A fault inside the machine goes through
@@ -154,6 +209,9 @@ int main(int argc, char **argv)
     terminal_finish(&term);
 
     zm_machine_free(&machine);
+    if (have_resources) {
+        zm_blorb_free(&resources);
+    }
     zm_memory_free(&mem);
     return EXIT_SUCCESS;
 }
