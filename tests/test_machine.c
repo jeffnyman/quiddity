@@ -22,6 +22,7 @@
 #include "zm/header.h"
 #include "zm/machine.h"
 #include "zm/memory.h"
+#include "zm/screen.h"
 #include "zm/text.h"
 
 #include "check.h"
@@ -153,6 +154,155 @@ static void script(const char *const *lines, const int *keys)
     io.show_status = lines != NULL || keys != NULL ? record_status : NULL;
 }
 
+
+/* Screen hooks that log what the front end is told, and collectors for
+ * the transcript and the command record (Spec §7). */
+static char screen_log[512];
+static char transcript_text[128];
+static char record_text[128];
+static int transcript_allowed;
+
+static void log_call(const char *text)
+{
+    if (strlen(screen_log) + strlen(text) + 2 < sizeof screen_log) {
+        if (screen_log[0] != '\0') {
+            strcat(screen_log, ";");
+        }
+        strcat(screen_log, text);
+    }
+}
+
+static void hook_split_window(void *context, unsigned lines)
+{
+    char text[32];
+    (void)context;
+    snprintf(text, sizeof text, "split %u", lines);
+    log_call(text);
+}
+
+static void hook_set_window(void *context, unsigned window)
+{
+    char text[32];
+    (void)context;
+    snprintf(text, sizeof text, "window %u", window);
+    log_call(text);
+}
+
+static void hook_erase_window(void *context, int window)
+{
+    char text[32];
+    (void)context;
+    snprintf(text, sizeof text, "erase %d", window);
+    log_call(text);
+}
+
+static void hook_erase_line(void *context)
+{
+    (void)context;
+    log_call("erase_line");
+}
+
+static void hook_set_cursor(void *context, unsigned row, unsigned column)
+{
+    char text[32];
+    (void)context;
+    snprintf(text, sizeof text, "cursor %u,%u", row, column);
+    log_call(text);
+}
+
+static void hook_set_text_style(void *context, unsigned style)
+{
+    char text[32];
+    (void)context;
+    snprintf(text, sizeof text, "style %u", style);
+    log_call(text);
+}
+
+static void hook_set_colour(void *context, unsigned foreground, unsigned background)
+{
+    char text[32];
+    (void)context;
+    snprintf(text, sizeof text, "colour %u/%u", foreground, background);
+    log_call(text);
+}
+
+static void hook_set_buffering(void *context, int on)
+{
+    (void)context;
+    log_call(on ? "buffer on" : "buffer off");
+}
+
+static void hook_sound_effect(void *context, unsigned number, unsigned effect, unsigned volume, unsigned repeats)
+{
+    char text[48];
+    (void)context;
+    snprintf(text, sizeof text, "sound %u %u %u %u", number, effect, volume, repeats);
+    log_call(text);
+}
+
+static void hook_print_unicode(void *context, uint16_t unicode)
+{
+    char text[32];
+    (void)context;
+    snprintf(text, sizeof text, "unicode %04x", (unsigned)unicode);
+    log_call(text);
+}
+
+static int hook_set_transcript(void *context, int on)
+{
+    (void)context;
+    log_call(on ? "transcript on" : "transcript off");
+    return transcript_allowed;
+}
+
+static void hook_transcript_char(void *context, uint16_t zscii)
+{
+    size_t n = strlen(transcript_text);
+    (void)context;
+    if (n + 1 < sizeof transcript_text) {
+        transcript_text[n] = zscii == ZM_ZSCII_NEWLINE ? '\n' : (char)zscii;
+        transcript_text[n + 1] = '\0';
+    }
+}
+
+static void hook_record_input(void *context, const uint16_t *zscii, unsigned count)
+{
+    size_t n = strlen(record_text);
+    (void)context;
+    for (unsigned i = 0; i < count && n + 1 < sizeof record_text; i++) {
+        record_text[n++] = (char)zscii[i];
+    }
+    if (n + 1 < sizeof record_text) {
+        record_text[n++] = '|';
+    }
+    record_text[n] = '\0';
+}
+
+/* Install every screen and file hook, or remove them all. */
+static void screen_hooks(int on)
+{
+    screen_log[0] = '\0';
+    transcript_text[0] = '\0';
+    record_text[0] = '\0';
+    transcript_allowed = 1;
+    io.split_window = on ? hook_split_window : NULL;
+    io.set_window = on ? hook_set_window : NULL;
+    io.erase_window = on ? hook_erase_window : NULL;
+    io.erase_line = on ? hook_erase_line : NULL;
+    io.set_cursor = on ? hook_set_cursor : NULL;
+    io.set_text_style = on ? hook_set_text_style : NULL;
+    io.set_colour = on ? hook_set_colour : NULL;
+    io.set_buffering = on ? hook_set_buffering : NULL;
+    io.sound_effect = on ? hook_sound_effect : NULL;
+    io.print_unicode = on ? hook_print_unicode : NULL;
+    io.set_transcript = on ? hook_set_transcript : NULL;
+    io.transcript_char = on ? hook_transcript_char : NULL;
+    io.record_input = on ? hook_record_input : NULL;
+    io.styles = on ? (ZM_STYLE_BOLD | ZM_STYLE_ITALIC) : 0;
+    io.screen_width = 0;
+    io.screen_height = 0;
+}
+
 /* A handler that records the fault and jumps back to the test. */
 static jmp_buf fault_jump;
 static char fault_message[256];
@@ -227,6 +377,9 @@ static const uint8_t hello[] = { 0x11, 0xaa, 0x46, 0x34, 0x16, 0x45, 0x9c, 0xa5 
 static void run(const story *s, output *out, zm_machine *m, zm_memory *mem)
 {
     memset(out, 0, sizeof *out);
+    screen_log[0] = '\0';
+    transcript_text[0] = '\0';
+    record_text[0] = '\0';
     io.context = out;
 
     CHECK_EQ_INT(zm_memory_load_bytes(mem, s->bytes, STORY_SIZE), ZM_OK);
@@ -714,9 +867,9 @@ static void test_faults(void)
     expect_fault(&s, "illegal opcode", &out);
 
     /* An opcode that exists but is not implemented yet is named. */
-    story_init(&s, 3);
-    EMIT(&s, 0xf3, 0x7f, 0x01);                                 /* output_stream 1 */
-    expect_fault(&s, "output_stream", &out);
+    story_init(&s, 5);
+    EMIT(&s, 0xbe, 0x09, 0xff, G0);                             /* save_undo -> G0 */
+    expect_fault(&s, "save_undo", &out);
 
     /* Spec §15 je: one operand is not permitted. */
     story_init(&s, 3);
@@ -1479,18 +1632,69 @@ static void test_header_flags_are_set_at_start(void)
     zm_machine_free(&m);
     zm_memory_free(&mem);
 
-    /* Spec §11.1.4, §11.1.2: from Version 4, every capability bit is
-     * cleared for now, and the requests in Flags 2 the interpreter cannot
-     * grant are cleared while the others stay. */
+    /* Spec §8.6.1.2: a front end with an upper window sets bit 5. */
+    screen_hooks(1);
+    story_init(&s, 3);
+    EMIT(&s, 0xba);
+    run(&s, &out, &m, &mem);
+    CHECK_EQ_INT(zm_read_byte(&mem, ZM_HEADER_FLAGS1), ZM_FLAGS1_V3_NO_STATUS_LINE | ZM_FLAGS1_V3_SCREEN_SPLITTING);
+    zm_machine_free(&m);
+    zm_memory_free(&mem);
+    screen_hooks(0);
+
+    /* Spec §11.1.4, §11.1.2: from Version 4, every capability bit says
+     * what the front end can do, which here is nothing; the requests in
+     * Flags 2 the interpreter cannot grant are cleared while the others
+     * stay, and the transcript bit is cleared because no transcript can
+     * be made (Spec §7.4). */
     story_init(&s, 5);
     s.bytes[ZM_HEADER_FLAGS1] = 0xff;
     put_word(s.bytes, ZM_HEADER_FLAGS2, 0x01fb);
     EMIT(&s, 0xba);
     run(&s, &out, &m, &mem);
     CHECK_EQ_INT(zm_read_byte(&mem, ZM_HEADER_FLAGS1), 0x40);
-    CHECK_EQ_INT(zm_read_word(&mem, ZM_HEADER_FLAGS2), ZM_FLAGS2_TRANSCRIPT | ZM_FLAGS2_FORCE_FIXED | ZM_FLAGS2_COLOURS);
+    CHECK_EQ_INT(zm_read_word(&mem, ZM_HEADER_FLAGS2), ZM_FLAGS2_FORCE_FIXED | ZM_FLAGS2_COLOURS);
+
+    /* Spec §11.1.3, §8.4, §8.4.3, §8.1.1, §8.3.3, §11.1.5: the fields
+     * that describe the interpreter and its screen. */
+    CHECK_EQ_INT(zm_read_byte(&mem, ZM_HEADER_INTERPRETER_NUMBER), 1);
+    CHECK_EQ_INT(zm_read_byte(&mem, ZM_HEADER_INTERPRETER_VERSION), 'Q');
+    CHECK_EQ_INT(zm_read_byte(&mem, ZM_HEADER_SCREEN_HEIGHT), 24);
+    CHECK_EQ_INT(zm_read_byte(&mem, ZM_HEADER_SCREEN_WIDTH), 80);
+    CHECK_EQ_INT(zm_read_word(&mem, ZM_HEADER_SCREEN_WIDTH_UNITS), 80);
+    CHECK_EQ_INT(zm_read_word(&mem, ZM_HEADER_SCREEN_HEIGHT_UNITS), 24);
+    CHECK_EQ_INT(zm_read_byte(&mem, ZM_HEADER_FONT_BYTE_26), 1);
+    CHECK_EQ_INT(zm_read_byte(&mem, ZM_HEADER_FONT_BYTE_27), 1);
+    CHECK_EQ_INT(zm_read_byte(&mem, ZM_HEADER_DEFAULT_BACKGROUND), ZM_COLOUR_BLACK);
+    CHECK_EQ_INT(zm_read_byte(&mem, ZM_HEADER_DEFAULT_FOREGROUND), ZM_COLOUR_WHITE);
+    CHECK_EQ_INT(zm_read_byte(&mem, ZM_HEADER_STANDARD_MAJOR), 1);
+    CHECK_EQ_INT(zm_read_byte(&mem, ZM_HEADER_STANDARD_MINOR), 1);
     zm_machine_free(&m);
     zm_memory_free(&mem);
+
+    /* With a front end that has colours, bold and italic, and a screen
+     * of its own size, the header says so. */
+    screen_hooks(1);
+    io.screen_width = 60;
+    io.screen_height = 14;
+    io.default_foreground = ZM_COLOUR_BLUE;
+    io.default_background = ZM_COLOUR_YELLOW;
+    story_init(&s, 5);
+    put_word(s.bytes, ZM_HEADER_FLAGS2, 0x01fb);
+    EMIT(&s, 0xba);
+    run(&s, &out, &m, &mem);
+    CHECK_EQ_INT(zm_read_byte(&mem, ZM_HEADER_FLAGS1), ZM_FLAGS1_COLOURS | ZM_FLAGS1_BOLD | ZM_FLAGS1_ITALIC | ZM_FLAGS1_SOUND);
+    CHECK_EQ_INT(zm_read_word(&mem, ZM_HEADER_FLAGS2), ZM_FLAGS2_TRANSCRIPT | ZM_FLAGS2_FORCE_FIXED | ZM_FLAGS2_COLOURS | ZM_FLAGS2_SOUND);
+    CHECK_EQ_INT(zm_read_byte(&mem, ZM_HEADER_SCREEN_HEIGHT), 14);
+    CHECK_EQ_INT(zm_read_byte(&mem, ZM_HEADER_SCREEN_WIDTH), 60);
+    CHECK_EQ_INT(zm_read_byte(&mem, ZM_HEADER_DEFAULT_BACKGROUND), ZM_COLOUR_YELLOW);
+    CHECK_EQ_INT(zm_read_byte(&mem, ZM_HEADER_DEFAULT_FOREGROUND), ZM_COLOUR_BLUE);
+    CHECK_EQ_STR(screen_log, "transcript on");
+    zm_machine_free(&m);
+    zm_memory_free(&mem);
+    io.default_foreground = 0;
+    io.default_background = 0;
+    screen_hooks(0);
 }
 
 static void test_input_faults(void)
@@ -1547,6 +1751,399 @@ static void test_input_faults(void)
     expect_fault(&s, "cannot read a line", &out);
 }
 
+
+/* Dynamic memory free for the screen tests, above the property tables. */
+#define STREAM1 0x340u
+#define STREAM2 0x360u
+#define ARRAY 0x380u
+#define TABLE2 0x3a0u
+
+static void test_output_streams(void)
+{
+    static const char *const lines[] = { "Look", NULL };
+    story s;
+    output out;
+    zm_machine m;
+    zm_memory mem;
+
+    screen_hooks(1);
+    script(lines, NULL);
+
+    /* Spec §7.1.2.1: stream 3 takes everything, counts it, and shows
+     * nothing on the screen; Spec §3.8.2.1: null is not counted. Spec
+     * §7.1.2.1.1: a second selection nests inside the first. */
+    story_init(&s, 5);
+    EMIT(&s, 0xf3, 0x4f, 0x03, STREAM1 >> 8, STREAM1 & 0xff);  /* output_stream 3 STREAM1 */
+    EMIT(&s, 0xe5, 0x7f, 'H');                                  /* print_char 'H' */
+    EMIT(&s, 0xe5, 0x7f, 0x00);                                 /* print_char 0 */
+    EMIT(&s, 0xf3, 0x4f, 0x03, STREAM2 >> 8, STREAM2 & 0xff);  /* output_stream 3 STREAM2 */
+    EMIT(&s, 0xe5, 0x7f, 'i');                                  /* print_char 'i' */
+    EMIT(&s, 0xf3, 0x3f, 0xff, 0xfd);                           /* output_stream -3 */
+    EMIT(&s, 0xbb);                                             /* new_line */
+    EMIT(&s, 0xf3, 0x3f, 0xff, 0xfd);                           /* output_stream -3 */
+    EMIT(&s, 0xe5, 0x7f, 'X');                                  /* print_char 'X' */
+
+    /* Spec §7.1.1: stream 1 can be turned off and on. */
+    EMIT(&s, 0xf3, 0x3f, 0xff, 0xff);                           /* output_stream -1 */
+    EMIT(&s, 0xe5, 0x7f, 'Z');                                  /* print_char 'Z' */
+    EMIT(&s, 0xf3, 0x7f, 0x01);                                 /* output_stream 1 */
+    EMIT(&s, 0xe5, 0x7f, 'Y');                                  /* print_char 'Y' */
+
+    /* Spec §7.4: stream 2 by opcode or by the header bit, and the bit
+     * always says which; Spec §7.1.1.1: the command is echoed to it. */
+    EMIT(&s, 0xf3, 0x7f, 0x02);                                 /* output_stream 2 */
+    EMIT(&s, 0xe5, 0x7f, 'T');                                  /* print_char 'T' */
+    EMIT(&s, 0xf3, 0x3f, 0xff, 0xfe);                           /* output_stream -2 */
+    EMIT(&s, 0xe5, 0x7f, 'U');                                  /* print_char 'U' */
+    EMIT(&s, 0xe2, 0x17, 0x00, 0x10, 0x01, 0x01);               /* storeb $10 1 1 */
+    EMIT(&s, 0xe5, 0x7f, 'V');                                  /* print_char 'V' */
+    EMIT(&s, 0xf3, 0x7f, 0x04);                                 /* output_stream 4 */
+    s.bytes[TABLE] = 20;
+    EMIT(&s, 0xe4, 0x1f, TABLE >> 8, TABLE & 0xff, 0x00, G1);   /* aread TABLE 0 -> G1 */
+    EMIT(&s, 0xe2, 0x17, 0x00, 0x10, 0x01, 0x00);               /* storeb $10 1 0 */
+    EMIT(&s, 0xe5, 0x7f, 'W');                                  /* print_char 'W' */
+    EMIT(&s, 0xba);
+    run(&s, &out, &m, &mem);
+    CHECK_EQ_STR(out.text, "XYTUVW");
+    CHECK_EQ_INT(zm_read_word(&mem, STREAM1), 2);
+    CHECK_EQ_INT(zm_read_byte(&mem, STREAM1 + 2), 'H');
+    CHECK_EQ_INT(zm_read_byte(&mem, STREAM1 + 3), 13);
+    CHECK_EQ_INT(zm_read_word(&mem, STREAM2), 1);
+    CHECK_EQ_INT(zm_read_byte(&mem, STREAM2 + 2), 'i');
+    CHECK_EQ_STR(transcript_text, "TVLook\n");
+    CHECK_EQ_STR(record_text, "Look|");
+    CHECK_EQ_STR(screen_log, "transcript on;transcript off;transcript on;transcript off");
+    CHECK_EQ_INT(zm_read_word(&mem, ZM_HEADER_FLAGS2) & ZM_FLAGS2_TRANSCRIPT, 0);
+    zm_machine_free(&m);
+    zm_memory_free(&mem);
+
+    /* A front end that declines the transcript leaves the bit clear, so
+     * the game can tell (Spec §7.4). */
+    transcript_allowed = 0;
+    story_init(&s, 5);
+    EMIT(&s, 0xf3, 0x7f, 0x02);                                 /* output_stream 2 */
+    EMIT(&s, 0xe5, 0x7f, 'T');                                  /* print_char 'T' */
+    EMIT(&s, 0xba);
+    run(&s, &out, &m, &mem);
+    CHECK_EQ_STR(out.text, "T");
+    CHECK_EQ_STR(transcript_text, "");
+    CHECK_EQ_INT(zm_read_word(&mem, ZM_HEADER_FLAGS2) & ZM_FLAGS2_TRANSCRIPT, 0);
+    zm_machine_free(&m);
+    zm_memory_free(&mem);
+
+    script(NULL, NULL);
+    screen_hooks(0);
+}
+
+static void test_windows_and_the_cursor(void)
+{
+    story s;
+    output out;
+    zm_machine m;
+    zm_memory mem;
+
+    screen_hooks(1);
+
+    /* Spec §8.7.2: selecting the upper window puts its cursor at the top
+     * left, and printing moves it; Spec §8.7.2.3: set_cursor and
+     * get_cursor work on the upper window, whichever is selected, and
+     * a row below the split enlarges the window (Spec §8 Remarks). */
+    story_init(&s, 5);
+    EMIT(&s, 0xea, 0x7f, 0x02);                                 /* split_window 2 */
+    EMIT(&s, 0xeb, 0x7f, 0x01);                                 /* set_window 1 */
+    EMIT(&s, 0xe5, 0x7f, 'A');                                  /* print_char 'A' */
+    EMIT(&s, 0xe5, 0x7f, 'B');                                  /* print_char 'B' */
+    EMIT(&s, 0xf0, 0x3f, ARRAY >> 8, ARRAY & 0xff);             /* get_cursor ARRAY */
+    EMIT(&s, 0xbb);                                             /* new_line */
+    EMIT(&s, 0xf0, 0x3f, (ARRAY + 4) >> 8, (ARRAY + 4) & 0xff); /* get_cursor ARRAY+4 */
+    EMIT(&s, 0xef, 0x5f, 0x01, 0x05);                           /* set_cursor 1 5 */
+    EMIT(&s, 0xef, 0x5f, 0x04, 0x02);                           /* set_cursor 4 2 */
+    EMIT(&s, 0xeb, 0x7f, 0x00);                                 /* set_window 0 */
+    EMIT(&s, 0xef, 0x5f, 0x09, 0x09);                           /* set_cursor 9 9 (ignored) */
+    EMIT(&s, 0xf0, 0x3f, (ARRAY + 8) >> 8, (ARRAY + 8) & 0xff); /* get_cursor ARRAY+8 */
+    EMIT(&s, 0xe5, 0x7f, 'C');                                  /* print_char 'C' */
+    EMIT(&s, 0xee, 0x7f, 0x01);                                 /* erase_line 1 */
+    EMIT(&s, 0xee, 0x7f, 0x02);                                 /* erase_line 2 (nothing) */
+    EMIT(&s, 0xed, 0x7f, 0x01);                                 /* erase_window 1 */
+    EMIT(&s, 0xf0, 0x3f, (ARRAY + 12) >> 8, (ARRAY + 12) & 0xff); /* get_cursor ARRAY+12 */
+    EMIT(&s, 0xed, 0x3f, 0xff, 0xff);                           /* erase_window -1 */
+    EMIT(&s, 0xba);
+    run(&s, &out, &m, &mem);
+    CHECK_EQ_STR(out.text, "AB\nC");
+    CHECK_EQ_INT(zm_read_word(&mem, ARRAY), 1);
+    CHECK_EQ_INT(zm_read_word(&mem, ARRAY + 2), 3);
+    CHECK_EQ_INT(zm_read_word(&mem, ARRAY + 4), 2);
+    CHECK_EQ_INT(zm_read_word(&mem, ARRAY + 6), 1);
+    CHECK_EQ_INT(zm_read_word(&mem, ARRAY + 8), 4);
+    CHECK_EQ_INT(zm_read_word(&mem, ARRAY + 10), 2);
+    CHECK_EQ_INT(zm_read_word(&mem, ARRAY + 12), 1);
+    CHECK_EQ_INT(zm_read_word(&mem, ARRAY + 14), 1);
+    CHECK_EQ_STR(screen_log, "split 2;window 1;cursor 1,5;split 4;cursor 4,2;window 0;erase_line;erase 1;erase -1");
+    CHECK_EQ_INT(m.screen.upper_height, 0);
+    CHECK_EQ_INT(m.screen.window, ZM_WINDOW_LOWER);
+    zm_machine_free(&m);
+    zm_memory_free(&mem);
+
+    /* Spec §8.7.2.1: the upper window cannot be taller than the screen;
+     * Spec §8.7.2.1.1: a split that leaves the upper cursor outside
+     * moves it to the top left. */
+    story_init(&s, 5);
+    EMIT(&s, 0xea, 0x7f, 0x30);                                 /* split_window 48 */
+    EMIT(&s, 0xeb, 0x7f, 0x01);                                 /* set_window 1 */
+    EMIT(&s, 0xef, 0x5f, 0x0a, 0x01);                           /* set_cursor 10 1 */
+    EMIT(&s, 0xea, 0x7f, 0x03);                                 /* split_window 3 */
+    EMIT(&s, 0xf0, 0x3f, ARRAY >> 8, ARRAY & 0xff);             /* get_cursor ARRAY */
+    EMIT(&s, 0xba);
+    run(&s, &out, &m, &mem);
+    CHECK_EQ_INT(zm_read_word(&mem, ARRAY), 1);
+    CHECK_EQ_INT(zm_read_word(&mem, ARRAY + 2), 1);
+    CHECK_EQ_STR(screen_log, "split 24;window 1;cursor 10,1;split 3;cursor 1,1");
+    zm_machine_free(&m);
+    zm_memory_free(&mem);
+
+    /* Spec §8.6.1.1.2: in Version 3 a split clears the upper window. */
+    story_init(&s, 3);
+    EMIT(&s, 0xea, 0x7f, 0x01);                                 /* split_window 1 */
+    EMIT(&s, 0xba);
+    run(&s, &out, &m, &mem);
+    CHECK_EQ_STR(screen_log, "split 1;erase 1");
+    zm_machine_free(&m);
+    zm_memory_free(&mem);
+    screen_hooks(0);
+
+    /* A front end with no upper window: what is printed there is lost,
+     * and the lower window is untouched. */
+    story_init(&s, 5);
+    EMIT(&s, 0xea, 0x7f, 0x01);                                 /* split_window 1 */
+    EMIT(&s, 0xeb, 0x7f, 0x01);                                 /* set_window 1 */
+    EMIT(&s, 0xe5, 0x7f, 'Q');                                  /* print_char 'Q' */
+    EMIT(&s, 0xeb, 0x7f, 0x00);                                 /* set_window 0 */
+    EMIT(&s, 0xe5, 0x7f, 'R');                                  /* print_char 'R' */
+    EMIT(&s, 0xba);
+    run(&s, &out, &m, &mem);
+    CHECK_EQ_STR(out.text, "R");
+    zm_machine_free(&m);
+    zm_memory_free(&mem);
+}
+
+static void test_styles_colours_fonts_and_sound(void)
+{
+    story s;
+    output out;
+    zm_machine m;
+    zm_memory mem;
+
+    screen_hooks(1);
+
+    /* Spec §15 set_text_style: styles add, Roman clears. Spec §15
+     * set_colour and §8.3.1: 0 keeps a colour, 1 restores the default.
+     * Spec §15 set_true_colour: the nearest standard colour. */
+    story_init(&s, 5);
+    EMIT(&s, 0xf1, 0x7f, 0x02);                                 /* set_text_style 2 */
+    EMIT(&s, 0xf1, 0x7f, 0x04);                                 /* set_text_style 4 */
+    EMIT(&s, 0xf1, 0x7f, 0x00);                                 /* set_text_style 0 */
+    EMIT(&s, 0x1b, 0x03, 0x04);                                 /* set_colour 3 4 */
+    EMIT(&s, 0x1b, 0x00, 0x01);                                 /* set_colour 0 1 */
+    EMIT(&s, 0x1b, 0x0a, 0x02);                                 /* set_colour 10 2 */
+    EMIT(&s, 0xbe, 0x0d, 0x0f, 0xff, 0xff, 0x03, 0xbd);         /* set_true_colour -1 $03bd */
+    EMIT(&s, 0xf2, 0x7f, 0x00);                                 /* buffer_mode 0 */
+    EMIT(&s, 0xf5, 0x7f, 0x01);                                 /* sound_effect 1 */
+    EMIT(&s, 0xf5, 0xff);                                       /* sound_effect */
+    EMIT(&s, 0xf5, 0x13, 0x00, 0x03, 0x02, 0x02, 0x05);         /* sound_effect 3 2 $0205 */
+    EMIT(&s, 0xba);
+    run(&s, &out, &m, &mem);
+    CHECK_EQ_STR(screen_log, "style 2;style 6;style 0;colour 3/4;colour 3/2;colour 10/2;colour 9/5;"
+                             "buffer off;sound 1 2 8 1;sound 1 2 8 1;sound 3 2 5 2");
+    CHECK_EQ_INT(m.screen.style, 0);
+    CHECK_EQ_INT(m.screen.foreground, ZM_COLOUR_WHITE);
+    CHECK_EQ_INT(m.screen.background, ZM_COLOUR_YELLOW);
+    CHECK_EQ_INT(m.screen.buffering, 0);
+    zm_machine_free(&m);
+    zm_memory_free(&mem);
+    screen_hooks(0);
+
+    /* Spec §15 set_font: without fonts of its own the front end has font
+     * 1 only; 0 asks which is current. */
+    story_init(&s, 5);
+    EMIT(&s, 0xbe, 0x04, 0x7f, 0x04, G0);                       /* set_font 4 -> G0 */
+    EMIT(&s, 0xbe, 0x04, 0x7f, 0x01, G1);                       /* set_font 1 -> G1 */
+    EMIT(&s, 0xbe, 0x04, 0x7f, 0x00, G2);                       /* set_font 0 -> G2 */
+    EMIT(&s, 0xf1, 0x7f, 0x08);                                 /* set_text_style 8 (no hook) */
+    EMIT(&s, 0xf5, 0x7f, 0x01);                                 /* sound_effect 1 (no hook) */
+    EMIT(&s, 0xba);
+    run(&s, &out, &m, &mem);
+    CHECK_EQ_INT(zm_read_word(&mem, GLOBALS), 0);
+    CHECK_EQ_INT(zm_read_word(&mem, GLOBALS + 2), 1);
+    CHECK_EQ_INT(zm_read_word(&mem, GLOBALS + 4), 1);
+    CHECK_EQ_INT(m.screen.style, ZM_STYLE_FIXED_PITCH);
+    zm_machine_free(&m);
+    zm_memory_free(&mem);
+}
+
+static void test_table_opcodes(void)
+{
+    story s;
+    output out;
+    zm_machine m;
+    zm_memory mem;
+
+    /* Spec §15 scan_table: words by default, or bytes with a form. */
+    story_init(&s, 5);
+    put_word(s.bytes, TABLE2, 0x1111);
+    put_word(s.bytes, TABLE2 + 2, 0x2222);
+    put_word(s.bytes, TABLE2 + 4, 0x3333);
+    EMIT(&s, 0xf7, 0x07, 0x22, 0x22, TABLE2 >> 8, TABLE2 & 0xff, 0x03, G0, 0xc5); /* scan_table $2222 TABLE2 3 -> G0 ?+5 */
+    EMIT(&s, 0xe5, 0x7f, 'n');                                  /* print_char 'n' (skipped) */
+    EMIT(&s, 0xf7, 0x07, 0x44, 0x44, TABLE2 >> 8, TABLE2 & 0xff, 0x03, G1, 0xc5); /* scan_table $4444 ... -> G1 ?+5 */
+    EMIT(&s, 0xe5, 0x7f, 'm');                                  /* print_char 'm' (printed) */
+    EMIT(&s, 0xf7, 0x45, 0x33, TABLE2 >> 8, TABLE2 & 0xff, 0x06, 0x01, G2, 0xc5); /* scan_table $33 TABLE2 6 1 -> G2 ?+5 */
+    EMIT(&s, 0xe5, 0x7f, 'o');                                  /* print_char 'o' (skipped) */
+    EMIT(&s, 0xba);
+    run(&s, &out, &m, &mem);
+    CHECK_EQ_STR(out.text, "m");
+    CHECK_EQ_INT(zm_read_word(&mem, GLOBALS), TABLE2 + 2);
+    CHECK_EQ_INT(zm_read_word(&mem, GLOBALS + 2), 0);
+    CHECK_EQ_INT(zm_read_word(&mem, GLOBALS + 4), TABLE2 + 4);
+    zm_machine_free(&m);
+    zm_memory_free(&mem);
+
+    /* Spec §15 copy_table: overlapping copies forward safely with a
+     * positive size and corruptingly with a negative one; a zero
+     * destination clears. */
+    story_init(&s, 5);
+    EMIT(&s, 0x01, 0x02, 0x03, 0x04, 0x05);                      /* data, not code: see below */
+    at(&s, TABLE2);
+    EMIT(&s, 0x01, 0x02, 0x03, 0x04, 0x05);
+    at(&s, CODE);
+    EMIT(&s, 0xfd, 0x07, TABLE2 >> 8, TABLE2 & 0xff, (TABLE2 + 1) >> 8, (TABLE2 + 1) & 0xff, 0x04); /* copy_table T T+1 4 */
+    EMIT(&s, 0xfd, 0x07, (TABLE2 + 8) >> 8, (TABLE2 + 8) & 0xff, 0x00, 0x00, 0x02); /* copy_table T+8 0 2 */
+    EMIT(&s, 0xba);
+    put_word(s.bytes, TABLE2 + 8, 0xabcd);
+    run(&s, &out, &m, &mem);
+    CHECK_EQ_INT(zm_read_byte(&mem, TABLE2), 1);
+    CHECK_EQ_INT(zm_read_byte(&mem, TABLE2 + 1), 1);
+    CHECK_EQ_INT(zm_read_byte(&mem, TABLE2 + 2), 2);
+    CHECK_EQ_INT(zm_read_byte(&mem, TABLE2 + 3), 3);
+    CHECK_EQ_INT(zm_read_byte(&mem, TABLE2 + 4), 4);
+    CHECK_EQ_INT(zm_read_word(&mem, TABLE2 + 8), 0);
+    zm_machine_free(&m);
+    zm_memory_free(&mem);
+
+    story_init(&s, 5);
+    at(&s, TABLE2);
+    EMIT(&s, 0x01, 0x02, 0x03, 0x04, 0x05);
+    at(&s, CODE);
+    EMIT(&s, 0xfd, 0x03, TABLE2 >> 8, TABLE2 & 0xff, (TABLE2 + 1) >> 8, (TABLE2 + 1) & 0xff, 0xff, 0xfc); /* copy_table T T+1 -4 */
+    EMIT(&s, 0xba);
+    run(&s, &out, &m, &mem);
+    for (unsigned i = 0; i < 5; i++) {
+        CHECK_EQ_INT(zm_read_byte(&mem, TABLE2 + i), 1);
+    }
+    zm_machine_free(&m);
+    zm_memory_free(&mem);
+
+    /* Spec §15 print_table: rows of width characters, skip apart. */
+    story_init(&s, 5);
+    at(&s, TABLE2);
+    EMIT(&s, 'A', 'B', 'C', 'D', 'E', 'F');
+    at(&s, CODE);
+    EMIT(&s, 0xfe, 0x15, TABLE2 >> 8, TABLE2 & 0xff, 0x02, 0x02, 0x01); /* print_table TABLE2 2 2 1 */
+    EMIT(&s, 0xba);
+    run(&s, &out, &m, &mem);
+    CHECK_EQ_STR(out.text, "AB\nDE");
+    zm_machine_free(&m);
+    zm_memory_free(&mem);
+}
+
+static void test_unicode_printing(void)
+{
+    story s;
+    output out;
+    zm_machine m;
+    zm_memory mem;
+
+    /* Spec §15 print_unicode, §7.5.3: a character with a ZSCII code is
+     * printed as that code (e acute is ZSCII 170 in the default table,
+     * Spec §3.8.5.3); one without becomes a question mark in memory and
+     * goes to the front end's Unicode printer on the screen, or is a
+     * question mark there too without one. Spec §15 check_unicode. */
+    story_init(&s, 5);
+    EMIT(&s, 0xf3, 0x4f, 0x03, STREAM1 >> 8, STREAM1 & 0xff);  /* output_stream 3 STREAM1 */
+    EMIT(&s, 0xbe, 0x0b, 0x3f, 0x00, 0xe9);                     /* print_unicode $e9 */
+    EMIT(&s, 0xbe, 0x0b, 0x3f, 0x4e, 0x2d);                     /* print_unicode $4e2d */
+    EMIT(&s, 0xf3, 0x3f, 0xff, 0xfd);                           /* output_stream -3 */
+    EMIT(&s, 0xbe, 0x0b, 0x3f, 0x4e, 0x2d);                     /* print_unicode $4e2d */
+    EMIT(&s, 0xbe, 0x0b, 0x3f, 0x00, 'A');                      /* print_unicode 'A' */
+    EMIT(&s, 0xbe, 0x0c, 0x3f, 0x00, 0xe9, G0);                 /* check_unicode $e9 -> G0 */
+    EMIT(&s, 0xbe, 0x0c, 0x3f, 0x4e, 0x2d, G1);                 /* check_unicode $4e2d -> G1 */
+    EMIT(&s, 0xba);
+    run(&s, &out, &m, &mem);
+    CHECK_EQ_STR(out.text, "?A");
+    CHECK_EQ_INT(zm_read_word(&mem, STREAM1), 2);
+    CHECK_EQ_INT(zm_read_byte(&mem, STREAM1 + 2), 170);
+    CHECK_EQ_INT(zm_read_byte(&mem, STREAM1 + 3), '?');
+    CHECK_EQ_INT(zm_read_word(&mem, GLOBALS), 3);
+    CHECK_EQ_INT(zm_read_word(&mem, GLOBALS + 2), 0);
+    zm_machine_free(&m);
+    zm_memory_free(&mem);
+
+    screen_hooks(1);
+    story_init(&s, 5);
+    EMIT(&s, 0xbe, 0x0b, 0x3f, 0x4e, 0x2d);                     /* print_unicode $4e2d */
+    EMIT(&s, 0xbe, 0x0c, 0x3f, 0x4e, 0x2d, G1);                 /* check_unicode $4e2d -> G1 */
+    EMIT(&s, 0xba);
+    run(&s, &out, &m, &mem);
+    CHECK_EQ_STR(out.text, "");
+    CHECK_EQ_STR(screen_log, "unicode 4e2d");
+    CHECK_EQ_INT(zm_read_word(&mem, GLOBALS + 2), 1);
+    zm_machine_free(&m);
+    zm_memory_free(&mem);
+    screen_hooks(0);
+}
+
+static void test_screen_faults(void)
+{
+    story s;
+    output out;
+
+    /* Spec §7.1.2.1.1: the seventeenth nested stream 3 halts. */
+    story_init(&s, 5);
+    for (unsigned i = 0; i < 17; i++) {
+        EMIT(&s, 0xf3, 0x4f, 0x03, STREAM1 >> 8, STREAM1 & 0xff); /* output_stream 3 STREAM1 */
+    }
+    expect_fault(&s, "17 times", &out);
+
+    story_init(&s, 5);
+    EMIT(&s, 0xf3, 0x7f, 0x05);                                 /* output_stream 5 */
+    expect_fault(&s, "no such stream", &out);
+
+    story_init(&s, 5);
+    EMIT(&s, 0xf3, 0x7f, 0x03);                                 /* output_stream 3 (no table) */
+    expect_fault(&s, "no table", &out);
+
+    /* Spec §8.7.2: two windows before Version 6. */
+    story_init(&s, 5);
+    EMIT(&s, 0xeb, 0x7f, 0x02);                                 /* set_window 2 */
+    expect_fault(&s, "only windows 0 and 1", &out);
+
+    story_init(&s, 5);
+    EMIT(&s, 0xed, 0x3f, 0xff, 0xfd);                           /* erase_window -3 */
+    expect_fault(&s, "erase_window -3", &out);
+
+    /* Spec §8.3.1, §8.3.7: Version 6 colour requests. */
+    story_init(&s, 5);
+    EMIT(&s, 0x1b, 0x0f, 0x02);                                 /* set_colour 15 2 */
+    expect_fault(&s, "colour 15", &out);
+
+    story_init(&s, 5);
+    EMIT(&s, 0xbe, 0x0d, 0x0f, 0xff, 0xfd, 0x00, 0x00);         /* set_true_colour -3 0 */
+    expect_fault(&s, "-3 is only meaningful in Version 6", &out);
+
+    story_init(&s, 5);
+    EMIT(&s, 0xf1, 0x7f, 0x10);                                 /* set_text_style 16 */
+    expect_fault(&s, "styles are 0 to 15", &out);
+}
+
 int main(void)
 {
     RUN_TEST(test_simple_test_files_say_hello);
@@ -1575,5 +2172,11 @@ int main(void)
     RUN_TEST(test_read_char_tokenise_and_encode_text);
     RUN_TEST(test_header_flags_are_set_at_start);
     RUN_TEST(test_input_faults);
+    RUN_TEST(test_output_streams);
+    RUN_TEST(test_windows_and_the_cursor);
+    RUN_TEST(test_styles_colours_fonts_and_sound);
+    RUN_TEST(test_table_opcodes);
+    RUN_TEST(test_unicode_printing);
+    RUN_TEST(test_screen_faults);
     return CHECK_SUMMARY();
 }

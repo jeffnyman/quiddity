@@ -76,7 +76,9 @@ Every build puts its executables under `build/<preset>/bin`. The Visual Studio g
 build/gcc/bin/quiddity path/to/story.z3
 ```
 
-The story runs on the terminal until it quits, reading commands from standard input. When standard input is a file rather than a keyboard, each command is echoed after the prompt so the transcript reads as a session would, and the game ends when the file does. In Versions 1 to 3 the status line is printed above each prompt. The instruction set is still being filled in, so a story that reaches an opcode Quiddity does not implement yet stops with a message naming it; that message is the to-do list.
+The story runs on the terminal until it quits, reading commands from standard input. When standard input is a file rather than a keyboard, each command is echoed after the prompt so the transcript reads as a session would, and the game ends when the file does. The terminal is treated as a teletype: text is word-wrapped at 80 columns, the Version 1 to 3 status line is printed above each prompt, and whatever a later game draws in its upper window (a status line, a menu, a map) is printed as a block whenever it changes and the game stops for input. Text styles and colours are accepted and ignored. The instruction set is still being filled in, so a story that reaches an opcode Quiddity does not implement yet stops with a message naming it; that message is the to-do list.
+
+The `--transcript <file>` option names a file for the game's transcript (output stream 2), which a game turns on with its own command, usually `script`; `--record <file>` likewise names a file for the commands typed (output stream 4), which Inform games turn on with `recording on`. Without the option, a game asking for the stream is told it is not available.
 
 The `--info` option prints what the story file's header says about it, including its Version, release, serial code, memory map, and whether its checksum verifies, and then exits without running it.
 

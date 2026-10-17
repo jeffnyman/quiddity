@@ -334,6 +334,24 @@ uint16_t zm_zscii_to_unicode(const zm_memory *mem, uint16_t zscii)
     return zm_read_word(mem, table + 1u + 2u * index);
 }
 
+uint16_t zm_unicode_to_zscii(const zm_memory *mem, uint16_t unicode)
+{
+    if (unicode >= 32 && unicode <= 126) {
+        return unicode;
+    }
+    if (unicode == 0) {
+        return 0;
+    }
+
+    /* Spec §3.8.5: the extra characters, through the story's table. */
+    for (uint16_t zscii = ZM_ZSCII_EXTRA_FIRST; zscii <= ZM_ZSCII_EXTRA_LAST; zscii++) {
+        if (zm_zscii_to_unicode(mem, zscii) == unicode) {
+            return zscii;
+        }
+    }
+    return 0;
+}
+
 /*
  * Encoding (Spec §3.7): turning what the player typed into the form the
  * dictionary stores, so the two can be compared byte for byte.

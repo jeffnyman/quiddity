@@ -35,9 +35,11 @@ static void print_usage(FILE *out)
     fputs("Usage: quiddity [options] <story-file>\n"
           "\n"
           "Options:\n"
-          "  -i, --info     Describe the story file's header and exit.\n"
-          "  -h, --help     Show this help and exit.\n"
-          "  -v, --version  Show the version and exit.\n",
+          "  -i, --info               Describe the story file's header and exit.\n"
+          "  -t, --transcript <file>  Append a transcript to <file> when the game asks for one.\n"
+          "  -r, --record <file>      Append the commands typed to <file> when the game asks.\n"
+          "  -h, --help               Show this help and exit.\n"
+          "  -v, --version            Show the version and exit.\n",
           out);
 }
 
@@ -62,6 +64,8 @@ int main(int argc, char **argv)
     int show_help = 0;
     int show_version = 0;
     int show_info = 0;
+    const char *transcript_path = NULL;
+    const char *record_path = NULL;
     int i = 1;
     const char *path;
     zm_memory mem;
@@ -87,6 +91,20 @@ int main(int argc, char **argv)
             show_version = 1;
         } else if (strcmp(arg, "-i") == 0 || strcmp(arg, "--info") == 0) {
             show_info = 1;
+        } else if (strcmp(arg, "-t") == 0 || strcmp(arg, "--transcript") == 0
+                   || strcmp(arg, "-r") == 0 || strcmp(arg, "--record") == 0) {
+            /* Spec §7.1.1, §7.1.2.3: the files for output streams 2 and
+             * 4, named here so the game need never ask. */
+            if (i + 1 >= argc) {
+                fprintf(stderr, "quiddity: option '%s' needs a file name\n\n", arg);
+                print_usage(stderr);
+                return EXIT_USAGE;
+            }
+            if (arg[1] == 't' || arg[2] == 't') {
+                transcript_path = argv[++i];
+            } else {
+                record_path = argv[++i];
+            }
         } else {
             fprintf(stderr, "quiddity: unknown option '%s'\n\n", arg);
             print_usage(stderr);
@@ -122,7 +140,7 @@ int main(int argc, char **argv)
         return EXIT_SUCCESS;
     }
 
-    terminal_init(&term, &mem, &io);
+    terminal_init(&term, &mem, &io, transcript_path, record_path);
     status = zm_machine_init(&machine, &mem, &io);
     if (status != ZM_OK) {
         fprintf(stderr, "quiddity: %s\n", zm_status_message(status));

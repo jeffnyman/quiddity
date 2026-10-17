@@ -11,6 +11,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "zm/screen.h"
 #include "zm/text.h"
 
 #ifdef _WIN32
@@ -27,31 +28,118 @@
  * Output.
  */
 
-/* Write a Unicode character to stdout as UTF-8. The Z-machine never
+/* Write a Unicode character to a stream as UTF-8. The Z-machine never
  * needs more than the Basic Multilingual Plane (Spec §3.8.5.1), so three
  * bytes is the most it takes. */
-static void put_utf8(uint16_t c)
+static void put_utf8(FILE *out, uint16_t c)
 {
     if (c < 0x80) {
-        putchar((int)c);
+        putc((int)c, out);
     } else if (c < 0x800) {
-        putchar(0xc0 | (c >> 6));
-        putchar(0x80 | (c & 0x3f));
+        putc(0xc0 | (c >> 6), out);
+        putc(0x80 | (c & 0x3f), out);
     } else {
-        putchar(0xe0 | (c >> 12));
-        putchar(0x80 | ((c >> 6) & 0x3f));
-        putchar(0x80 | (c & 0x3f));
+        putc(0xe0 | (c >> 12), out);
+        putc(0x80 | ((c >> 6) & 0x3f), out);
+        putc(0x80 | (c & 0x3f), out);
     }
 }
 
-/* Write the held-back line without ending it. */
+/* Write the first count characters of the held-back line without ending
+ * it, and keep the rest. */
+static void emit_line(terminal *t, unsigned count)
+{
+    for (unsigned i = 0; i < count; i++) {
+        put_utf8(stdout, t->line[i]);
+    }
+    memmove(t->line, t->line + count, (t->line_length - count) * sizeof t->line[0]);
+    t->line_length -= count;
+}
+
 static void flush_line(terminal *t)
 {
-    for (unsigned i = 0; i < t->line_length; i++) {
-        put_utf8(t->line[i]);
-    }
-    t->line_length = 0;
+    emit_line(t, t->line_length);
     fflush(stdout);
+}
+
+/* The held-back line is full. Spec §7.2: with buffering on, break it
+ * after the last word that fits; otherwise after the last character. */
+static void wrap_line(terminal *t)
+{
+    unsigned cut = t->line_length;  /* characters that go out before the break */
+    unsigned skip = 0;              /* characters dropped at the break */
+
+    if (t->buffering) {
+        unsigned i = t->line_length;
+
+        while (i > 0 && t->line[i - 1] != ' ') {
+            i--;
+        }
+        if (i > 0) {
+            cut = i - 1;    /* the space itself is the break */
+            skip = 1;
+        }
+    }
+    emit_line(t, cut);
+    putchar('\n');
+    if (skip > 0) {
+        memmove(t->line, t->line + skip, (t->line_length - skip) * sizeof t->line[0]);
+        t->line_length -= skip;
+    }
+}
+
+/* The upper window is a grid. Spec §8.7.3.1: it never scrolls, and a
+ * cursor at its bottom right stays put. */
+static void put_upper(terminal *t, uint16_t unicode)
+{
+    if (t->upper_row > t->upper_height) {
+        return;
+    }
+    if (unicode == '\n') {
+        if (t->upper_row < t->upper_height) {
+            t->upper_row++;
+        }
+        t->upper_column = 1;
+        return;
+    }
+    if (t->upper_column <= TERMINAL_WIDTH) {
+        t->upper[t->upper_row - 1][t->upper_column - 1] = unicode;
+        t->upper_shown = 0;
+        if (t->upper_column < TERMINAL_WIDTH) {
+            t->upper_column++;
+        }
+    }
+}
+
+static void put_lower(terminal *t, uint16_t unicode)
+{
+    if (unicode == '\n') {
+        flush_line(t);
+        putchar('\n');
+        return;
+    }
+    if (t->line_length == TERMINAL_WIDTH) {
+        if (unicode == ' ') {
+            /* A space at the margin is the break itself. */
+            flush_line(t);
+            putchar('\n');
+            return;
+        }
+        wrap_line(t);
+    }
+    if (t->line_length == TERMINAL_LINE_MAX) {
+        flush_line(t);
+    }
+    t->line[t->line_length++] = unicode;
+}
+
+static void put_char(terminal *t, uint16_t unicode)
+{
+    if (t->window == ZM_WINDOW_UPPER) {
+        put_upper(t, unicode);
+    } else {
+        put_lower(t, unicode);
+    }
 }
 
 static void terminal_print_char(void *context, uint16_t zscii)
@@ -60,8 +148,7 @@ static void terminal_print_char(void *context, uint16_t zscii)
     uint16_t unicode;
 
     if (zscii == ZM_ZSCII_NEWLINE) {
-        flush_line(t);
-        putchar('\n');
+        put_char(t, '\n');
         return;
     }
 
@@ -72,10 +159,53 @@ static void terminal_print_char(void *context, uint16_t zscii)
         return;
     }
     unicode = zm_zscii_to_unicode(t->mem, zscii);
-    if (t->line_length == TERMINAL_LINE_MAX) {
-        flush_line(t);
+    put_char(t, unicode != 0 ? unicode : '?');
+}
+
+static void terminal_print_unicode(void *context, uint16_t unicode)
+{
+    put_char(context, unicode);
+}
+
+/* Print the upper window's grid, if it has changed since it was last
+ * printed: every row down to the last that has anything on it, with
+ * trailing blanks cut. */
+static void show_upper(terminal *t)
+{
+    unsigned rows = 0;
+
+    if (t->upper_shown) {
+        return;
     }
-    t->line[t->line_length++] = unicode != 0 ? unicode : '?';
+    t->upper_shown = 1;
+    for (unsigned r = 0; r < t->upper_height; r++) {
+        for (unsigned c = 0; c < TERMINAL_WIDTH; c++) {
+            if (t->upper[r][c] != ' ') {
+                rows = r + 1;
+                break;
+            }
+        }
+    }
+    for (unsigned r = 0; r < rows; r++) {
+        unsigned end = TERMINAL_WIDTH;
+
+        while (end > 0 && t->upper[r][end - 1] == ' ') {
+            end--;
+        }
+        for (unsigned c = 0; c < end; c++) {
+            put_utf8(stdout, t->upper[r][c]);
+        }
+        putchar('\n');
+    }
+}
+
+static void clear_upper_rows(terminal *t, unsigned from, unsigned to)
+{
+    for (unsigned r = from; r < to && r < TERMINAL_HEIGHT; r++) {
+        for (unsigned c = 0; c < TERMINAL_WIDTH; c++) {
+            t->upper[r][c] = ' ';
+        }
+    }
 }
 
 static void terminal_show_status(void *context, const uint16_t *name, unsigned name_length,
@@ -100,20 +230,20 @@ static void terminal_show_status(void *context, const uint16_t *name, unsigned n
      *
      * Spec §8.2.2: the location on the left; Spec §8.2.2.2: cut to fit
      * with an ellipsis if it must be. */
-    room = t->width > right_length + 2u ? t->width - right_length - 2u : 0;
+    room = TERMINAL_WIDTH > right_length + 2u ? TERMINAL_WIDTH - right_length - 2u : 0;
     if (name_length > room && room > 3) {
         for (unsigned i = 0; i < room - 3; i++) {
-            put_utf8(zm_zscii_to_unicode(t->mem, name[i]));
+            put_utf8(stdout, zm_zscii_to_unicode(t->mem, name[i]));
         }
         fputs("...", stdout);
         used = room;
     } else {
         for (unsigned i = 0; i < name_length && i < room; i++) {
-            put_utf8(zm_zscii_to_unicode(t->mem, name[i]));
+            put_utf8(stdout, zm_zscii_to_unicode(t->mem, name[i]));
         }
         used = name_length < room ? name_length : room;
     }
-    for (unsigned i = used; i + right_length < t->width; i++) {
+    for (unsigned i = used; i + right_length < TERMINAL_WIDTH; i++) {
         putchar(' ');
     }
     fputs(right, stdout);
@@ -121,27 +251,169 @@ static void terminal_show_status(void *context, const uint16_t *name, unsigned n
 }
 
 /*
- * Input.
+ * The screen model.
  */
 
-/* Translate a Unicode character typed by the player into ZSCII, or 0 if
- * ZSCII has no code for it (Spec §3.8, §10.7). */
-static uint16_t unicode_to_zscii(const terminal *t, uint32_t unicode)
+static void terminal_split_window(void *context, unsigned lines)
 {
-    if (unicode >= 32 && unicode <= 126) {
-        return (uint16_t)unicode;
+    terminal *t = context;
+
+    if (lines > TERMINAL_HEIGHT) {
+        lines = TERMINAL_HEIGHT;
     }
-    if (unicode > 0xffff) {
-        return 0;
+
+    /* Rows the window gives up are printed first if nobody has seen
+     * them: 'Trinity' and the Inform library draw boxed quotations this
+     * way, in an upper window that is enlarged for them and shrunk again
+     * once they have been read. Rows it gains start blank. */
+    if (lines < t->upper_height) {
+        show_upper(t);
+        clear_upper_rows(t, lines, t->upper_height);
+    } else {
+        clear_upper_rows(t, t->upper_height, lines);
     }
-    /* Spec §3.8.5: the extra characters, through the story's table. */
-    for (uint16_t zscii = ZM_ZSCII_EXTRA_FIRST; zscii <= ZM_ZSCII_EXTRA_LAST; zscii++) {
-        if (zm_zscii_to_unicode(t->mem, zscii) == unicode) {
-            return zscii;
+    t->upper_height = lines;
+}
+
+static void terminal_set_window(void *context, unsigned window)
+{
+    terminal *t = context;
+
+    t->window = window;
+    if (window == ZM_WINDOW_UPPER) {
+        t->upper_row = 1;
+        t->upper_column = 1;
+    }
+}
+
+static void terminal_erase_window(void *context, int window)
+{
+    terminal *t = context;
+
+    /* Spec §15 erase_window. Whatever is on the teletype stays, so
+     * erasing the lower window only finishes its line; erasing the
+     * upper window loses its grid, after printing anything not yet
+     * seen. */
+    if (window == -1 || window == -2 || window == ZM_WINDOW_UPPER) {
+        show_upper(t);
+        clear_upper_rows(t, 0, TERMINAL_HEIGHT);
+        t->upper_row = 1;
+        t->upper_column = 1;
+    }
+    if (window == -1) {
+        t->upper_height = 0;
+        t->window = ZM_WINDOW_LOWER;
+    }
+    if (window != ZM_WINDOW_UPPER && t->line_length > 0) {
+        flush_line(t);
+        putchar('\n');
+    }
+}
+
+static void terminal_erase_line(void *context)
+{
+    terminal *t = context;
+
+    /* Spec §8.7.3.4: in the upper window, from the cursor to the right
+     * edge. In the lower window the rest of the line is already blank. */
+    if (t->window == ZM_WINDOW_UPPER && t->upper_row <= t->upper_height) {
+        for (unsigned c = t->upper_column - 1; c < TERMINAL_WIDTH; c++) {
+            if (t->upper[t->upper_row - 1][c] != ' ') {
+                t->upper[t->upper_row - 1][c] = ' ';
+                t->upper_shown = 0;
+            }
         }
     }
-    return 0;
 }
+
+static void terminal_set_cursor(void *context, unsigned row, unsigned column)
+{
+    terminal *t = context;
+
+    t->upper_row = row > TERMINAL_HEIGHT ? TERMINAL_HEIGHT : row;
+    t->upper_column = column > TERMINAL_WIDTH ? TERMINAL_WIDTH : column;
+}
+
+static void terminal_set_buffering(void *context, int on)
+{
+    terminal *t = context;
+
+    t->buffering = on;
+}
+
+/*
+ * Files.
+ */
+
+static int terminal_set_transcript(void *context, int on)
+{
+    terminal *t = context;
+
+    /* Spec §7.1.1.2: the file is opened once and kept, however often the
+     * game turns the stream off and on. */
+    if (on && t->transcript == NULL) {
+        t->transcript = fopen(t->transcript_path, "a");
+        if (t->transcript == NULL) {
+            fprintf(stderr, "quiddity: cannot write a transcript to %s\n", t->transcript_path);
+            return 0;
+        }
+    }
+    if (!on && t->transcript != NULL) {
+        fflush(t->transcript);
+    }
+    return t->transcript != NULL;
+}
+
+static void terminal_transcript_char(void *context, uint16_t zscii)
+{
+    terminal *t = context;
+    uint16_t unicode;
+
+    if (t->transcript == NULL) {
+        return;
+    }
+    if (zscii == ZM_ZSCII_NEWLINE) {
+        putc('\n', t->transcript);
+        return;
+    }
+    unicode = zm_zscii_to_unicode(t->mem, zscii);
+    if (unicode != 0) {
+        put_utf8(t->transcript, unicode);
+    }
+}
+
+static void terminal_record_input(void *context, const uint16_t *zscii, unsigned count)
+{
+    terminal *t = context;
+
+    if (t->record == NULL) {
+        t->record = fopen(t->record_path, "a");
+        if (t->record == NULL) {
+            fprintf(stderr, "quiddity: cannot record commands to %s\n", t->record_path);
+            t->record_path = NULL;
+            return;
+        }
+    }
+
+    /* One command or keypress per line, in the style Spec §7's Remarks
+     * suggest: a key with no printable form is written as its code in
+     * square brackets. */
+    for (unsigned i = 0; i < count; i++) {
+        uint16_t unicode = zm_zscii_to_unicode(t->mem, zscii[i]);
+
+        if (unicode != 0) {
+            put_utf8(t->record, unicode);
+        } else {
+            fprintf(t->record, "[%u]", (unsigned)zscii[i]);
+        }
+    }
+    putc('\n', t->record);
+    fflush(t->record);
+}
+
+/*
+ * Input.
+ */
 
 /* Decode one UTF-8 sequence from a byte string, advancing the index.
  * Malformed input yields the replacement character, which ZSCII cannot
@@ -178,6 +450,21 @@ static uint32_t next_utf8(const unsigned char *s, size_t *i)
     return c;
 }
 
+/* Translate a Unicode character typed by the player into ZSCII, or 0 if
+ * ZSCII has no code for it (Spec §3.8, §10.7). */
+static uint16_t unicode_to_zscii(const terminal *t, uint32_t unicode)
+{
+    return unicode > 0xffff ? 0 : zm_unicode_to_zscii(t->mem, (uint16_t)unicode);
+}
+
+/* The game is about to wait: everything it has drawn should be visible,
+ * the upper window above the unfinished line. */
+static void before_input(terminal *t)
+{
+    show_upper(t);
+    flush_line(t);
+}
+
 static int terminal_read_line(void *context, uint16_t *buffer, unsigned max, uint16_t *terminator)
 {
     terminal *t = context;
@@ -186,8 +473,7 @@ static int terminal_read_line(void *context, uint16_t *buffer, unsigned max, uin
     size_t i = 0;
     unsigned count = 0;
 
-    /* The prompt, if any, has been waiting; the player should see it. */
-    flush_line(t);
+    before_input(t);
 
     if (fgets(line, sizeof line, stdin) == NULL) {
         return -1;
@@ -231,7 +517,7 @@ static int terminal_read_char(void *context)
     int c;
     uint16_t zscii;
 
-    flush_line(t);
+    before_input(t);
 
     c = getchar();
     if (c == EOF) {
@@ -263,18 +549,49 @@ static int terminal_read_char(void *context)
  * Set-up.
  */
 
-void terminal_init(terminal *t, const zm_memory *mem, zm_io *io)
+void terminal_init(terminal *t, const zm_memory *mem, zm_io *io,
+                   const char *transcript_path, const char *record_path)
 {
     memset(t, 0, sizeof *t);
     t->mem = mem;
     t->interactive = terminal_isatty(stdin);
-    t->width = 80;
+    t->buffering = 1;
+    t->window = ZM_WINDOW_LOWER;
+    t->upper_row = 1;
+    t->upper_column = 1;
+    t->upper_shown = 1;
+    t->transcript_path = transcript_path;
+    t->record_path = record_path;
+    clear_upper_rows(t, 0, TERMINAL_HEIGHT);
 
+    memset(io, 0, sizeof *io);
     io->context = t;
+    io->screen_width = TERMINAL_WIDTH;
+    io->screen_height = TERMINAL_HEIGHT;
+
+    /* Everything a terminal prints is in one fixed-pitch font; the other
+     * styles and colours are left unclaimed, and text asked for in them
+     * is printed plainly. */
+    io->styles = ZM_STYLE_FIXED_PITCH;
+
     io->print_char = terminal_print_char;
+    io->print_unicode = terminal_print_unicode;
     io->read_line = terminal_read_line;
     io->read_char = terminal_read_char;
     io->show_status = terminal_show_status;
+    io->split_window = terminal_split_window;
+    io->set_window = terminal_set_window;
+    io->erase_window = terminal_erase_window;
+    io->erase_line = terminal_erase_line;
+    io->set_cursor = terminal_set_cursor;
+    io->set_buffering = terminal_set_buffering;
+    if (transcript_path != NULL) {
+        io->set_transcript = terminal_set_transcript;
+        io->transcript_char = terminal_transcript_char;
+    }
+    if (record_path != NULL) {
+        io->record_input = terminal_record_input;
+    }
 
 #ifdef _WIN32
     /* The Windows console decodes output in its own code page unless told
@@ -286,5 +603,14 @@ void terminal_init(terminal *t, const zm_memory *mem, zm_io *io)
 
 void terminal_finish(terminal *t)
 {
+    show_upper(t);
     flush_line(t);
+    if (t->transcript != NULL) {
+        fclose(t->transcript);
+        t->transcript = NULL;
+    }
+    if (t->record != NULL) {
+        fclose(t->record);
+        t->record = NULL;
+    }
 }

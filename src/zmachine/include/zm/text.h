@@ -67,6 +67,11 @@ void zm_text_decode_abbreviation(const zm_memory *mem, unsigned number, zm_text_
  * caller must handle those before asking here. */
 uint16_t zm_zscii_to_unicode(const zm_memory *mem, uint16_t zscii);
 
+/* The ZSCII code that prints as a Unicode character, or 0 if there is
+ * none: the inverse of zm_zscii_to_unicode() for what the player types
+ * (Spec §10.7) and for print_unicode (Spec §7.5.3). */
+uint16_t zm_unicode_to_zscii(const zm_memory *mem, uint16_t unicode);
+
 /* The length in bytes of a word encoded for the dictionary: 4 in Versions
  * 1 to 3 (6 Z-characters), 6 after (9 Z-characters) (Spec §3.7, §13.3,
  * §13.4). */

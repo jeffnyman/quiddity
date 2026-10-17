@@ -21,6 +21,7 @@
 
 #include "zm/io.h"
 #include "zm/memory.h"
+#include "zm/screen.h"
 #include "zm/status.h"
 
 /* Spec §6.3.3 asks for a stack of at least 1024 words and advises more;
@@ -82,6 +83,9 @@ typedef struct zm_machine {
 
     /* Byte address of the dictionary (Spec §13.1). */
     uint32_t dictionary;
+
+    /* The output streams and the screen model (Spec §7, §8). */
+    zm_screen screen;
 
     /* The random number generator (Spec §2.4). In "random" mode the
      * state is a 64-bit generator seeded from the clock. In
