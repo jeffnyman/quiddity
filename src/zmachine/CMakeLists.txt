@@ -14,6 +14,7 @@ add_library(zmachine STATIC
     machine.c
     memory.c
     object.c
+    quetzal.c
     screen.c
     status.c
     text.c

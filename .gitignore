@@ -5,6 +5,16 @@
 build/
 
 #
+# Saved games
+#
+# Running the interpreter from the repository root leaves these behind.
+#
+
+*.sav
+*.qzl
+*.AUX
+
+#
 # Personal CMake presets
 #
 # This will ignore any local developer overrides, custom toolchain

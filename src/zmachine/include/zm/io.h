@@ -25,6 +25,14 @@
 
 #include <stdint.h>
 
+/* What a file the game asks for is (Spec §15 save and restore): a saved
+ * game, which the machine writes and reads in Quetzal form (zm/quetzal.h),
+ * or an auxiliary file of the game's own bytes (Spec §7.6). */
+typedef enum zm_file_kind {
+    ZM_FILE_SAVED_GAME,
+    ZM_FILE_AUXILIARY
+} zm_file_kind;
+
 typedef struct zm_io {
     void *context;
 
@@ -146,6 +154,25 @@ typedef struct zm_io {
      * the command file, output stream 4. Left NULL, stream 4 records
      * nothing. */
     void (*record_input)(void *context, const uint16_t *zscii, unsigned count);
+
+    /* Keep a file for the save opcode (Spec §15 save). The front end
+     * chooses where it goes and asks the player what it likes; "all
+     * questions about filenames are asked by interpreters". For an
+     * auxiliary file, name is the file name the game suggests as ASCII,
+     * or NULL if it gave none, and prompt is 1 if the game wants the
+     * player asked, 0 if not, and -1 if it did not say (Spec §15 save,
+     * Standard 1.1). For a saved game both are always NULL and -1. Return
+     * nonzero once the bytes are safely written. Left NULL, saving
+     * fails, and the game says so in its own words. */
+    int (*write_file)(void *context, zm_file_kind kind, const char *name, int prompt,
+                      const uint8_t *data, uint32_t size);
+
+    /* Fetch a file back for restore (Spec §15 restore), with the same
+     * arguments. Return its bytes in a buffer obtained from malloc, which
+     * the machine frees, and its size in *size; or NULL if there is no
+     * file to be had, the player having declined or named a file that
+     * does not exist. Left NULL, restoring fails. */
+    uint8_t *(*read_file)(void *context, zm_file_kind kind, const char *name, int prompt, uint32_t *size);
 
     /*
      * Sound (Spec §9).

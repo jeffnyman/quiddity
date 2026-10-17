@@ -16,6 +16,7 @@
 
 #include <setjmp.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "zm/fatal.h"
@@ -301,6 +302,73 @@ static void screen_hooks(int on)
     io.styles = on ? (ZM_STYLE_BOLD | ZM_STYLE_ITALIC) : 0;
     io.screen_width = 0;
     io.screen_height = 0;
+}
+
+/* Files kept in memory for the save and restore hooks (Spec §15): one
+ * saved game, handed back as many times as saved_game_reads allows, and
+ * one auxiliary file, with the name and prompt the game gave for it. */
+static uint8_t saved_game[4096];
+static uint32_t saved_game_size;
+static int saved_game_reads;
+static uint8_t aux_data[64];
+static uint32_t aux_size;
+static char aux_name[64];
+static int aux_prompt;
+
+static int hook_write_file(void *context, zm_file_kind kind, const char *name, int prompt,
+                           const uint8_t *data, uint32_t size)
+{
+    (void)context;
+    if (kind == ZM_FILE_SAVED_GAME) {
+        if (size > sizeof saved_game) {
+            return 0;
+        }
+        memcpy(saved_game, data, size);
+        saved_game_size = size;
+        return 1;
+    }
+    if (size > sizeof aux_data) {
+        return 0;
+    }
+    memcpy(aux_data, data, size);
+    aux_size = size;
+    snprintf(aux_name, sizeof aux_name, "%s", name != NULL ? name : "");
+    aux_prompt = prompt;
+    return 1;
+}
+
+static uint8_t *hook_read_file(void *context, zm_file_kind kind, const char *name, int prompt, uint32_t *size)
+{
+    uint8_t *copy;
+
+    (void)context;
+    if (kind == ZM_FILE_SAVED_GAME) {
+        if (saved_game_reads <= 0) {
+            return NULL;
+        }
+        saved_game_reads--;
+        copy = malloc(saved_game_size > 0 ? saved_game_size : 1);
+        memcpy(copy, saved_game, saved_game_size);
+        *size = saved_game_size;
+        return copy;
+    }
+    snprintf(aux_name, sizeof aux_name, "%s", name != NULL ? name : "");
+    aux_prompt = prompt;
+    copy = malloc(aux_size > 0 ? aux_size : 1);
+    memcpy(copy, aux_data, aux_size);
+    *size = aux_size;
+    return copy;
+}
+
+static void file_hooks(int on)
+{
+    io.write_file = on ? hook_write_file : NULL;
+    io.read_file = on ? hook_read_file : NULL;
+    saved_game_size = 0;
+    saved_game_reads = 0;
+    aux_size = 0;
+    aux_name[0] = '\0';
+    aux_prompt = -2;
 }
 
 /* A handler that records the fault and jumps back to the test. */
@@ -867,9 +935,12 @@ static void test_faults(void)
     expect_fault(&s, "illegal opcode", &out);
 
     /* An opcode that exists but is not implemented yet is named. */
-    story_init(&s, 5);
-    EMIT(&s, 0xbe, 0x09, 0xff, G0);                             /* save_undo -> G0 */
-    expect_fault(&s, "save_undo", &out);
+    story_init(&s, 6);
+    put_word(s.bytes, ZM_HEADER_INITIAL_PC, (uint16_t)(R1 / 4));
+    at(&s, R1);
+    EMIT(&s, 0x00);                                             /* no locals */
+    EMIT(&s, 0xbe, 0x05, 0x5f, 0x01, 0x02);                     /* draw_picture 1 2 */
+    expect_fault(&s, "draw_picture", &out);
 
     /* Spec §15 je: one operand is not permitted. */
     story_init(&s, 3);
@@ -1209,6 +1280,8 @@ static void test_object_opcodes(void)
     EMIT(&s, 0xe3, 0x53, 2, 3, 0x01, 0xff);                     /* put_prop 2 3 $1ff (low byte kept) */
     EMIT(&s, 0x11, 2, 3, G0);                                   /* get_prop 2 3 -> G0 */
     EMIT(&s, 0xe6, 0xbf, G0, 0xe5, 0x7f, ' ');                  /* 255 */
+    EMIT(&s, 0x12, 2, 40, G0);                                  /* get_prop_addr 2 40 -> G0 (no such number) */
+    EMIT(&s, 0xe6, 0xbf, G0, 0xe5, 0x7f, ' ');                  /* 0 */
 
     /* Enquiries about nothing. */
     EMIT(&s, 0x93, 0, G0);                                      /* get_parent 0 -> G0 */
@@ -1221,7 +1294,7 @@ static void test_object_opcodes(void)
 
     run(&s, &out, &m, &mem);
     snprintf(expected, sizeof expected,
-             "1 2 3 0 4 2 3 0 ac 258 7 68 68 %u 1 0 0 4 5 3 2 0 -16657 255 0", (unsigned)(PROPS2 + 7));
+             "1 2 3 0 4 2 3 0 ac 258 7 68 68 %u 1 0 0 4 5 3 2 0 -16657 255 0 0", (unsigned)(PROPS2 + 7));
     CHECK_EQ_STR(out.text, expected);
 
     /* The table itself reflects the moves and writes. */
@@ -1645,15 +1718,15 @@ static void test_header_flags_are_set_at_start(void)
     /* Spec §11.1.4, §11.1.2: from Version 4, every capability bit says
      * what the front end can do, which here is nothing; the requests in
      * Flags 2 the interpreter cannot grant are cleared while the others
-     * stay, and the transcript bit is cleared because no transcript can
-     * be made (Spec §7.4). */
+     * stay (undo among them, Spec §6.1.4), and the transcript bit is
+     * cleared because no transcript can be made (Spec §7.4). */
     story_init(&s, 5);
     s.bytes[ZM_HEADER_FLAGS1] = 0xff;
     put_word(s.bytes, ZM_HEADER_FLAGS2, 0x01fb);
     EMIT(&s, 0xba);
     run(&s, &out, &m, &mem);
     CHECK_EQ_INT(zm_read_byte(&mem, ZM_HEADER_FLAGS1), 0x40);
-    CHECK_EQ_INT(zm_read_word(&mem, ZM_HEADER_FLAGS2), ZM_FLAGS2_FORCE_FIXED | ZM_FLAGS2_COLOURS);
+    CHECK_EQ_INT(zm_read_word(&mem, ZM_HEADER_FLAGS2), ZM_FLAGS2_FORCE_FIXED | ZM_FLAGS2_UNDO | ZM_FLAGS2_COLOURS);
 
     /* Spec §11.1.3, §8.4, §8.4.3, §8.1.1, §8.3.3, §11.1.5: the fields
      * that describe the interpreter and its screen. */
@@ -1684,7 +1757,8 @@ static void test_header_flags_are_set_at_start(void)
     EMIT(&s, 0xba);
     run(&s, &out, &m, &mem);
     CHECK_EQ_INT(zm_read_byte(&mem, ZM_HEADER_FLAGS1), ZM_FLAGS1_COLOURS | ZM_FLAGS1_BOLD | ZM_FLAGS1_ITALIC | ZM_FLAGS1_SOUND);
-    CHECK_EQ_INT(zm_read_word(&mem, ZM_HEADER_FLAGS2), ZM_FLAGS2_TRANSCRIPT | ZM_FLAGS2_FORCE_FIXED | ZM_FLAGS2_COLOURS | ZM_FLAGS2_SOUND);
+    CHECK_EQ_INT(zm_read_word(&mem, ZM_HEADER_FLAGS2),
+                 ZM_FLAGS2_TRANSCRIPT | ZM_FLAGS2_FORCE_FIXED | ZM_FLAGS2_UNDO | ZM_FLAGS2_COLOURS | ZM_FLAGS2_SOUND);
     CHECK_EQ_INT(zm_read_byte(&mem, ZM_HEADER_SCREEN_HEIGHT), 14);
     CHECK_EQ_INT(zm_read_byte(&mem, ZM_HEADER_SCREEN_WIDTH), 60);
     CHECK_EQ_INT(zm_read_byte(&mem, ZM_HEADER_DEFAULT_BACKGROUND), ZM_COLOUR_YELLOW);
@@ -2144,6 +2218,323 @@ static void test_screen_faults(void)
     expect_fault(&s, "styles are 0 to 15", &out);
 }
 
+/*
+ * The state of play (Spec §6.1): save, restore, restart, undo.
+ */
+
+static void test_save_and_restore_in_version_3(void)
+{
+    story s;
+    output out;
+    zm_machine m;
+    zm_memory mem;
+
+    file_hooks(1);
+
+    /* Spec §15 save: a branch, taken when the save succeeds; Spec §15
+     * restore, Quetzal §5.8.1: a restore picks up at that branch and
+     * takes it again. The game sets a Flags 2 bit before restoring, and
+     * finds it still set after (Spec §6.1.2), while the global it
+     * changed is back to its saved value. The second restore finds no
+     * file and so is not taken. */
+    story_init(&s, 3);
+    EMIT(&s, 0x0d, G0, 7);                                      /* store G0 7 */
+    EMIT(&s, 0xb5, 0xc3);                                       /* save ?saved */
+    EMIT(&s, 0xba);                                             /* quit */
+    EMIT(&s, 0xe6, 0xbf, G0);                                   /* saved: print_num G0 */
+    EMIT(&s, 0xe5, 0x7f, '/');                                  /* print_char '/' */
+    EMIT(&s, 0x10, 0x00, 0x11, SP);                             /* loadb 0 $11 -> sp */
+    EMIT(&s, 0xe6, 0xbf, SP);                                   /* print_num sp */
+    EMIT(&s, 0xe5, 0x7f, ' ');                                  /* print_char ' ' */
+    EMIT(&s, 0x0d, G0, 9);                                      /* store G0 9 */
+    EMIT(&s, 0xe2, 0x57, 0x00, 0x11, 0x02);                     /* storeb 0 $11 2 */
+    EMIT(&s, 0xb6, 0xc2);                                       /* restore ?next */
+    EMIT(&s, 0xe6, 0xbf, G0);                                   /* next: print_num G0 */
+    EMIT(&s, 0xba);                                             /* quit */
+    saved_game_reads = 1;
+    run(&s, &out, &m, &mem);
+    CHECK_EQ_STR(out.text, "7/0 7/2 9");
+
+    /* The file is Quetzal, and records the branch's address. */
+    CHECK(saved_game_size > 36);
+    CHECK(memcmp(saved_game, "FORM", 4) == 0);
+    CHECK(memcmp(saved_game + 8, "IFZS", 4) == 0);
+    CHECK(memcmp(saved_game + 30, "\x00\x04\x04", 3) == 0);
+    zm_machine_free(&m);
+    zm_memory_free(&mem);
+
+    file_hooks(0);
+}
+
+static void test_save_and_restore_in_version_5(void)
+{
+    story s;
+    output out;
+    zm_machine m;
+    zm_memory mem;
+
+    file_hooks(1);
+    screen_hooks(1);
+
+    /* Spec §15 save: 1 when saved, 2 when restored to this point. Spec
+     * §8.6.1.3: a restore collapses the upper window. Spec §14: in
+     * Version 4 these are the 0OP opcodes, storing rather than
+     * branching. */
+    story_init(&s, 4);
+    EMIT(&s, 0x0d, G0, 7);                                      /* store G0 7 */
+    EMIT(&s, 0xb5, G1);                                         /* save -> G1 */
+    EMIT(&s, 0xe6, 0xbf, G1);                                   /* print_num G1 */
+    EMIT(&s, 0x41, G1, 2, 0xca);                                /* je G1 2 ?done */
+    EMIT(&s, 0x0d, G0, 9);                                      /* store G0 9 */
+    EMIT(&s, 0xb6, G2);                                         /* restore -> G2 */
+    EMIT(&s, 0xe5, 0x7f, 'F');                                  /* print_char 'F' */
+    EMIT(&s, 0xe6, 0xbf, G0);                                   /* done: print_num G0 */
+    EMIT(&s, 0xba);                                             /* quit */
+    saved_game_reads = 1;
+    run(&s, &out, &m, &mem);
+    CHECK_EQ_STR(out.text, "127");
+    CHECK(memcmp(saved_game + 30, "\x00\x04\x04", 3) == 0);
+    CHECK(strstr(screen_log, "split 0;window 0") != NULL);
+    zm_machine_free(&m);
+    zm_memory_free(&mem);
+
+    /* Spec §14: from Version 5 they are the extended opcodes, here
+     * without their optional operands. */
+    story_init(&s, 5);
+    EMIT(&s, 0x0d, G0, 7);                                      /* store G0 7 */
+    EMIT(&s, 0xbe, 0x00, 0xff, G1);                             /* save -> G1 */
+    EMIT(&s, 0xe6, 0xbf, G1);                                   /* print_num G1 */
+    EMIT(&s, 0x41, G1, 2, 0xcc);                                /* je G1 2 ?done */
+    EMIT(&s, 0x0d, G0, 9);                                      /* store G0 9 */
+    EMIT(&s, 0xbe, 0x01, 0xff, G2);                             /* restore -> G2 */
+    EMIT(&s, 0xe5, 0x7f, 'F');                                  /* print_char 'F' */
+    EMIT(&s, 0xe6, 0xbf, G0);                                   /* done: print_num G0 */
+    EMIT(&s, 0xba);                                             /* quit */
+    saved_game_reads = 1;
+    run(&s, &out, &m, &mem);
+    CHECK_EQ_STR(out.text, "127");
+    CHECK(memcmp(saved_game + 30, "\x00\x04\x06", 3) == 0);
+    zm_machine_free(&m);
+    zm_memory_free(&mem);
+
+    /* Spec §15 restore: 0 when there is no file; and when the file is
+     * wrong, with a word on why. */
+    story_init(&s, 5);
+    EMIT(&s, 0xbe, 0x01, 0xff, G2);                             /* restore -> G2 */
+    EMIT(&s, 0xe6, 0xbf, G2);                                   /* print_num G2 */
+    EMIT(&s, 0xba);                                             /* quit */
+    saved_game_reads = 0;
+    run(&s, &out, &m, &mem);
+    CHECK_EQ_STR(out.text, "0");
+    zm_machine_free(&m);
+    zm_memory_free(&mem);
+
+    saved_game_reads = 1;
+    saved_game[21] = 0x01;                                      /* another release */
+    run(&s, &out, &m, &mem);
+    CHECK(strstr(out.text, "different story") != NULL);
+    CHECK_EQ_INT(out.text[out.count - 1], '0');
+    zm_machine_free(&m);
+    zm_memory_free(&mem);
+
+    saved_game_reads = 1;
+    saved_game[21] = 0x00;
+    saved_game[0] = 'X';                                        /* not IFF at all */
+    run(&s, &out, &m, &mem);
+    CHECK(strstr(out.text, "not a Quetzal") != NULL);
+    CHECK_EQ_INT(out.text[out.count - 1], '0');
+    zm_machine_free(&m);
+    zm_memory_free(&mem);
+
+    saved_game_reads = 1;
+    saved_game[0] = 'F';
+    saved_game_size = 40;                                       /* cut short */
+    run(&s, &out, &m, &mem);
+    CHECK(strstr(out.text, "damaged") != NULL);
+    CHECK_EQ_INT(out.text[out.count - 1], '0');
+    zm_machine_free(&m);
+    zm_memory_free(&mem);
+
+    screen_hooks(0);
+    file_hooks(0);
+}
+
+static void test_auxiliary_files(void)
+{
+    story s;
+    output out;
+    zm_machine m;
+    zm_memory mem;
+
+    file_hooks(1);
+
+    /* Spec §15 save and restore with operands, §7.6: four bytes of a
+     * table go to a file named by the game, which asks not to be
+     * prompted; cleared, they come back from it, and restore returns
+     * how many. */
+    story_init(&s, 5);
+    s.bytes[ARRAY] = 1;
+    s.bytes[ARRAY + 1] = 2;
+    s.bytes[ARRAY + 2] = 3;
+    s.bytes[ARRAY + 3] = 4;
+    s.bytes[TABLE2] = 4;
+    memcpy(s.bytes + TABLE2 + 1, "NOTE", 4);
+    EMIT(&s, 0xbe, 0x00, 0x11, ARRAY >> 8, ARRAY & 0xff, 0x04, TABLE2 >> 8, TABLE2 & 0xff, 0x00, G1);
+                                                                /* save ARRAY 4 TABLE2 0 -> G1 */
+    EMIT(&s, 0xe2, 0x17, ARRAY >> 8, ARRAY & 0xff, 0x00, 0x00); /* storeb ARRAY 0 0 */
+    EMIT(&s, 0xe2, 0x17, ARRAY >> 8, ARRAY & 0xff, 0x03, 0x00); /* storeb ARRAY 3 0 */
+    EMIT(&s, 0xbe, 0x01, 0x11, ARRAY >> 8, ARRAY & 0xff, 0x04, TABLE2 >> 8, TABLE2 & 0xff, 0x00, G2);
+                                                                /* restore ARRAY 4 TABLE2 0 -> G2 */
+    EMIT(&s, 0xe6, 0xbf, G1, 0xe5, 0x7f, ' ');                  /* print_num G1 ' ' */
+    EMIT(&s, 0xe6, 0xbf, G2, 0xe5, 0x7f, ' ');                  /* print_num G2 ' ' */
+    EMIT(&s, 0xd0, 0x1f, ARRAY >> 8, ARRAY & 0xff, 0x00, SP);   /* loadb ARRAY 0 -> sp */
+    EMIT(&s, 0xe6, 0xbf, SP, 0xe5, 0x7f, ' ');                  /* print_num sp ' ' */
+    EMIT(&s, 0xd0, 0x1f, ARRAY >> 8, ARRAY & 0xff, 0x03, SP);   /* loadb ARRAY 3 -> sp */
+    EMIT(&s, 0xe6, 0xbf, SP);                                   /* print_num sp */
+    EMIT(&s, 0xba);                                             /* quit */
+    run(&s, &out, &m, &mem);
+    CHECK_EQ_STR(out.text, "1 4 1 4");
+    CHECK_EQ_STR(aux_name, "NOTE");
+    CHECK_EQ_INT(aux_prompt, 0);
+    CHECK_EQ_INT(aux_size, 4);
+    CHECK(memcmp(aux_data, "\x01\x02\x03\x04", 4) == 0);
+    zm_machine_free(&m);
+    zm_memory_free(&mem);
+
+    /* Without a front end that keeps files, both fail. */
+    file_hooks(0);
+    run(&s, &out, &m, &mem);
+    CHECK_EQ_STR(out.text, "0 0 0 0");
+    zm_machine_free(&m);
+    zm_memory_free(&mem);
+}
+
+static void test_restart(void)
+{
+    story s;
+    output out;
+    zm_machine m;
+    zm_memory mem;
+
+    screen_hooks(1);
+
+    /* Spec §15 restart, §6.1.3: memory comes back from the story file
+     * and the stack empties, but Flags 2 survives, which is how the
+     * game here tells its second start from its first. The Rst header
+     * fields are reset (Spec §6.1.2.2) and the screen cleared. */
+    story_init(&s, 3);
+    EMIT(&s, 0x95, G0);                                         /* inc G0 */
+    EMIT(&s, 0xe6, 0xbf, G0);                                   /* print_num G0 */
+    EMIT(&s, 0x10, 0x00, 0x11, SP);                             /* loadb 0 $11 -> sp */
+    EMIT(&s, 0xa0, SP, 0xc6);                                   /* jz sp ?first */
+    EMIT(&s, 0xe5, 0x7f, 'R');                                  /* print_char 'R' */
+    EMIT(&s, 0xba);                                             /* quit */
+    EMIT(&s, 0xe2, 0x57, 0x00, 0x11, 0x02);                     /* first: storeb 0 $11 2 */
+    EMIT(&s, 0x0d, G0, 50);                                     /* store G0 50 */
+    EMIT(&s, 0xe8, 0x7f, 1);                                    /* push 1 */
+    EMIT(&s, 0xb7);                                             /* restart */
+    run(&s, &out, &m, &mem);
+    CHECK_EQ_STR(out.text, "11R");
+    CHECK_EQ_INT(m.sp, 0);
+    CHECK_EQ_INT(zm_read_word(&mem, GLOBALS), 1);
+    CHECK_EQ_INT(zm_read_byte(&mem, ZM_HEADER_FLAGS2 + 1), 2);
+    CHECK_EQ_INT(zm_read_byte(&mem, ZM_HEADER_STANDARD_MAJOR), 1);
+    CHECK(strstr(screen_log, "style 0;colour 9/2;buffer on;erase -1") != NULL);
+    zm_machine_free(&m);
+    zm_memory_free(&mem);
+
+    screen_hooks(0);
+}
+
+static void test_undo(void)
+{
+    story s;
+    output out;
+    zm_machine m;
+    zm_memory mem;
+
+    /* Spec §15 save_undo and restore_undo: each save_undo stores 1, and
+     * 2 again when undone to; a second undo goes back a step further;
+     * with nothing left, restore_undo stores 0. */
+    story_init(&s, 5);
+    EMIT(&s, 0x0d, G0, 1);                                      /* store G0 1 */
+    EMIT(&s, 0xbe, 0x09, 0xff, G1);                             /* save_undo -> G1 */
+    EMIT(&s, 0x41, G1, 2, 0xdb);                                /* je G1 2 ?undone1 */
+    EMIT(&s, 0x0d, G0, 2);                                      /* store G0 2 */
+    EMIT(&s, 0xbe, 0x09, 0xff, G1);                             /* save_undo -> G1 */
+    EMIT(&s, 0x41, G1, 2, 0xc9);                                /* je G1 2 ?undone2 */
+    EMIT(&s, 0x0d, G0, 3);                                      /* store G0 3 */
+    EMIT(&s, 0xbe, 0x0a, 0xff, G2);                             /* restore_undo -> G2 */
+    EMIT(&s, 0xe6, 0xbf, G0);                                   /* undone2: print_num G0 */
+    EMIT(&s, 0xbe, 0x0a, 0xff, G2);                             /* restore_undo -> G2 */
+    EMIT(&s, 0xe6, 0xbf, G0);                                   /* undone1: print_num G0 */
+    EMIT(&s, 0xbe, 0x0a, 0xff, G2);                             /* restore_undo -> G2 */
+    EMIT(&s, 0xe6, 0xbf, G2);                                   /* print_num G2 */
+    EMIT(&s, 0xba);                                             /* quit */
+    run(&s, &out, &m, &mem);
+    CHECK_EQ_STR(out.text, "210");
+    zm_machine_free(&m);
+    zm_memory_free(&mem);
+
+    /* More saves than the ring holds: the newest is still there. */
+    story_init(&s, 5);
+    EMIT(&s, 0xbe, 0x09, 0xff, G1);                             /* loop: save_undo -> G1 */
+    EMIT(&s, 0x41, G1, 2, 0xcd);                                /* je G1 2 ?out */
+    EMIT(&s, 0x95, G0);                                         /* inc G0 */
+    EMIT(&s, 0x42, G0, 40, 0xbf, 0xf3);                         /* jl G0 40 ?loop */
+    EMIT(&s, 0xbe, 0x0a, 0xff, G2);                             /* restore_undo -> G2 */
+    EMIT(&s, 0xe6, 0xbf, G0);                                   /* out: print_num G0 */
+    EMIT(&s, 0xba);                                             /* quit */
+    run(&s, &out, &m, &mem);
+    CHECK_EQ_STR(out.text, "39");
+    CHECK_EQ_INT(m.undo_count, ZM_UNDO_LEVELS - 1);
+    zm_machine_free(&m);
+    zm_memory_free(&mem);
+}
+
+static void test_catch_and_throw(void)
+{
+    story s;
+    output out;
+    zm_machine m;
+    zm_memory mem;
+
+    /* Spec §15 catch and throw, Quetzal §6.2: catch counts the frames
+     * on the call stack, not counting the top level, so the first
+     * routine called sees 1; throw returns from that routine with the
+     * value, discarding the frames and stack words above it. */
+    story_init(&s, 5);
+    EMIT(&s, 0xe0, 0x3f); emit_packed(&s, R1); EMIT(&s, G0);    /* call_vs R1 -> G0 */
+    EMIT(&s, 0xe6, 0xbf, G0);                                   /* print_num G0 */
+    EMIT(&s, 0xba);                                             /* quit */
+    at(&s, R1);
+    EMIT(&s, 0x01);                                             /* 1 local */
+    EMIT(&s, 0xb9, L1);                                         /* catch -> L1 */
+    EMIT(&s, 0xe6, 0xbf, L1, 0xe5, 0x7f, ' ');                  /* print_num L1 ' ' */
+    EMIT(&s, 0xf9, 0x2f); emit_packed(&s, R2); EMIT(&s, L1);    /* call_vn R2 L1 */
+    EMIT(&s, 0x9b, 5);                                          /* ret 5 */
+    at(&s, R2);
+    EMIT(&s, 0x01);                                             /* 1 local */
+    EMIT(&s, 0xe8, 0x7f, 7);                                    /* push 7 */
+    EMIT(&s, 0xf9, 0x2f); emit_packed(&s, R3); EMIT(&s, L1);    /* call_vn R3 L1 */
+    EMIT(&s, 0xb0);                                             /* rtrue */
+    at(&s, R3);
+    EMIT(&s, 0x01);                                             /* 1 local */
+    EMIT(&s, 0xe8, 0x7f, 8);                                    /* push 8 */
+    EMIT(&s, 0x3c, 99, L1);                                     /* throw 99 L1 */
+    run(&s, &out, &m, &mem);
+    CHECK_EQ_STR(out.text, "1 99");
+    CHECK_EQ_INT(m.sp, 0);
+    CHECK_EQ_INT(m.depth, 1);
+    zm_machine_free(&m);
+    zm_memory_free(&mem);
+
+    /* A frame that is not there. */
+    story_init(&s, 5);
+    EMIT(&s, 0x1c, 5, 7);                                       /* throw 5 7 */
+    expect_fault(&s, "throw", &out);
+}
+
 int main(void)
 {
     RUN_TEST(test_simple_test_files_say_hello);
@@ -2178,5 +2569,11 @@ int main(void)
     RUN_TEST(test_table_opcodes);
     RUN_TEST(test_unicode_printing);
     RUN_TEST(test_screen_faults);
+    RUN_TEST(test_save_and_restore_in_version_3);
+    RUN_TEST(test_save_and_restore_in_version_5);
+    RUN_TEST(test_auxiliary_files);
+    RUN_TEST(test_restart);
+    RUN_TEST(test_undo);
+    RUN_TEST(test_catch_and_throw);
     return CHECK_SUMMARY();
 }

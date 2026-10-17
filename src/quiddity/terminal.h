@@ -23,6 +23,11 @@
  * is erased unseen. For the usual status line that means one line above
  * each prompt, as in Version 3; for a menu or a map it means the whole
  * thing, once per keypress.
+ *
+ * Saved games (Spec §15 save and restore) go to files the player names
+ * at a prompt, with the story's own name offered as the default; the
+ * machine supplies the bytes (zm/quetzal.h) and this file only puts them
+ * somewhere.
  */
 
 #ifndef QUIDDITY_TERMINAL_H
@@ -38,6 +43,9 @@
 #define TERMINAL_HEIGHT 24
 
 #define TERMINAL_LINE_MAX 1024
+
+/* The longest file name the prompts accept. */
+#define TERMINAL_NAME_MAX 260
 
 typedef struct terminal {
     const zm_memory *mem;
@@ -73,13 +81,18 @@ typedef struct terminal {
     FILE *transcript;
     const char *record_path;
     FILE *record;
+
+    /* The file the last saved game went to or came from, offered as the
+     * default at the next prompt. */
+    char save_name[TERMINAL_NAME_MAX];
 } terminal;
 
 /* Prepare the terminal and fill in the I/O struct to point at it. The
- * terminal needs the memory to translate ZSCII (Spec §3.8). The paths,
- * which may be NULL, are where a transcript and a record of commands go
- * if the game asks for them. */
-void terminal_init(terminal *t, const zm_memory *mem, zm_io *io,
+ * terminal needs the memory to translate ZSCII (Spec §3.8) and the story
+ * file's path to name saved games after. The other paths, which may be
+ * NULL, are where a transcript and a record of commands go if the game
+ * asks for them. */
+void terminal_init(terminal *t, const zm_memory *mem, zm_io *io, const char *story_path,
                    const char *transcript_path, const char *record_path);
 
 /* Write out anything still held back and close any files. Call when the

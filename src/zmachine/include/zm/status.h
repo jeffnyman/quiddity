@@ -36,7 +36,18 @@ typedef enum zm_status {
 
     /* The file is a Blorb resource collection. Reading the story file out
      * of a Blorb wrapper is not supported yet. */
-    ZM_ERROR_BLORB_UNSUPPORTED
+    ZM_ERROR_BLORB_UNSUPPORTED,
+
+    /* Offered as a saved game, the bytes are not a Quetzal file at all
+     * (Quetzal §2.1, §8.5). */
+    ZM_ERROR_NOT_A_SAVE,
+
+    /* The saved game belongs to a different story (Quetzal §5.3). */
+    ZM_ERROR_WRONG_STORY,
+
+    /* The saved game is malformed or too large for this interpreter
+     * (Quetzal §3.5, §4.8). */
+    ZM_ERROR_BAD_SAVE
 } zm_status;
 
 /* A short, human-readable description of a status code. */

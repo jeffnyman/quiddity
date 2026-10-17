@@ -23,6 +23,12 @@ const char *zm_status_message(zm_status status)
         return "story file header describes an impossible memory map";
     case ZM_ERROR_BLORB_UNSUPPORTED:
         return "Blorb files are not supported yet";
+    case ZM_ERROR_NOT_A_SAVE:
+        return "not a Quetzal saved game";
+    case ZM_ERROR_WRONG_STORY:
+        return "saved game is from a different story";
+    case ZM_ERROR_BAD_SAVE:
+        return "saved game is damaged";
     }
 
     return "unknown error";

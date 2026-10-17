@@ -140,7 +140,7 @@ int main(int argc, char **argv)
         return EXIT_SUCCESS;
     }
 
-    terminal_init(&term, &mem, &io, transcript_path, record_path);
+    terminal_init(&term, &mem, &io, path, transcript_path, record_path);
     status = zm_machine_init(&machine, &mem, &io);
     if (status != ZM_OK) {
         fprintf(stderr, "quiddity: %s\n", zm_status_message(status));

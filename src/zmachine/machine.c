@@ -4,10 +4,11 @@
  * the object table of Spec §12, the dictionary of Spec §13, and the
  * screen of Spec §7 and §8 as the opcodes need them.
  *
- * The file is in four parts: the stack and variables (§6.2, §6.3), routine
- * calls and returns (§5, §6.4), the helpers every opcode shares (store,
+ * The file is in five parts: the stack and variables (§6.2, §6.3), routine
+ * calls and returns (§5, §6.4), the state of play as a whole (§6.1:
+ * snapshots, restart, undo), the helpers every opcode shares (store,
  * branch, printing, arithmetic, random numbers, objects, input, the
- * screen), and the dispatch itself.
+ * screen, files), and the dispatch itself.
  */
 
 #include "zm/machine.h"
@@ -22,6 +23,7 @@
 #include "zm/header.h"
 #include "zm/instruction.h"
 #include "zm/object.h"
+#include "zm/quetzal.h"
 #include "zm/text.h"
 
 /*
@@ -228,6 +230,134 @@ static void return_from_routine(zm_machine *m, uint16_t value)
 }
 
 /*
+ * The state of play (Spec §6.1).
+ */
+
+/* Put the machine at the start of the story: frame 0 with an empty
+ * stack, and the PC at the first instruction (Spec §5.5) or, in Version
+ * 6, inside the main routine (Spec §5.4). */
+static void begin_execution(zm_machine *m)
+{
+    zm_header h;
+
+    zm_header_read(m->mem, &h);
+    m->sp = 0;
+
+    /* Frame 0 is the starting environment, which has no locals and no
+     * caller. Its stack base is 0, so the stack starts empty. */
+    m->depth = 1;
+    memset(&m->frames[0], 0, sizeof m->frames[0]);
+    m->frames[0].result_variable = -1;
+
+    if (m->mem->version == 6) {
+        /* Version 6 begins by calling the main routine. It is entered
+         * here directly, so that it is frame 0 and the rule that frame 0
+         * cannot be returned from covers it too. */
+        m->depth = 0;
+        enter_routine(m, zm_unpack_routine(m->mem, h.initial_pc), NULL, 0);
+    } else {
+        m->pc = h.initial_pc;
+    }
+}
+
+/* Replace dynamic memory wholesale while keeping Flags 2, which Spec
+ * §6.1.2 and §6.1.3 have survive a restore, an undo, and a restart: its
+ * bits describe the player's session (transcript on, fixed pitch
+ * wanted), not the story's state. */
+static void replace_memory(zm_machine *m, const uint8_t *memory)
+{
+    uint16_t flags2 = zm_read_word(m->mem, ZM_HEADER_FLAGS2);
+
+    memcpy(m->mem->bytes, memory, m->mem->static_base);
+    zm_write_word(m->mem, ZM_HEADER_FLAGS2, flags2);
+}
+
+void zm_machine_restart(zm_machine *m)
+{
+    /* Spec §15 restart, §6.1.3: back to the story file's dynamic memory,
+     * an empty stack, and the first instruction; the header's Rst fields
+     * are reset and the screen cleared by zm_screen_restart(). */
+    replace_memory(m, m->mem->original);
+    begin_execution(m);
+    zm_screen_restart(&m->screen);
+}
+
+void zm_snapshot_free(zm_snapshot *snapshot)
+{
+    free(snapshot->memory);
+    free(snapshot->stack);
+    free(snapshot->frames);
+    memset(snapshot, 0, sizeof *snapshot);
+}
+
+zm_status zm_machine_take_snapshot(const zm_machine *m, uint32_t pc, zm_snapshot *snapshot)
+{
+    memset(snapshot, 0, sizeof *snapshot);
+    snapshot->memory = malloc(m->mem->static_base);
+    snapshot->stack = malloc((m->sp > 0 ? m->sp : 1) * sizeof *snapshot->stack);
+    snapshot->frames = malloc(m->depth * sizeof *snapshot->frames);
+    if (snapshot->memory == NULL || snapshot->stack == NULL || snapshot->frames == NULL) {
+        zm_snapshot_free(snapshot);
+        return ZM_ERROR_OUT_OF_MEMORY;
+    }
+    memcpy(snapshot->memory, m->mem->bytes, m->mem->static_base);
+    memcpy(snapshot->stack, m->stack, m->sp * sizeof *snapshot->stack);
+    memcpy(snapshot->frames, m->frames, m->depth * sizeof *snapshot->frames);
+    snapshot->sp = m->sp;
+    snapshot->depth = m->depth;
+    snapshot->pc = pc;
+    return ZM_OK;
+}
+
+void zm_machine_apply_snapshot(zm_machine *m, const zm_snapshot *snapshot)
+{
+    replace_memory(m, snapshot->memory);
+    memcpy(m->stack, snapshot->stack, snapshot->sp * sizeof *m->stack);
+    memcpy(m->frames, snapshot->frames, snapshot->depth * sizeof *m->frames);
+    m->sp = snapshot->sp;
+    m->depth = snapshot->depth;
+    m->pc = snapshot->pc;
+
+    /* Spec §6.1.2.2: the game may have been saved by another
+     * interpreter, so the header says who is running it now. */
+    zm_screen_write_header(&m->screen);
+}
+
+/* Spec §15 save_undo: keep the state of play in memory. The ring holds
+ * the last ZM_UNDO_LEVELS of them; when it is full the oldest goes. */
+static int save_undo(zm_machine *m, uint32_t pc)
+{
+    zm_snapshot *slot = &m->undo[m->undo_next];
+
+    zm_snapshot_free(slot);
+    if (zm_machine_take_snapshot(m, pc, slot) != ZM_OK) {
+        return 0;
+    }
+    m->undo_next = (m->undo_next + 1) % ZM_UNDO_LEVELS;
+    if (m->undo_count < ZM_UNDO_LEVELS) {
+        m->undo_count++;
+    }
+    return 1;
+}
+
+/* Spec §15 restore_undo: go back to the newest state kept, which is
+ * then used up, so that a second undo goes back a step further. */
+static int restore_undo(zm_machine *m)
+{
+    zm_snapshot *slot;
+
+    if (m->undo_count == 0) {
+        return 0;
+    }
+    m->undo_next = (m->undo_next + ZM_UNDO_LEVELS - 1) % ZM_UNDO_LEVELS;
+    m->undo_count--;
+    slot = &m->undo[m->undo_next];
+    zm_machine_apply_snapshot(m, slot);
+    zm_snapshot_free(slot);
+    return 1;
+}
+
+/*
  * Shared pieces of instructions.
  */
 
@@ -269,6 +399,15 @@ static void print_sink(void *context, uint16_t zscii)
 static void print_string(zm_machine *m, uint32_t address)
 {
     zm_text_decode(m->mem, address, print_sink, m);
+}
+
+/* A message of the interpreter's own, in ASCII, sent where the game's
+ * text goes so that it lands on the screen and in the transcript. */
+static void print_ascii(zm_machine *m, const char *text)
+{
+    for (; *text != '\0'; text++) {
+        print_zscii(m, (uint16_t)(unsigned char)*text);
+    }
 }
 
 /* Spec §2.2.1, §15 print_num: numbers print as signed decimals. */
@@ -853,6 +992,199 @@ static void copy_table_opcode(zm_machine *m, const zm_instruction *inst, const u
 }
 
 /*
+ * Saving and restoring (Spec §15 save, restore, save_undo, restore_undo).
+ */
+
+/* Quetzal §5.8: a saved game records the address of the save
+ * instruction's branch data (Versions 1 to 3) or store byte (Version 4
+ * on), rather than of the next instruction, so that on a restore those
+ * bytes can be acted on again with a different outcome. A save in those
+ * Versions is a one-byte 0OP instruction, so its branch data starts at
+ * the next byte; a store byte is always the last byte of its
+ * instruction. */
+static uint32_t save_point(const zm_machine *m, const zm_instruction *inst)
+{
+    return m->mem->version <= 3 ? inst->address + 1 : inst->next - 1;
+}
+
+/* Pick up after a restore, with the PC at the save point: Spec §15 save
+ * has Versions 1 to 3 take the save's branch, as if it had succeeded, and
+ * later Versions store 2 where the save stored its 1. */
+static void resume_after_restore(zm_machine *m)
+{
+    if (m->mem->version <= 3) {
+        zm_instruction save = { 0 };
+
+        save.next = zm_instruction_read_branch(m->mem, m->pc, &save.branch_on_true, &save.branch_offset);
+        m->pc = save.next;
+        branch(m, &save, 1);
+    } else {
+        uint8_t variable = zm_read_byte(m->mem, m->pc++);
+
+        write_variable(m, variable, 2, 0);
+    }
+}
+
+/* The Version 5 forms of save and restore with operands (Spec §15, §7.6)
+ * move bytes between a table in memory and an auxiliary file of the
+ * game's own: table and bytes give the region, name a string counted by
+ * its first byte (Spec §7.6.1), and prompt, if given, whether to ask the
+ * player. Returns 1 or 0 for a save and the number of bytes read for a
+ * restore. */
+static uint16_t auxiliary_file(zm_machine *m, const zm_instruction *inst, const uint16_t *ops, unsigned count, int saving)
+{
+    uint32_t table = ops[0];
+    uint32_t bytes;
+    char name[256];
+    const char *name_given = NULL;
+    int prompt = -1;
+    uint8_t *data;
+    uint32_t size;
+    uint16_t result = 0;
+
+    if (count < 2) {
+        zm_fatal("%s at $%05x names a table but not how many bytes of it",
+                 inst->info->name, (unsigned)inst->address);
+    }
+    bytes = ops[1];
+    if (count > 2 && ops[2] != 0) {
+        unsigned length = zm_read_byte(m->mem, ops[2]);
+
+        for (unsigned i = 0; i < length; i++) {
+            name[i] = (char)zm_read_byte(m->mem, (uint32_t)(ops[2] + 1u + i));
+        }
+        name[length] = '\0';
+        name_given = name;
+    }
+    if (count > 3) {
+        prompt = ops[3] != 0;
+    }
+
+    if (saving) {
+        if (m->io->write_file == NULL) {
+            return 0;
+        }
+        data = malloc(bytes > 0 ? bytes : 1);
+        if (data == NULL) {
+            return 0;
+        }
+        for (uint32_t i = 0; i < bytes; i++) {
+            data[i] = zm_read_byte(m->mem, table + i);
+        }
+        result = m->io->write_file(m->io->context, ZM_FILE_AUXILIARY, name_given, prompt, data, bytes) ? 1 : 0;
+        free(data);
+        return result;
+    }
+
+    if (m->io->read_file == NULL) {
+        return 0;
+    }
+    data = m->io->read_file(m->io->context, ZM_FILE_AUXILIARY, name_given, prompt, &size);
+    if (data == NULL) {
+        return 0;
+    }
+    if (size > bytes) {
+        size = bytes;
+    }
+    for (uint32_t i = 0; i < size; i++) {
+        zm_write_byte(m->mem, table + i, data[i]);
+    }
+    free(data);
+    return (uint16_t)size;
+}
+
+static void save_opcode(zm_machine *m, const zm_instruction *inst, const uint16_t *ops, unsigned count)
+{
+    uint8_t *data;
+    uint32_t size;
+    int saved = 0;
+
+    if (count > 0) {
+        store_result(m, inst, auxiliary_file(m, inst, ops, count, 1));
+        return;
+    }
+
+    /* Spec §6.1.1: the whole state of play, as a Quetzal file the front
+     * end puts somewhere. */
+    if (m->io->write_file != NULL && zm_quetzal_write(m, save_point(m, inst), &data, &size) == ZM_OK) {
+        saved = m->io->write_file(m->io->context, ZM_FILE_SAVED_GAME, NULL, -1, data, size) != 0;
+        free(data);
+    }
+    if (m->mem->version <= 3) {
+        branch(m, inst, saved);
+    } else {
+        store_result(m, inst, saved ? 1 : 0);
+    }
+}
+
+static void restore_opcode(zm_machine *m, const zm_instruction *inst, const uint16_t *ops, unsigned count)
+{
+    uint8_t *data = NULL;
+    uint32_t size = 0;
+
+    if (count > 0) {
+        store_result(m, inst, auxiliary_file(m, inst, ops, count, 0));
+        return;
+    }
+
+    if (m->io->read_file != NULL) {
+        data = m->io->read_file(m->io->context, ZM_FILE_SAVED_GAME, NULL, -1, &size);
+    }
+    if (data != NULL) {
+        zm_status status = zm_quetzal_read(m, data, size);
+
+        free(data);
+        if (status == ZM_OK) {
+            /* Spec §8.6.1.3: the upper window collapses on a restore;
+             * the game draws it again if it wants one. */
+            zm_screen_split(&m->screen, 0);
+            zm_screen_set_window(&m->screen, ZM_WINDOW_LOWER);
+            resume_after_restore(m);
+            return;
+        }
+
+        /* The game will say the restore failed, but it cannot say why,
+         * and the player deserves to know. */
+        print_ascii(m, "[");
+        print_ascii(m, zm_status_message(status));
+        print_ascii(m, "]\n");
+    }
+
+    /* Spec §15 restore: 0 for failure, which in Versions 1 to 3 means
+     * the branch is not taken. */
+    if (m->mem->version <= 3) {
+        branch(m, inst, 0);
+    } else {
+        store_result(m, inst, 0);
+    }
+}
+
+/* Quetzal §6.2: catch is the number of frames on the call stack, so that
+ * a caught value survives in a saved game. Frotz, whose saved games are
+ * the ones to agree with, does not count the environment of Spec §5.5
+ * that this machine keeps as frame 0; it does count the Version 6 main
+ * routine. */
+static uint16_t frame_number(const zm_machine *m)
+{
+    return (uint16_t)(m->depth - (m->mem->version == 6 ? 0 : 1));
+}
+
+static void throw_opcode(zm_machine *m, const zm_instruction *inst, const uint16_t *ops)
+{
+    uint32_t depth = (uint32_t)ops[1] + (m->mem->version == 6 ? 0 : 1);
+
+    /* Spec §15 throw: back to the routine that caught the value, which
+     * then returns. A frame that is not on the stack cannot be
+     * returned to. */
+    if (depth < 1 || depth > m->depth) {
+        zm_fatal("throw at $%05x to stack frame %u, which does not exist",
+                 (unsigned)inst->address, (unsigned)ops[1]);
+    }
+    m->depth = depth;
+    return_from_routine(m, ops[0]);
+}
+
+/*
  * Dispatch. Each function receives the decoded instruction and its
  * operand values, already fetched in order (Spec §4.5.2).
  */
@@ -876,11 +1208,25 @@ static void execute_0op(zm_machine *m, const zm_instruction *inst)
         break;
     case 4:  /* nop */
         break;
+    case 5:  /* save */
+        save_opcode(m, inst, NULL, 0);
+        break;
+    case 6:  /* restore */
+        restore_opcode(m, inst, NULL, 0);
+        break;
+    case 7:  /* restart */
+        zm_machine_restart(m);
+        break;
     case 8:  /* ret_popped */
         return_from_routine(m, pop(m));
         break;
-    case 9:  /* pop (Versions 1 to 4): discard the top of the stack */
-        pop(m);
+    case 9:  /* catch from Version 5; pop before that, which discards the
+              * top of the stack */
+        if (m->mem->version >= 5) {
+            store_result(m, inst, frame_number(m));
+        } else {
+            pop(m);
+        }
         break;
     case 10: /* quit */
         m->running = 0;
@@ -1071,11 +1417,21 @@ static void execute_2op(zm_machine *m, const zm_instruction *inst, const uint16_
             }
         }
         break;
-    case 18: /* get_prop_addr: the address of the data, or 0 */
+    case 18: /* get_prop_addr: the address of the data, or 0. Spec §15 asks
+              * for 0 when the object has not got the property, and some
+              * Inform games ('Vespers', 'Nine Dancers') ask about numbers
+              * above the Version's highest, which no object has got.
+              * Frotz answers 0 to those too, so faulting would only
+              * stop games that run elsewhere. */
         {
             zm_property prop;
+            unsigned limit = m->mem->version <= 3 ? 31u : 63u;
 
-            store_result(m, inst, find_property(m, inst, ops[0], ops[1], &prop) ? (uint16_t)prop.address : 0u);
+            if (ops[1] == 0 || ops[1] > limit) {
+                store_result(m, inst, 0);
+            } else {
+                store_result(m, inst, find_property(m, inst, ops[0], ops[1], &prop) ? (uint16_t)prop.address : 0u);
+            }
         }
         break;
     case 19: /* get_next_prop: the number after the given one in the
@@ -1121,6 +1477,9 @@ static void execute_2op(zm_machine *m, const zm_instruction *inst, const uint16_
         break;
     case 27: /* set_colour */
         set_colour_opcode(m, inst, ops, count);
+        break;
+    case 28: /* throw */
+        throw_opcode(m, inst, ops);
         break;
     default:
         not_implemented(m, inst);
@@ -1336,9 +1695,15 @@ static void execute_var(zm_machine *m, const zm_instruction *inst, const uint16_
     }
 }
 
-static void execute_ext(zm_machine *m, const zm_instruction *inst, const uint16_t *ops)
+static void execute_ext(zm_machine *m, const zm_instruction *inst, const uint16_t *ops, unsigned count)
 {
     switch (inst->number) {
+    case 0:  /* save, with a table to put in an auxiliary file if given */
+        save_opcode(m, inst, ops, count);
+        break;
+    case 1:  /* restore */
+        restore_opcode(m, inst, ops, count);
+        break;
     case 2:  /* log_shift */
         store_result(m, inst, shift(inst, ops[0], ops[1], 0));
         break;
@@ -1348,6 +1713,18 @@ static void execute_ext(zm_machine *m, const zm_instruction *inst, const uint16_
     case 4:  /* set_font */
         check_not_version_6(m, inst);
         store_result(m, inst, (uint16_t)zm_screen_set_font(&m->screen, ops[0]));
+        break;
+    case 9:  /* save_undo: 1 for saved, 0 for not; -1 would mean the
+              * interpreter cannot, and it can */
+        store_result(m, inst, save_undo(m, save_point(m, inst)) ? 1 : 0);
+        break;
+    case 10: /* restore_undo: on success the save_undo stores 2, as a
+              * restored save does; with nothing to go back to, 0 */
+        if (restore_undo(m)) {
+            resume_after_restore(m);
+        } else {
+            store_result(m, inst, 0);
+        }
         break;
     case 11: /* print_unicode */
         zm_screen_print_unicode(&m->screen, ops[0]);
@@ -1407,7 +1784,7 @@ void zm_machine_step(zm_machine *m)
     case ZM_OP_1OP: execute_1op(m, &inst, ops); break;
     case ZM_OP_2OP: execute_2op(m, &inst, ops, inst.operand_count); break;
     case ZM_OP_VAR: execute_var(m, &inst, ops, inst.operand_count); break;
-    case ZM_OP_EXT: execute_ext(m, &inst, ops); break;
+    case ZM_OP_EXT: execute_ext(m, &inst, ops, inst.operand_count); break;
     }
 }
 
@@ -1449,29 +1826,15 @@ zm_status zm_machine_init(zm_machine *m, zm_memory *mem, const zm_io *io)
     /* Spec §2.4: the generator starts in "random" mode. */
     zm_machine_seed_random(m, 0);
 
-    /* Frame 0 is the starting environment, which has no locals and no
-     * caller (Spec §5.5). Its stack base is 0, so the stack starts
-     * empty. */
-    m->depth = 1;
-    memset(&m->frames[0], 0, sizeof m->frames[0]);
-    m->frames[0].result_variable = -1;
-
-    if (mem->version == 6) {
-        /* Spec §5.4: Version 6 begins by calling the main routine. It is
-         * entered here directly, so that it is frame 0 and the rule that
-         * frame 0 cannot be returned from covers it too. */
-        m->depth = 0;
-        enter_routine(m, zm_unpack_routine(mem, h.initial_pc), NULL, 0);
-    } else {
-        /* Spec §5.5: elsewhere the header gives the first instruction. */
-        m->pc = h.initial_pc;
-    }
-
+    begin_execution(m);
     return ZM_OK;
 }
 
 void zm_machine_free(zm_machine *m)
 {
+    for (unsigned i = 0; i < ZM_UNDO_LEVELS; i++) {
+        zm_snapshot_free(&m->undo[i]);
+    }
     free(m->stack);
     free(m->frames);
     memset(m, 0, sizeof *m);

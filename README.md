@@ -80,6 +80,8 @@ The story runs on the terminal until it quits, reading commands from standard in
 
 The `--transcript <file>` option names a file for the game's transcript (output stream 2), which a game turns on with its own command, usually `script`; `--record <file>` likewise names a file for the commands typed (output stream 4), which Inform games turn on with `recording on`. Without the option, a game asking for the stream is told it is not available.
 
+Saved games are written in the Quetzal format, so a game saved by Quiddity can be restored by Frotz or any other Quetzal interpreter, and theirs by Quiddity. When a game saves or restores, Quiddity asks for a file name, offering the story file's name with the extension `.sav` the first time and the name last used after that; it will not write over an existing file without a yes. Undo is kept in memory, 32 turns deep, for the games that offer an `undo` command. The Version 5 forms of `save` and `restore` that copy a table of bytes to a file of the game's own write that file in the current directory, under the game's name for it reduced to letters and digits with the extension `.AUX`.
+
 The `--info` option prints what the story file's header says about it, including its Version, release, serial code, memory map, and whether its checksum verifies, and then exits without running it.
 
 In VS Code with the CMake Tools extension, pick a configure preset when prompted, then use the build, run, and debug buttons on the status bar; the tracked `.vscode` files wire F5 to the `quiddity` target.

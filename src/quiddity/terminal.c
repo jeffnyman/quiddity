@@ -8,7 +8,9 @@
 
 #include "terminal.h"
 
+#include <ctype.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "zm/screen.h"
@@ -465,23 +467,19 @@ static void before_input(terminal *t)
     flush_line(t);
 }
 
-static int terminal_read_line(void *context, uint16_t *buffer, unsigned max, uint16_t *terminator)
+/* Read one line typed by the player, without its line ending. Returns 0
+ * when there is no more input. */
+static int read_typed_line(terminal *t, char *line, size_t size)
 {
-    terminal *t = context;
-    char line[TERMINAL_LINE_MAX];
     size_t length;
-    size_t i = 0;
-    unsigned count = 0;
 
-    before_input(t);
-
-    if (fgets(line, sizeof line, stdin) == NULL) {
-        return -1;
+    if (fgets(line, (int)size, stdin) == NULL) {
+        return 0;
     }
     length = strlen(line);
     if (length > 0 && line[length - 1] == '\n') {
         line[--length] = '\0';
-    } else if (length == sizeof line - 1) {
+    } else if (length == size - 1) {
         /* A line longer than the buffer: drop the rest of it. */
         int c;
         while ((c = getchar()) != EOF && c != '\n') {
@@ -497,6 +495,31 @@ static int terminal_read_line(void *context, uint16_t *buffer, unsigned max, uin
         fputs(line, stdout);
         putchar('\n');
     }
+    return 1;
+}
+
+/* A line of the interpreter's own, in the lower window. */
+static void say(terminal *t, const char *text)
+{
+    for (; *text != '\0'; text++) {
+        put_lower(t, (uint16_t)(unsigned char)*text);
+    }
+    put_lower(t, '\n');
+}
+
+static int terminal_read_line(void *context, uint16_t *buffer, unsigned max, uint16_t *terminator)
+{
+    terminal *t = context;
+    char line[TERMINAL_LINE_MAX];
+    size_t length;
+    size_t i = 0;
+    unsigned count = 0;
+
+    before_input(t);
+    if (!read_typed_line(t, line, sizeof line)) {
+        return -1;
+    }
+    length = strlen(line);
 
     while (i < length && count < max) {
         uint16_t zscii = unicode_to_zscii(t, next_utf8((const unsigned char *)line, &i));
@@ -546,14 +569,197 @@ static int terminal_read_char(void *context)
 }
 
 /*
+ * Saved games and auxiliary files (Spec §15 save and restore, §7.6).
+ */
+
+/* The default name for a saved game: the story file's own name with its
+ * extension replaced by .sav, in the directory the player is in. */
+static void default_save_name(const char *story_path, char *name, size_t size)
+{
+    const char *base = story_path;
+    const char *dot;
+    size_t length;
+
+    for (const char *p = story_path; *p != '\0'; p++) {
+        if (*p == '/' || *p == '\\') {
+            base = p + 1;
+        }
+    }
+    dot = strrchr(base, '.');
+    length = dot != NULL && dot != base ? (size_t)(dot - base) : strlen(base);
+    if (length > size - 5) {
+        length = size - 5;
+    }
+    memcpy(name, base, length);
+    strcpy(name + length, ".sav");
+}
+
+/* Spec §7.6.1: an auxiliary file's name as the game gives it is made
+ * safe to use: letters and digits only, in upper case, cut at the first
+ * full stop, and given the extension .AUX, so that a game can neither
+ * reach outside the current directory nor overwrite its own files
+ * (Spec §7.6.1.2, §7.6.1.4). A name that is a device on Windows (CON,
+ * AUX, NUL, and the like) is set apart with an underscore. */
+static void auxiliary_name(const char *given, char *name, size_t size)
+{
+    static const char *const devices[] = { "CON", "PRN", "AUX", "NUL", "COM", "LPT" };
+    size_t length = 0;
+
+    for (; given != NULL && *given != '\0' && *given != '.'; given++) {
+        if (isalnum((unsigned char)*given) && length < size - 6) {
+            name[length++] = (char)toupper((unsigned char)*given);
+        }
+    }
+    name[length] = '\0';
+    if (length == 0) {
+        strcpy(name, "DATA");
+        length = 4;
+    }
+    for (unsigned i = 0; i < sizeof devices / sizeof devices[0]; i++) {
+        if (strncmp(name, devices[i], 3) == 0 && (length == 3 || (length == 4 && isdigit((unsigned char)name[3])))) {
+            memmove(name + 1, name, length + 1);
+            name[0] = '_';
+            length++;
+        }
+    }
+    strcpy(name + length, ".AUX");
+}
+
+static int file_exists(const char *path)
+{
+    FILE *file = fopen(path, "rb");
+
+    if (file == NULL) {
+        return 0;
+    }
+    fclose(file);
+    return 1;
+}
+
+/* Put a question to the player and take a line in answer; an empty
+ * answer means the default. Returns 0 if the input has run out. */
+static int ask(terminal *t, const char *question, const char *default_answer, char *answer, size_t size)
+{
+    before_input(t);
+    printf("%s [%s] ", question, default_answer);
+    fflush(stdout);
+    if (!read_typed_line(t, answer, size)) {
+        return 0;
+    }
+    if (answer[0] == '\0') {
+        strncpy(answer, default_answer, size - 1);
+        answer[size - 1] = '\0';
+    }
+    return 1;
+}
+
+/* Settle which file a save or restore means. "All questions about
+ * filenames are asked by interpreters" (Spec §15 save): a saved game is
+ * always asked about, with the last name used as the default, and an
+ * existing file is not written over without a yes; an auxiliary file is
+ * asked about unless the game said not to (Spec §15 save, prompt). */
+static int choose_file(terminal *t, zm_file_kind kind, const char *name, int prompt, int writing, char *path)
+{
+    char answer[TERMINAL_NAME_MAX];
+
+    if (kind == ZM_FILE_AUXILIARY) {
+        auxiliary_name(name, path, TERMINAL_NAME_MAX);
+        if (prompt == 0) {
+            return 1;
+        }
+        if (!ask(t, writing ? "Enter a file name to write to." : "Enter a file name to read from.",
+                 path, answer, sizeof answer)) {
+            return 0;
+        }
+        strcpy(path, answer);
+        return 1;
+    }
+
+    if (!ask(t, writing ? "Enter a file name to save to." : "Enter a file name to restore from.",
+             t->save_name, path, TERMINAL_NAME_MAX)) {
+        return 0;
+    }
+    if (writing && file_exists(path)) {
+        if (!ask(t, "That file exists. Overwrite it? (y/n)", "n", answer, sizeof answer)
+            || (answer[0] != 'y' && answer[0] != 'Y')) {
+            return 0;
+        }
+    }
+    return 1;
+}
+
+static int terminal_write_file(void *context, zm_file_kind kind, const char *name, int prompt,
+                               const uint8_t *data, uint32_t size)
+{
+    terminal *t = context;
+    char path[TERMINAL_NAME_MAX];
+    FILE *file;
+    int ok;
+
+    if (!choose_file(t, kind, name, prompt, 1, path)) {
+        return 0;
+    }
+    file = fopen(path, "wb");
+    if (file == NULL) {
+        say(t, "That file cannot be written.");
+        return 0;
+    }
+    ok = fwrite(data, 1, size, file) == size;
+    ok = fclose(file) == 0 && ok;
+    if (!ok) {
+        say(t, "That file could not be written in full.");
+    } else if (kind == ZM_FILE_SAVED_GAME) {
+        strcpy(t->save_name, path);
+    }
+    return ok;
+}
+
+static uint8_t *terminal_read_file(void *context, zm_file_kind kind, const char *name, int prompt, uint32_t *size)
+{
+    terminal *t = context;
+    char path[TERMINAL_NAME_MAX];
+    FILE *file;
+    long length;
+    uint8_t *data;
+
+    if (!choose_file(t, kind, name, prompt, 0, path)) {
+        return NULL;
+    }
+    file = fopen(path, "rb");
+    if (file == NULL) {
+        say(t, "That file cannot be read.");
+        return NULL;
+    }
+    if (fseek(file, 0, SEEK_END) != 0 || (length = ftell(file)) < 0 || fseek(file, 0, SEEK_SET) != 0) {
+        fclose(file);
+        say(t, "That file cannot be read.");
+        return NULL;
+    }
+    data = malloc(length > 0 ? (size_t)length : 1);
+    if (data == NULL || fread(data, 1, (size_t)length, file) != (size_t)length) {
+        free(data);
+        fclose(file);
+        say(t, "That file could not be read in full.");
+        return NULL;
+    }
+    fclose(file);
+    if (kind == ZM_FILE_SAVED_GAME) {
+        strcpy(t->save_name, path);
+    }
+    *size = (uint32_t)length;
+    return data;
+}
+
+/*
  * Set-up.
  */
 
-void terminal_init(terminal *t, const zm_memory *mem, zm_io *io,
+void terminal_init(terminal *t, const zm_memory *mem, zm_io *io, const char *story_path,
                    const char *transcript_path, const char *record_path)
 {
     memset(t, 0, sizeof *t);
     t->mem = mem;
+    default_save_name(story_path, t->save_name, sizeof t->save_name);
     t->interactive = terminal_isatty(stdin);
     t->buffering = 1;
     t->window = ZM_WINDOW_LOWER;
@@ -592,6 +798,8 @@ void terminal_init(terminal *t, const zm_memory *mem, zm_io *io,
     if (record_path != NULL) {
         io->record_input = terminal_record_input;
     }
+    io->write_file = terminal_write_file;
+    io->read_file = terminal_read_file;
 
 #ifdef _WIN32
     /* The Windows console decodes output in its own code page unless told

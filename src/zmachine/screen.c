@@ -73,10 +73,11 @@ void zm_screen_write_header(zm_screen *s)
     zm_write_byte(mem, ZM_HEADER_FLAGS1, (uint8_t)flags1);
 
     /* Spec §11.1.2: the game sets these bits to ask for a feature and the
-     * interpreter clears the ones it cannot provide. Undo arrives with
-     * save and restore; the transcript bit is the game's and stream 2's
-     * (Spec §7.4) and is left to zm_screen_sync_transcript(). */
-    flags2 &= ~(unsigned)(ZM_FLAGS2_PICTURES | ZM_FLAGS2_UNDO | ZM_FLAGS2_MOUSE | ZM_FLAGS2_MENUS);
+     * interpreter clears the ones it cannot provide. Undo it can (Spec
+     * §6.1.4), so that bit is left as the game set it; the transcript
+     * bit is the game's and stream 2's (Spec §7.4) and is left to
+     * zm_screen_sync_transcript(). */
+    flags2 &= ~(unsigned)(ZM_FLAGS2_PICTURES | ZM_FLAGS2_MOUSE | ZM_FLAGS2_MENUS);
     if (io->sound_effect == NULL) {
         flags2 &= ~(unsigned)ZM_FLAGS2_SOUND;                  /* Spec §9.1.2 */
     }
@@ -407,6 +408,29 @@ void zm_screen_split(zm_screen *s, unsigned lines)
         s->upper_column = 1;
         report_cursor(s);
     }
+}
+
+void zm_screen_restart(zm_screen *s)
+{
+    /* Spec §6.1.3: Flags 2 survives, so a transcript that was running
+     * keeps running; every other stream is as at the start (Spec
+     * §7.1.1), and any memory stream is abandoned. */
+    s->streams &= (unsigned)ZM_STREAM_TRANSCRIPT;
+    s->streams |= (unsigned)ZM_STREAM_SCREEN;
+    s->table_depth = 0;
+
+    /* Spec §6.1.3: the Rst header fields are reset. */
+    zm_screen_write_header(s);
+
+    /* The text comes out as it did at first: plain, in the default
+     * colours and font, word-wrapped. Spec §8.7.3.3: the whole screen is
+     * cleared, which also collapses the upper window and selects the
+     * lower. */
+    zm_screen_set_style(s, ZM_STYLE_ROMAN);
+    zm_screen_set_colour(s, ZM_COLOUR_DEFAULT, ZM_COLOUR_DEFAULT);
+    zm_screen_set_buffering(s, 1);
+    s->font = 1;
+    zm_screen_erase_window(s, -1);
 }
 
 void zm_screen_set_window(zm_screen *s, unsigned window)

@@ -258,25 +258,31 @@ static uint32_t read_operands(const zm_memory *mem, uint32_t address, zm_operand
 }
 
 /* Spec §4.7: one or two bytes of branch data. */
-static uint32_t read_branch(const zm_memory *mem, uint32_t address, zm_instruction *inst)
+uint32_t zm_instruction_read_branch(const zm_memory *mem, uint32_t address,
+                                    uint8_t *branch_on_true, int16_t *branch_offset)
 {
     uint8_t first = zm_read_byte(mem, address++);
 
     /* Bit 7 gives the sense of the test. */
-    inst->branch_on_true = (uint8_t)((first & 0x80) != 0);
+    *branch_on_true = (uint8_t)((first & 0x80) != 0);
 
     if (first & 0x40) {
         /* Bit 6 set: a single byte, with an unsigned offset of 0 to 63 in
          * the bottom six bits. This form can only branch forward. */
-        inst->branch_offset = (int16_t)(first & 0x3f);
+        *branch_offset = (int16_t)(first & 0x3f);
     } else {
         /* Bit 6 clear: a signed 14-bit offset from the bottom six bits
          * of this byte and all eight of the next. Bit 13 is the sign
          * bit, so a value with it set is 16384 less than it reads. */
         int raw = ((first & 0x3f) << 8) | zm_read_byte(mem, address++);
-        inst->branch_offset = (int16_t)((raw & 0x2000) ? raw - 0x4000 : raw);
+        *branch_offset = (int16_t)((raw & 0x2000) ? raw - 0x4000 : raw);
     }
     return address;
+}
+
+static uint32_t read_branch(const zm_memory *mem, uint32_t address, zm_instruction *inst)
+{
+    return zm_instruction_read_branch(mem, address, &inst->branch_on_true, &inst->branch_offset);
 }
 
 /* Spec §4.8, §3.2: skip the words of a string up to and including the

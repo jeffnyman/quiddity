@@ -178,6 +178,10 @@ void zm_screen_sync_transcript(zm_screen *s);
 /* Spec §15 split_window. */
 void zm_screen_split(zm_screen *s, unsigned lines);
 
+/* Spec §15 restart: the screen begins again as at the start of play,
+ * cleared, with only a running transcript carried over. */
+void zm_screen_restart(zm_screen *s);
+
 /* Spec §15 set_window: 0 or 1. */
 void zm_screen_set_window(zm_screen *s, unsigned window);
 

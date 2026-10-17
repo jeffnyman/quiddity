@@ -112,6 +112,13 @@ typedef struct zm_instruction {
  * past the end of memory are still faults. */
 void zm_instruction_decode(const zm_memory *mem, uint32_t address, zm_instruction *out);
 
+/* Decode the one or two bytes of branch data at an address (Spec §4.7)
+ * without the instruction they belong to, as a restore must for the
+ * branch of the save instruction it resumes at (Quetzal §5.8.1). Returns
+ * the address after the data. */
+uint32_t zm_instruction_read_branch(const zm_memory *mem, uint32_t address,
+                                    uint8_t *branch_on_true, int16_t *branch_offset);
+
 /* Look up an opcode in the table of Spec §14 for a given Version, or
  * NULL if that Version does not define it. */
 const zm_opcode_info *zm_opcode_lookup(uint8_t version, zm_opcode_class op_class, uint8_t number);
