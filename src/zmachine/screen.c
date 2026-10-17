@@ -50,10 +50,12 @@ void zm_screen_write_header(zm_screen *s)
         }
     } else {
         /* Spec §11.1.4: each bit says whether the front end can do the
-         * thing. Pictures (Spec §8.8.6) and timed input (Spec §15 read)
-         * are not offered yet. */
+         * thing. Pictures (Spec §8.8.6) are not offered yet. */
         flags1 &= ~(unsigned)(ZM_FLAGS1_COLOURS | ZM_FLAGS1_PICTURES | ZM_FLAGS1_BOLD | ZM_FLAGS1_ITALIC
                               | ZM_FLAGS1_FIXED_PITCH | ZM_FLAGS1_SOUND | ZM_FLAGS1_TIMED_INPUT);
+        if (io->timed_input) {
+            flags1 |= (unsigned)ZM_FLAGS1_TIMED_INPUT;         /* Spec §10.5.3 */
+        }
         if (io->set_colour != NULL) {
             flags1 |= (unsigned)ZM_FLAGS1_COLOURS;             /* Spec §8.3.3 */
         }

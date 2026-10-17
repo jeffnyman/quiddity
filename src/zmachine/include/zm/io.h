@@ -33,6 +33,12 @@ typedef enum zm_file_kind {
     ZM_FILE_AUXILIARY
 } zm_file_kind;
 
+/* What read_line and read_char return instead of input. */
+enum {
+    ZM_INPUT_END = -1,
+    ZM_INPUT_TIMEOUT = -2
+};
+
 typedef struct zm_io {
     void *context;
 
@@ -54,6 +60,11 @@ typedef struct zm_io {
     unsigned default_foreground;
     unsigned default_background;
 
+    /* Whether read_line and read_char honour their timeout (Spec
+     * §10.5.3), for the header's timed-input bit. A front end that
+     * cannot keep time leaves this 0 and ignores the timeout. */
+    int timed_input;
+
     /*
      * Output.
      */
@@ -72,17 +83,25 @@ typedef struct zm_io {
      */
 
     /* Read a line of input for the read opcode (Spec §15 read, §10.5).
-     * Store up to max ZSCII characters in buffer, without the
-     * terminator, and return how many; put the terminating character in
-     * *terminator, which is ZSCII 13 for a new-line. Only characters
-     * defined for input and output may be stored (Spec §10.7.2). Return
-     * -1 when there is no more input to be had, which ends the game. */
-    int (*read_line)(void *context, uint16_t *buffer, unsigned max, uint16_t *terminator);
+     * buffer already holds *count ZSCII characters, left over from an
+     * interrupted read or typed before a timeout; add what the player
+     * types after them, up to max in all, update *count, and put the
+     * terminating character in *terminator, which is ZSCII 13 for a
+     * new-line. Only characters defined for input and output may be
+     * stored (Spec §10.7.2). Return 0 for a line, ZM_INPUT_END when there
+     * is no more input to be had, which ends the game, or, when timeout
+     * is not 0 and that many tenths of a second pass first,
+     * ZM_INPUT_TIMEOUT, with whatever was typed so far kept in the
+     * buffer and counted; the read may then be continued with another
+     * call. */
+    int (*read_line)(void *context, uint16_t *buffer, unsigned *count, unsigned max,
+                     uint16_t *terminator, unsigned timeout);
 
     /* Read one keypress for read_char (Spec §15 read_char, §10.6) as a
-     * ZSCII input code, with new-line as 13. Return -1 at the end of
-     * input. */
-    int (*read_char)(void *context);
+     * ZSCII input code, with new-line as 13, or ZM_INPUT_END at the end
+     * of input, or ZM_INPUT_TIMEOUT when the timeout, in tenths of a
+     * second if not 0, passes first. */
+    int (*read_char)(void *context, unsigned timeout);
 
     /*
      * The screen (Spec §8).

@@ -37,6 +37,9 @@
 /* Spec §5.2: a routine has at most 15 local variables. */
 #define ZM_MAX_LOCALS 15
 
+/* See zm_frame.result_variable. */
+#define ZM_RESULT_INTERRUPT (-2)
+
 /* How many turns save_undo keeps (Spec §15 save_undo). Inform's UNDO
  * takes one per command, so this is how far back a player can go. */
 #define ZM_UNDO_LEVELS 32u
@@ -51,8 +54,10 @@ typedef struct zm_frame {
      * it pushed is discarded on return (Spec §6.3.2). */
     uint32_t stack_base;
 
-    /* Variable to receive the return value, or -1 if the call discards
-     * it (the call_*n opcodes). */
+    /* Variable to receive the return value; -1 if the call discards it
+     * (the call_*n opcodes); ZM_RESULT_INTERRUPT if the routine was
+     * called by the interpreter itself while waiting for input (Spec
+     * §15 read), which takes the value from interrupt_result. */
     int result_variable;
 
     /* Spec §6.4.4.1: how many arguments the caller supplied, which
@@ -118,6 +123,9 @@ typedef struct zm_machine {
     uint64_t random_state;
     uint16_t random_interval;   /* 0 unless predictable with a small seed */
     uint16_t random_counter;
+
+    /* What the last interrupt routine returned (Spec §15 read). */
+    uint16_t interrupt_result;
 
     /* Cleared by quit. */
     int running;

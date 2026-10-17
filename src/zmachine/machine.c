@@ -223,9 +223,12 @@ static void return_from_routine(zm_machine *m, uint16_t value)
 
     /* The store happens in the caller's frame, so a result sent to the
      * stack lands on the caller's stack and one sent to a local goes to
-     * the caller's local. */
+     * the caller's local. A routine the interpreter called returns its
+     * value to the interpreter. */
     if (result_variable >= 0) {
         write_variable(m, (uint8_t)result_variable, value, 0);
+    } else if (result_variable == ZM_RESULT_INTERRUPT) {
+        m->interrupt_result = value;
     }
 }
 
@@ -682,30 +685,51 @@ static void end_of_input(zm_machine *m)
     m->running = 0;
 }
 
-static void check_not_timed(const zm_instruction *inst, const uint16_t *ops, unsigned count, unsigned time_index)
+/* Spec §15 read: with a time and a routine, the routine is called every
+ * time/10 seconds while the game waits for input, and may end the input
+ * by returning true. The routine runs here, inside the read instruction,
+ * on top of the game's own call stack: it is entered as any routine is,
+ * instructions are stepped until it returns, and its value is collected
+ * from where return_from_routine() puts it. Returns whether the input
+ * is to stop. A routine that quits stops everything, and the caller
+ * must look at m->running. */
+static int run_interrupt(zm_machine *m, uint16_t routine)
 {
-    /* Spec §15 read: a time and a routine ask for the routine to be
-     * called every time/10 seconds while waiting, which needs a front
-     * end that can wait with a clock. Until there is one, saying so beats
-     * quietly never calling the routine. */
-    if (count > time_index + 1 && ops[time_index] != 0 && ops[time_index + 1] != 0) {
-        zm_fatal("%s at $%05x asks for timed input, which is not implemented yet",
-                 inst->info->name, (unsigned)inst->address);
+    uint32_t depth = m->depth;
+
+    if (routine == 0) {
+        return 0;
     }
+    enter_routine(m, zm_unpack_routine(m->mem, routine), NULL, 0)->result_variable = ZM_RESULT_INTERRUPT;
+    m->interrupt_result = 0;
+    while (m->running && m->depth > depth) {
+        zm_machine_step(m);
+    }
+    return m->running && m->interrupt_result != 0;
+}
+
+/* The time and routine operands of read and read_char, which only
+ * count together (Spec §15 read): a time with no routine is no timer. */
+static unsigned timeout_of(const uint16_t *ops, unsigned count, unsigned time_index, uint16_t *routine)
+{
+    *routine = count > time_index + 1 ? ops[time_index + 1] : 0;
+    return count > time_index && *routine != 0 ? ops[time_index] : 0;
 }
 
 static void read_line_opcode(zm_machine *m, const zm_instruction *inst, const uint16_t *ops, unsigned count)
 {
     uint32_t text = ops[0];
     uint32_t parse = count > 1 ? ops[1] : 0;
+    uint16_t routine;
+    unsigned timeout = timeout_of(ops, count, 2, &routine);
     unsigned room;
     unsigned letters;
     unsigned have = 0;
+    unsigned typed;
     uint16_t line[256];
     uint16_t terminator = ZM_ZSCII_NEWLINE;
-    int got;
+    int interrupted = 0;
 
-    check_not_timed(inst, ops, count, 2);
     if (m->io->read_line == NULL) {
         zm_fatal("%s at $%05x: the front end cannot read a line", inst->info->name, (unsigned)inst->address);
     }
@@ -744,43 +768,76 @@ static void read_line_opcode(zm_machine *m, const zm_instruction *inst, const ui
                  inst->info->name, (unsigned)inst->address, (unsigned)parse);
     }
 
+    for (unsigned i = 0; i < have; i++) {
+        line[i] = zm_read_byte(m->mem, text + 2u + i);
+    }
+    typed = have;
+
     /* Spec §8.2.4, §10.5.1. */
     if (m->mem->version <= 3) {
         show_status_line(m);
     }
 
-    got = m->io->read_line(m->io->context, line, letters - have, &terminator);
-    if (got < 0) {
-        end_of_input(m);
-        return;
-    }
-    zm_screen_echo_command(&m->screen, line, (unsigned)got);
+    /* Spec §15 read: the wait is broken up by the timer, if there is
+     * one, and goes on after an interrupt routine that returns false. */
+    for (;;) {
+        int got = m->io->read_line(m->io->context, line, &typed, letters, &terminator, timeout);
 
-    /* Spec §15 read: the text is reduced to lower case. Only the ASCII
-     * letters are folded here; what lower case means for the extra
-     * characters (Spec §3.8.5) depends on the story's Unicode table, and
-     * no game is known to need it. */
-    for (unsigned i = 0; i < (unsigned)got; i++) {
-        if (line[i] >= 'A' && line[i] <= 'Z') {
-            line[i] = (uint16_t)(line[i] + 32u);
+        if (typed > letters) {
+            typed = letters;
+        }
+        if (got == ZM_INPUT_END) {
+            end_of_input(m);
+            return;
+        }
+        if (got != ZM_INPUT_TIMEOUT) {
+            break;
+        }
+        if (run_interrupt(m, routine)) {
+            interrupted = 1;
+            break;
+        }
+        if (!m->running) {
+            return;
+        }
+    }
+
+    if (interrupted) {
+        /* Spec §15 read: the input stops with terminator 0. What was
+         * typed stays in the buffer, and from Version 5 is counted in
+         * byte 1, so that the next read can carry on from it (the
+         * "characters left over" of Spec §15 read, which 'Beyond Zork'
+         * and 'Zork Zero' rely on): it is not lexed or folded. */
+        terminator = 0;
+    } else {
+        zm_screen_echo_command(&m->screen, line + have, typed - have);
+
+        /* Spec §15 read: the text is reduced to lower case. Only the
+         * ASCII letters are folded here; what lower case means for the
+         * extra characters (Spec §3.8.5) depends on the story's Unicode
+         * table, and no game is known to need it. */
+        for (unsigned i = 0; i < typed; i++) {
+            if (line[i] >= 'A' && line[i] <= 'Z') {
+                line[i] = (uint16_t)(line[i] + 32u);
+            }
         }
     }
 
     if (m->mem->version <= 4) {
-        for (unsigned i = 0; i < (unsigned)got; i++) {
+        for (unsigned i = 0; i < typed; i++) {
             zm_write_byte(m->mem, text + 1u + i, (uint8_t)line[i]);
         }
-        zm_write_byte(m->mem, text + 1u + (unsigned)got, 0);
+        zm_write_byte(m->mem, text + 1u + typed, 0);
     } else {
-        for (unsigned i = 0; i < (unsigned)got; i++) {
-            zm_write_byte(m->mem, text + 2u + have + i, (uint8_t)line[i]);
+        for (unsigned i = 0; i < typed; i++) {
+            zm_write_byte(m->mem, text + 2u + i, (uint8_t)line[i]);
         }
-        zm_write_byte(m->mem, text + 1u, (uint8_t)(have + (unsigned)got));
+        zm_write_byte(m->mem, text + 1u, (uint8_t)typed);
     }
 
     /* Spec §13.6: lexical analysis, with the game's own dictionary. From
      * Version 5 a parse buffer of 0 asks for none. */
-    if (parse != 0) {
+    if (parse != 0 && !interrupted) {
         zm_dictionary dict;
 
         zm_dictionary_read(m->mem, m->dictionary, &dict);
@@ -788,7 +845,8 @@ static void read_line_opcode(zm_machine *m, const zm_instruction *inst, const ui
     }
 
     /* Spec §15 read: from Version 5 the result is the terminating
-     * character, 13 for a new-line however the keyboard spelt it. */
+     * character, 13 for a new-line however the keyboard spelt it, and 0
+     * for an input the timer ended. */
     if (m->mem->version >= 5) {
         store_result(m, inst, terminator);
     }
@@ -796,6 +854,8 @@ static void read_line_opcode(zm_machine *m, const zm_instruction *inst, const ui
 
 static void read_char_opcode(zm_machine *m, const zm_instruction *inst, const uint16_t *ops, unsigned count)
 {
+    uint16_t routine;
+    unsigned timeout = timeout_of(ops, count, 1, &routine);
     int c;
 
     /* Spec §15 read_char: the first operand is the input device, and
@@ -804,17 +864,32 @@ static void read_char_opcode(zm_machine *m, const zm_instruction *inst, const ui
         zm_fatal("read_char at $%05x from device %u; only device 1 exists",
                  (unsigned)inst->address, count < 1 ? 0u : (unsigned)ops[0]);
     }
-    check_not_timed(inst, ops, count, 1);
     if (m->io->read_char == NULL) {
         zm_fatal("read_char at $%05x: the front end cannot read a key", (unsigned)inst->address);
     }
 
-    c = m->io->read_char(m->io->context);
-    if (c < 0) {
-        end_of_input(m);
-        return;
+    /* Spec §15 read_char: the timer works as for read, and a wait the
+     * routine ends gives 0. */
+    for (;;) {
+        c = m->io->read_char(m->io->context, timeout);
+        if (c == ZM_INPUT_END) {
+            end_of_input(m);
+            return;
+        }
+        if (c != ZM_INPUT_TIMEOUT) {
+            break;
+        }
+        if (run_interrupt(m, routine)) {
+            c = 0;
+            break;
+        }
+        if (!m->running) {
+            return;
+        }
     }
-    zm_screen_echo_key(&m->screen, (uint16_t)c);
+    if (c != 0) {
+        zm_screen_echo_key(&m->screen, (uint16_t)c);
+    }
     store_result(m, inst, (uint16_t)c);
 }
 

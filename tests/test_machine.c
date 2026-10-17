@@ -88,31 +88,76 @@ typedef struct {
 } status_record;
 static status_record status;
 
-static int script_read_line(void *context, uint16_t *buffer, unsigned max, uint16_t *terminator)
-{
-    const char *line;
-    unsigned count = 0;
+/* The clock, as scripted: a timed read reports script_timeouts_each
+ * timeouts before each line or key it delivers, and on timeout number
+ * script_partial_at of the run the characters of script_partial, if
+ * any, arrive as if typed before the clock ran out. The timeout asked
+ * for is noted. */
+static unsigned script_timeouts_each;
+static unsigned script_timeouts;
+static const char *script_partial;
+static unsigned script_partial_at;
+static unsigned timeouts_total;
+static unsigned timeout_seen;
 
-    (void)context;
-    line = script_lines[script_next];
-    if (line == NULL) {
-        return -1;
-    }
-    script_next++;
-    while (line[count] != '\0' && count < max) {
-        buffer[count] = (uint8_t)line[count];
-        count++;
-    }
-    *terminator = ZM_ZSCII_NEWLINE;
-    return (int)count;
+static void script_clock(unsigned each, const char *partial, unsigned partial_at)
+{
+    script_timeouts_each = each;
+    script_timeouts = each;
+    script_partial = partial;
+    script_partial_at = partial_at;
+    timeouts_total = 0;
+    timeout_seen = 0;
 }
 
-static int script_read_char(void *context)
+static int script_timed_out(unsigned timeout, uint16_t *buffer, unsigned *count, unsigned max)
+{
+    if (timeout == 0 || script_timeouts == 0) {
+        return 0;
+    }
+    timeout_seen = timeout;
+    script_timeouts--;
+    timeouts_total++;
+    if (buffer != NULL && script_partial != NULL && timeouts_total == script_partial_at) {
+        for (const char *p = script_partial; *p != '\0' && *count < max; p++) {
+            buffer[(*count)++] = (uint8_t)*p;
+        }
+    }
+    return 1;
+}
+
+static int script_read_line(void *context, uint16_t *buffer, unsigned *count, unsigned max,
+                            uint16_t *terminator, unsigned timeout)
+{
+    const char *line;
+
+    (void)context;
+    if (script_timed_out(timeout, buffer, count, max)) {
+        return ZM_INPUT_TIMEOUT;
+    }
+    line = script_lines[script_next];
+    if (line == NULL) {
+        return ZM_INPUT_END;
+    }
+    script_next++;
+    script_timeouts = script_timeouts_each;
+    for (unsigned i = 0; line[i] != '\0' && *count < max; i++) {
+        buffer[(*count)++] = (uint8_t)line[i];
+    }
+    *terminator = ZM_ZSCII_NEWLINE;
+    return 0;
+}
+
+static int script_read_char(void *context, unsigned timeout)
 {
     (void)context;
-    if (script_keys[script_key_next] == 0) {
-        return -1;
+    if (script_timed_out(timeout, NULL, NULL, 0)) {
+        return ZM_INPUT_TIMEOUT;
     }
+    if (script_keys[script_key_next] == 0) {
+        return ZM_INPUT_END;
+    }
+    script_timeouts = script_timeouts_each;
     return script_keys[script_key_next++];
 }
 
@@ -140,6 +185,7 @@ static void script(const char *const *lines, const int *keys)
     memset(&status, 0, sizeof status);
     script_next = 0;
     script_key_next = 0;
+    script_clock(0, NULL, 0);
     if (lines != NULL) {
         for (unsigned i = 0; lines[i] != NULL && i < 7; i++) {
             script_lines[i] = lines[i];
@@ -300,6 +346,7 @@ static void screen_hooks(int on)
     io.transcript_char = on ? hook_transcript_char : NULL;
     io.record_input = on ? hook_record_input : NULL;
     io.styles = on ? (ZM_STYLE_BOLD | ZM_STYLE_ITALIC) : 0;
+    io.timed_input = on;
     io.screen_width = 0;
     io.screen_height = 0;
 }
@@ -1687,6 +1734,142 @@ static void test_read_char_tokenise_and_encode_text(void)
     zm_memory_free(&mem);
 }
 
+/* An interrupt routine for timed reads: counts its calls in G2, prints
+ * 'T', and asks for the input to stop on its second call. */
+static void build_interrupt(story *s)
+{
+    at(s, R1);
+    EMIT(s, 0x00);                                              /* no locals */
+    EMIT(s, 0x95, G2);                                          /* inc G2 */
+    EMIT(s, 0xe5, 0x7f, 'T');                                   /* print_char 'T' */
+    EMIT(s, 0x41, G2, 2, 0xc1);                                 /* je G2 2 ?rtrue */
+    EMIT(s, 0xb1);                                              /* rfalse */
+    at(s, CODE);
+}
+
+static void test_timed_input(void)
+{
+    static const char *const lines[] = { "look", "xyz", NULL };
+    static const int keys[] = { 'q', 0 };
+    story s;
+    output out;
+    zm_machine m;
+    zm_memory mem;
+
+    /* Spec §15 read: every time/10 seconds the routine runs, and the
+     * read goes on if it returns false; its output is simply printed.
+     * When it returns true the read ends with terminator 0, leaving what
+     * was typed in the buffer, counted in byte 1 and not folded, for the
+     * next read to carry on from; that read then stores the whole. The
+     * parse buffer is untouched by the interrupted read. */
+    story_init(&s, 5);
+    build_dictionary(&s);
+    build_interrupt(&s);
+    s.bytes[TABLE] = 20;
+    s.bytes[PARSE] = 4;
+    EMIT(&s, 0xe4, 0x04, TABLE >> 8, TABLE & 0xff, PARSE >> 8, PARSE & 0xff, 10); emit_packed(&s, R1); EMIT(&s, G0);
+                                                                /* aread TEXT PARSE 10 R1 -> G0 */
+    EMIT(&s, 0xe6, 0xbf, G0, 0xe5, 0x7f, ' ');                  /* print_num G0 ' ' */
+    EMIT(&s, 0xe2, 0x17, TABLE >> 8, TABLE & 0xff, 1, 0);       /* storeb TEXT 1 0 */
+    EMIT(&s, 0xe4, 0x04, TABLE >> 8, TABLE & 0xff, PARSE >> 8, PARSE & 0xff, 10); emit_packed(&s, R1); EMIT(&s, G0);
+                                                                /* aread TEXT PARSE 10 R1 -> G0 */
+    EMIT(&s, 0xe6, 0xbf, G0, 0xe5, 0x7f, ' ');                  /* print_num G0 ' ' */
+    EMIT(&s, 0xe4, 0x1f, TABLE >> 8, TABLE & 0xff, 0, G0);      /* aread TEXT 0 -> G0 */
+    EMIT(&s, 0xe6, 0xbf, G0);                                   /* print_num G0 */
+    EMIT(&s, 0xba);                                             /* quit */
+    script(lines, NULL);
+    script_clock(1, "AB", 2);
+    run(&s, &out, &m, &mem);
+    CHECK_EQ_STR(out.text, "T13 T0 13");
+    CHECK_EQ_INT(timeout_seen, 10);
+    CHECK_EQ_INT(zm_read_byte(&mem, TABLE + 1), 5);
+    CHECK(memcmp(mem.bytes + TABLE + 2, "abxyz", 5) == 0);
+    CHECK_EQ_INT(zm_read_byte(&mem, PARSE + 1), 1);
+    CHECK_EQ_INT(m.sp, 0);
+    CHECK_EQ_INT(m.depth, 1);
+    zm_machine_free(&m);
+    zm_memory_free(&mem);
+
+    /* The interrupted read left "AB" as typed. */
+    script(lines, NULL);
+    script_clock(1, "AB", 1);
+    story_init(&s, 5);
+    build_dictionary(&s);
+    build_interrupt(&s);
+    s.bytes[TABLE] = 20;
+    s.bytes[PARSE] = 4;
+    EMIT(&s, 0x0d, G2, 1);                                      /* store G2 1: stop at the first call */
+    EMIT(&s, 0xe4, 0x04, TABLE >> 8, TABLE & 0xff, PARSE >> 8, PARSE & 0xff, 10); emit_packed(&s, R1); EMIT(&s, G0);
+    EMIT(&s, 0xe6, 0xbf, G0);                                   /* print_num G0 */
+    EMIT(&s, 0xba);
+    run(&s, &out, &m, &mem);
+    CHECK_EQ_STR(out.text, "T0");
+    CHECK_EQ_INT(zm_read_byte(&mem, TABLE + 1), 2);
+    CHECK(memcmp(mem.bytes + TABLE + 2, "AB", 2) == 0);
+    CHECK_EQ_INT(zm_read_byte(&mem, PARSE + 1), 0);
+    zm_machine_free(&m);
+    zm_memory_free(&mem);
+
+    /* Spec §15 read_char: the same, with 0 for a wait the routine
+     * ended. */
+    story_init(&s, 5);
+    build_interrupt(&s);
+    EMIT(&s, 0xf6, 0x53, 1, 5); emit_packed(&s, R1); EMIT(&s, G0);   /* read_char 1 5 R1 -> G0 */
+    EMIT(&s, 0xe6, 0xbf, G0, 0xe5, 0x7f, ' ');                  /* print_num G0 ' ' */
+    EMIT(&s, 0xf6, 0x53, 1, 5); emit_packed(&s, R1); EMIT(&s, G0);   /* read_char 1 5 R1 -> G0 */
+    EMIT(&s, 0xe6, 0xbf, G0);                                   /* print_num G0 */
+    EMIT(&s, 0xba);
+    script(NULL, keys);
+    script_clock(1, NULL, 0);
+    run(&s, &out, &m, &mem);
+    CHECK_EQ_STR(out.text, "T113 T0");
+    CHECK_EQ_INT(timeout_seen, 5);
+    zm_machine_free(&m);
+    zm_memory_free(&mem);
+
+    /* Spec §15 read: a time without a routine is no timer, and before
+     * Version 5 an interrupted read leaves a zero-terminated text with
+     * nothing stored. */
+    story_init(&s, 4);
+    build_dictionary(&s);
+    build_interrupt(&s);
+    s.bytes[TABLE] = 20;
+    s.bytes[PARSE] = 4;
+    EMIT(&s, 0x0d, G2, 1);                                      /* store G2 1 */
+    EMIT(&s, 0xe4, 0x07, TABLE >> 8, TABLE & 0xff, PARSE >> 8, PARSE & 0xff, 10);
+                                                                /* sread TEXT PARSE 10 */
+    EMIT(&s, 0xe5, 0x7f, 'a');                                  /* print_char 'a' */
+    EMIT(&s, 0xe4, 0x04, TABLE >> 8, TABLE & 0xff, PARSE >> 8, PARSE & 0xff, 10); emit_packed(&s, R1);
+                                                                /* sread TEXT PARSE 10 R1 */
+    EMIT(&s, 0xe5, 0x7f, 'b');                                  /* print_char 'b' */
+    EMIT(&s, 0xba);
+    script(lines, NULL);
+    script_clock(1, "AB", 1);
+    run(&s, &out, &m, &mem);
+    CHECK_EQ_STR(out.text, "aTb");
+    CHECK(memcmp(mem.bytes + TABLE + 1, "AB\0", 3) == 0);
+    CHECK_EQ_INT(zm_read_byte(&mem, PARSE + 1), 1);
+    zm_machine_free(&m);
+    zm_memory_free(&mem);
+
+    /* A routine that quits ends the game from inside the read. */
+    story_init(&s, 5);
+    EMIT(&s, 0xf6, 0x53, 1, 5); emit_packed(&s, R1); EMIT(&s, G0);   /* read_char 1 5 R1 -> G0 */
+    EMIT(&s, 0xe5, 0x7f, 'x');                                  /* print_char 'x' */
+    EMIT(&s, 0xba);
+    at(&s, R1);
+    EMIT(&s, 0x00, 0xba);                                       /* quit */
+    script(NULL, keys);
+    script_clock(1, NULL, 0);
+    run(&s, &out, &m, &mem);
+    CHECK_EQ_STR(out.text, "");
+    CHECK_EQ_INT(m.running, 0);
+    zm_machine_free(&m);
+    zm_memory_free(&mem);
+
+    script(NULL, NULL);
+}
+
 static void test_header_flags_are_set_at_start(void)
 {
     story s;
@@ -1756,7 +1939,8 @@ static void test_header_flags_are_set_at_start(void)
     put_word(s.bytes, ZM_HEADER_FLAGS2, 0x01fb);
     EMIT(&s, 0xba);
     run(&s, &out, &m, &mem);
-    CHECK_EQ_INT(zm_read_byte(&mem, ZM_HEADER_FLAGS1), ZM_FLAGS1_COLOURS | ZM_FLAGS1_BOLD | ZM_FLAGS1_ITALIC | ZM_FLAGS1_SOUND);
+    CHECK_EQ_INT(zm_read_byte(&mem, ZM_HEADER_FLAGS1),
+                 ZM_FLAGS1_COLOURS | ZM_FLAGS1_BOLD | ZM_FLAGS1_ITALIC | ZM_FLAGS1_SOUND | ZM_FLAGS1_TIMED_INPUT);
     CHECK_EQ_INT(zm_read_word(&mem, ZM_HEADER_FLAGS2),
                  ZM_FLAGS2_TRANSCRIPT | ZM_FLAGS2_FORCE_FIXED | ZM_FLAGS2_UNDO | ZM_FLAGS2_COLOURS | ZM_FLAGS2_SOUND);
     CHECK_EQ_INT(zm_read_byte(&mem, ZM_HEADER_SCREEN_HEIGHT), 14);
@@ -1802,13 +1986,6 @@ static void test_input_faults(void)
     s.bytes[PARSE] = 4;
     EMIT(&s, 0xe4, 0x0f, TABLE >> 8, TABLE & 0xff, PARSE >> 8, PARSE & 0xff);
     expect_fault(&s, "global 0, is object 0", &out);
-
-    /* Timed input is declared rather than ignored. */
-    story_init(&s, 5);
-    build_dictionary(&s);
-    s.bytes[TABLE] = 20;
-    EMIT(&s, 0xe4, 0x15, TABLE >> 8, TABLE & 0xff, 0, 10, 1, G0);  /* aread TEXT 0 10 1 -> G0 */
-    expect_fault(&s, "timed input", &out);
 
     /* Spec §15 read_char: only device 1. */
     story_init(&s, 5);
@@ -2561,6 +2738,7 @@ int main(void)
     RUN_TEST(test_read_in_version_3);
     RUN_TEST(test_read_in_version_5);
     RUN_TEST(test_read_char_tokenise_and_encode_text);
+    RUN_TEST(test_timed_input);
     RUN_TEST(test_header_flags_are_set_at_start);
     RUN_TEST(test_input_faults);
     RUN_TEST(test_output_streams);

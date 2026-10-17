@@ -18,10 +18,12 @@
 
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
+#include <conio.h>
 #include <io.h>
 #include <windows.h>
 #define terminal_isatty(stream) _isatty(_fileno(stream))
 #else
+#include <sys/select.h>
 #include <unistd.h>
 #define terminal_isatty(stream) isatty(fileno(stream))
 #endif
@@ -467,6 +469,50 @@ static void before_input(terminal *t)
     flush_line(t);
 }
 
+/* Whether there is something to read on standard input within a time
+ * in tenths of a second, 0 meaning however long it takes. Standard input
+ * is read unbuffered (see terminal_init), so what the system reports is
+ * all there is. */
+static int input_ready(unsigned tenths)
+{
+#ifdef _WIN32
+    HANDLE in = GetStdHandle(STD_INPUT_HANDLE);
+    DWORD type = GetFileType(in);
+    ULONGLONG deadline = GetTickCount64() + (ULONGLONG)tenths * 100u;
+
+    /* A file is always ready. A console reports keys pressed; a pipe
+     * reports bytes waiting, or fails once its writer has gone, which
+     * is the end of input and so ready too. */
+    if (tenths == 0 || (type != FILE_TYPE_CHAR && type != FILE_TYPE_PIPE)) {
+        return 1;
+    }
+    for (;;) {
+        DWORD available = 0;
+
+        if (type == FILE_TYPE_CHAR ? _kbhit() != 0
+                                   : !PeekNamedPipe(in, NULL, 0, NULL, &available, NULL) || available > 0) {
+            return 1;
+        }
+        if (GetTickCount64() >= deadline) {
+            return 0;
+        }
+        Sleep(10);
+    }
+#else
+    fd_set fds;
+    struct timeval tv;
+
+    if (tenths == 0) {
+        return 1;
+    }
+    FD_ZERO(&fds);
+    FD_SET(0, &fds);
+    tv.tv_sec = tenths / 10;
+    tv.tv_usec = (tenths % 10) * 100000L;
+    return select(1, &fds, NULL, NULL, &tv) != 0;
+#endif
+}
+
 /* Read one line typed by the player, without its line ending. Returns 0
  * when there is no more input. */
 static int read_typed_line(terminal *t, char *line, size_t size)
@@ -507,32 +553,35 @@ static void say(terminal *t, const char *text)
     put_lower(t, '\n');
 }
 
-static int terminal_read_line(void *context, uint16_t *buffer, unsigned max, uint16_t *terminator)
+static int terminal_read_line(void *context, uint16_t *buffer, unsigned *count, unsigned max,
+                              uint16_t *terminator, unsigned timeout)
 {
     terminal *t = context;
     char line[TERMINAL_LINE_MAX];
     size_t length;
     size_t i = 0;
-    unsigned count = 0;
 
     before_input(t);
+    if (!input_ready(timeout)) {
+        return ZM_INPUT_TIMEOUT;
+    }
     if (!read_typed_line(t, line, sizeof line)) {
-        return -1;
+        return ZM_INPUT_END;
     }
     length = strlen(line);
 
-    while (i < length && count < max) {
+    while (i < length && *count < max) {
         uint16_t zscii = unicode_to_zscii(t, next_utf8((const unsigned char *)line, &i));
 
         if (zscii != 0) {
-            buffer[count++] = zscii;
+            buffer[(*count)++] = zscii;
         }
     }
     *terminator = ZM_ZSCII_NEWLINE;
-    return (int)count;
+    return 0;
 }
 
-static int terminal_read_char(void *context)
+static int terminal_read_char(void *context, unsigned timeout)
 {
     terminal *t = context;
     unsigned char bytes[4];
@@ -541,10 +590,13 @@ static int terminal_read_char(void *context)
     uint16_t zscii;
 
     before_input(t);
+    if (!input_ready(timeout)) {
+        return ZM_INPUT_TIMEOUT;
+    }
 
     c = getchar();
     if (c == EOF) {
-        return -1;
+        return ZM_INPUT_END;
     }
     if (c == '\n' || c == '\r') {
         return ZM_ZSCII_NEWLINE;
@@ -770,10 +822,17 @@ void terminal_init(terminal *t, const zm_memory *mem, zm_io *io, const char *sto
     t->record_path = record_path;
     clear_upper_rows(t, 0, TERMINAL_HEIGHT);
 
+    /* Standard input is read as it arrives rather than in buffered
+     * chunks, so that input_ready() sees everything there is to see:
+     * a line already drawn into a buffer behind the system's back would
+     * look like silence. */
+    setvbuf(stdin, NULL, _IONBF, 0);
+
     memset(io, 0, sizeof *io);
     io->context = t;
     io->screen_width = TERMINAL_WIDTH;
     io->screen_height = TERMINAL_HEIGHT;
+    io->timed_input = 1;
 
     /* Everything a terminal prints is in one fixed-pitch font; the other
      * styles and colours are left unclaimed, and text asked for in them

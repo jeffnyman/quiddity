@@ -28,6 +28,13 @@
  * at a prompt, with the story's own name offered as the default; the
  * machine supplies the bytes (zm/quetzal.h) and this file only puts them
  * somewhere.
+ *
+ * Timed input (Spec §15 read) is kept by waiting for something to arrive
+ * on standard input before reading it. The terminal's own line editor
+ * takes over once the first key of a command is pressed, so the clock
+ * runs while the player is thinking and stops while they are typing;
+ * what the interrupt routine prints appears above the line being typed,
+ * which the editor keeps intact.
  */
 
 #ifndef QUIDDITY_TERMINAL_H
