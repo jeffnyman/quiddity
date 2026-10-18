@@ -116,6 +116,14 @@ build/gcc/bin/quiddity --accept acceptance/cutthroats-r23-s840809.accept --games
 
 The play is shown as it happens, and the verdict comes at the end: passed, or the first line that differs and the line of the script that was being played. When a change in the play is meant, `--update` records it afresh; while a script is being written, `--resume` plays it and then hands the game over at the keyboard, so that the next commands can be tried before they go into the file. The seed is what makes this work: the game's dice come from the interpreter's own generator, which is pinned by its source and shared with Rezrov, so the same seed rolls the same dice in every build and a script written for either interpreter plays on the other.
 
+A new script begins with `--create`, which writes the file naming the story given by `--game`, seeded with 1 and with no commands yet, and then hands the game over at the keyboard as `--resume` would, so that the opening commands can be tried before they go into the file:
+
+```
+build/gcc/bin/quiddity --accept --create acceptance/checkers/cloak-plus.accept --game zcode-checkers/cloak-plus.z5 --games ../entharion
+```
+
+The story is named as it will be looked up, relative to the games directory, and the file is written with LF line endings on every platform. A script that exists already is left alone, and a story that cannot be found leaves no file behind.
+
 The play is recorded through the plainest front end there is, a stream of text in which the lower window is everything: no wrapping, no status line, no upper window, and the game told as much through its header. That keeps a recording about what the game said rather than how a screen arranged it. A script's directives (`GAME`, `SEED`, `BLORB`, `INTERPRETER`, `TANDY`, `UPPER`, `PICTURES`) and its command format are described in `src/quiddity/script.h`; a line beginning with `!` is a directive, `#` a comment, three backticks fence off a part not to be played, and anything else is typed into the game, with a key that is not a character written as `[code]` or by name, such as `<down>`.
 
 The games themselves are not in the repository. A script names its game relative to itself, and when the file is not there the runner looks under a games directory instead, given by `--games`, by the `QUIDDITY_GAMES` environment variable, or, for the CTest runs, by the CMake cache variable `QUIDDITY_GAMES_DIR`, which defaults to an `entharion` directory beside the repository. Every script under `acceptance/` is a CTest test; one whose game cannot be found is reported as skipped rather than failed, so the suite passes on a machine without the corpus. Scripts may be grouped in subdirectories, and a test is named after the script's path under `acceptance/` with the slashes turned to dots, so `checkers/czech-z3.accept` is the test `accept_checkers.czech-z3` and `ctest --preset gcc -R checkers` runs the whole group.

@@ -36,6 +36,7 @@ static void print_usage(FILE *out)
 {
     fputs("Usage: quiddity [options] <story-file>\n"
           "       quiddity --accept <script> [--update | --resume] [--games <dir>]\n"
+          "       quiddity --accept --create <script> --game <story> [--games <dir>]\n"
           "\n"
           "Options:\n"
           "  -i, --info               Describe the story file's header and exit.\n"
@@ -48,7 +49,10 @@ static void print_usage(FILE *out)
           "The acceptance command plays a script and checks the play against the\n"
           "recording beside it: --update records the play afresh, and --resume hands\n"
           "the game over at the console where the script ends. A game the script\n"
-          "names is looked for beside the script, then under --games or $QUIDDITY_GAMES.\n",
+          "names is looked for beside the script, then under --games or $QUIDDITY_GAMES.\n"
+          "--create writes a new script naming the story given by --game, with seed 1\n"
+          "and no commands, and hands the game over at once, so that the commands\n"
+          "that work can be tried before they go into the file.\n",
           out);
 }
 
@@ -59,6 +63,8 @@ static int accept_command(int argc, char **argv)
     accept_mode mode = ACCEPT_CHECK;
     const char *script = NULL;
     const char *games = getenv("QUIDDITY_GAMES");
+    const char *game = NULL;
+    int create = 0;
 
     for (int i = 2; i < argc; i++) {
         const char *arg = argv[i];
@@ -67,6 +73,15 @@ static int accept_command(int argc, char **argv)
             mode = ACCEPT_UPDATE;
         } else if (strcmp(arg, "--resume") == 0) {
             mode = ACCEPT_RESUME;
+        } else if (strcmp(arg, "--create") == 0) {
+            create = 1;
+        } else if (strcmp(arg, "--game") == 0) {
+            if (i + 1 >= argc) {
+                fprintf(stderr, "quiddity: option '--game' needs a story file\n\n");
+                print_usage(stderr);
+                return EXIT_USAGE;
+            }
+            game = argv[++i];
         } else if (strcmp(arg, "--games") == 0) {
             if (i + 1 >= argc) {
                 fprintf(stderr, "quiddity: option '--games' needs a directory\n\n");
@@ -89,6 +104,28 @@ static int accept_command(int argc, char **argv)
     if (script == NULL) {
         print_usage(stderr);
         return EXIT_USAGE;
+    }
+    if (create != (game != NULL)) {
+        fputs(create ? "quiddity: --create needs --game <story>\n\n"
+                     : "quiddity: --game goes with --create\n\n",
+              stderr);
+        print_usage(stderr);
+        return EXIT_USAGE;
+    }
+    if (create) {
+        char error[ACCEPT_ERROR_MAX];
+
+        if (mode == ACCEPT_UPDATE) {
+            fputs("quiddity: --create and --update cannot go together\n\n", stderr);
+            print_usage(stderr);
+            return EXIT_USAGE;
+        }
+        if (!accept_create(script, game, games, error)) {
+            fprintf(stderr, "quiddity: %s\n", error);
+            return 1;
+        }
+        printf("quiddity: created %s; the game is yours from the start\n", script);
+        mode = ACCEPT_RESUME;
     }
     return accept_run(script, mode, games);
 }

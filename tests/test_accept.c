@@ -307,6 +307,50 @@ static void test_a_play_is_recorded_as_text(void)
     accept_script_free(&script);
 }
 
+static void test_a_script_can_be_created_for_a_game(void)
+{
+    static const char path[] = "created-by-test.accept";
+    accept_script script;
+    char error[ACCEPT_ERROR_MAX];
+    char text[256];
+    FILE *file;
+    size_t read;
+
+    remove(path);
+
+    /* A new script names the game and seed 1, has no commands, and is
+     * written with LF line endings whatever the platform. */
+    CHECK(accept_create(path, "simple-test-r1-s260727.z3", QUIDDITY_TEST_DATA_DIR, error));
+    file = fopen(path, "rb");
+    CHECK(file != NULL);
+    if (file != NULL) {
+        read = fread(text, 1, sizeof text - 1, file);
+        fclose(file);
+        text[read] = '\0';
+        CHECK_EQ_STR(text, "# created-by-test\n\n! SEED=1\n! GAME=simple-test-r1-s260727.z3\n");
+    }
+    CHECK(accept_script_load(&script, path, QUIDDITY_TEST_DATA_DIR, error));
+    CHECK_EQ_INT(script.seed, 1);
+    CHECK_EQ_STR(script.game_path, QUIDDITY_TEST_DATA_DIR "/simple-test-r1-s260727.z3");
+    CHECK_EQ_INT(script.command_count, 0);
+    accept_script_free(&script);
+
+    /* A script that is there already is not touched. */
+    CHECK(!accept_create(path, "something-else.z5", QUIDDITY_TEST_DATA_DIR, error));
+    CHECK(contains(error, "there already"));
+    remove(path);
+
+    /* A game that cannot be found leaves no script behind. */
+    CHECK(!accept_create(path, "no-such-game.z5", QUIDDITY_TEST_DATA_DIR, error));
+    CHECK(contains(error, "not there"));
+    file = fopen(path, "rb");
+    CHECK(file == NULL);
+    if (file != NULL) {
+        fclose(file);
+        remove(path);
+    }
+}
+
 int main(void)
 {
     RUN_TEST(test_a_script_has_directives_comments_and_commands);
@@ -318,5 +362,6 @@ int main(void)
     RUN_TEST(test_the_first_difference_is_found_by_line);
     RUN_TEST(test_a_difference_is_placed_in_both_files);
     RUN_TEST(test_a_play_is_recorded_as_text);
+    RUN_TEST(test_a_script_can_be_created_for_a_game);
     return CHECK_SUMMARY();
 }

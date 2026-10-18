@@ -1106,6 +1106,67 @@ static int write_whole_file(const char *path, const char *text)
     return ok;
 }
 
+int accept_create(const char *script_path, const char *game, const char *games_dir, char *error)
+{
+    const char *name = script_path;
+    size_t stem_length;
+    FILE *file;
+    accept_script script;
+    int ok;
+
+    /* The script's name without its directory or extension, for the
+     * comment that heads the file. */
+    for (const char *c = script_path; *c != '\0'; c++) {
+        if (*c == '/' || *c == '\\') {
+            name = c + 1;
+        }
+    }
+    stem_length = strlen(name);
+    for (size_t i = stem_length; i > 0; i--) {
+        if (name[i - 1] == '.') {
+            stem_length = i - 1;
+            break;
+        }
+    }
+
+    /* "x" (C11 §7.21.5.3) makes the open fail rather than truncate a
+     * file that is there, and "b" keeps the line endings LF on Windows,
+     * which is how a script is kept. */
+    file = fopen(script_path, "wbx");
+    if (file == NULL) {
+        if (errno == EEXIST) {
+            snprintf(error, ACCEPT_ERROR_MAX, "%s is there already and is left as it is", script_path);
+        } else {
+            snprintf(error, ACCEPT_ERROR_MAX, "%s cannot be created: %s", script_path, strerror(errno));
+        }
+        return 0;
+    }
+    ok = fprintf(file, "# %.*s\n\n! SEED=1\n! GAME=%s\n", (int)stem_length, name, game) > 0;
+    ok = fclose(file) == 0 && ok;
+    if (!ok) {
+        snprintf(error, ACCEPT_ERROR_MAX, "%s cannot be written: %s", script_path, strerror(errno));
+        remove(script_path);
+        return 0;
+    }
+
+    /* Make sure the game can be found before the file stays, so that a
+     * mistyped path does not leave a script that can only be skipped. */
+    if (!accept_script_load(&script, script_path, games_dir, error)) {
+        remove(script_path);
+        return 0;
+    }
+    file = fopen(script.game_path, "rb");
+    if (file == NULL) {
+        snprintf(error, ACCEPT_ERROR_MAX, "the game %s is not there; nothing created", script.game_path);
+        accept_script_free(&script);
+        remove(script_path);
+        return 0;
+    }
+    fclose(file);
+    accept_script_free(&script);
+    return 1;
+}
+
 int accept_run(const char *script_path, accept_mode mode, const char *games_dir)
 {
     accept_script script;

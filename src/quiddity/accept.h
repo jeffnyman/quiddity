@@ -102,4 +102,13 @@ char *accept_describe(const accept_difference *difference, const accept_result *
  * may be NULL. */
 int accept_run(const char *script_path, accept_mode mode, const char *games_dir);
 
+/* The --create option: write a new script at script_path that names
+ * game, with seed 1 and no commands, so that a run with --resume hands
+ * the game over from its start and the commands that work can be put
+ * into the file. The file is written with LF line endings on every
+ * platform. A script that is there already is left alone, and a game
+ * that cannot be found leaves no file behind. Returns 1, or 0 after
+ * filling in error. games_dir may be NULL. */
+int accept_create(const char *script_path, const char *game, const char *games_dir, char *error);
+
 #endif /* QUIDDITY_ACCEPT_H */
