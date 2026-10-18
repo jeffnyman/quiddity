@@ -1,0 +1,17 @@
+# Cloak of Darkness, the ZIL port: hang the cloak on the hook, go to
+# the bar in the light, and read the message. This is the winning
+# scenario.
+
+! SEED=1
+! GAME=zcode-checkers/cloak.z3
+
+north
+i
+examine cloak
+west
+examine hook
+hang the cloak on the hook
+east
+south
+examine message
+y

@@ -1,0 +1,49 @@
+
+
+Hurrying through the rainswept November night, you're glad to see the bright lights of the Opera House. It's surprising that there aren't more people about but, hey, what do you expect in a cheap demo game...?
+
+Cloak of Darkness
+A basic IF demonstration.
+Original game by Roger Firth
+ZIL conversion by Jesse McGrew, Jayson Smith, and Josh Lawrence
+Release 1 / Serial number 181205 / ZILF 0.8 lib J4
+
+Foyer of the Opera House
+You are standing in a spacious hall, splendidly decorated in red and gold, with glittering chandeliers overhead. The entrance from the street is to the north, and there are doorways south and west.
+
+> north
+You've only just arrived, and besides, the weather outside seems to be getting worse.
+
+> i
+You are carrying:
+   a cloak (worn)
+
+> examine cloak
+The cloak is unnaturally dark.
+
+> west
+Cloakroom
+The walls of this small room were clearly once lined with hooks, though now only one remains. The exit is a door to the east.
+
+A small brass hook is on the wall.
+
+> examine hook
+You see nothing special about the small brass hook.
+
+> hang the cloak on the hook
+You put the cloak on the small brass hook.
+
+> east
+Foyer of the Opera House
+
+> south
+Foyer Bar
+The bar, much rougher than you'd have guessed after the opulence of the foyer to the north, is completely empty.
+
+There seems to be some sort of message scrawled in the sawdust on the floor.
+
+> examine message
+The message simply reads: "You win."
+Are you sure you want to quit? (y/n) >y
+
+Thanks for playing.

@@ -1,0 +1,16 @@
+# Cloak of Darkness, the ZIL port: go into the bar area when it
+# is dark, move around the scuff the message, then go back when
+# the room is lit, and noticed the scuffed message. This is the
+# losing scenario.
+
+! SEED=1
+! GAME=zcode-checkers/cloak.z3
+
+south
+east
+take off cloak
+north
+drop cloak
+south
+examine message
+y

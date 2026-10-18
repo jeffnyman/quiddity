@@ -11,4 +11,29 @@ Release 1 / Serial number 181205 / ZILF 0.8 lib J4
 Foyer of the Opera House
 You are standing in a spacious hall, splendidly decorated in red and gold, with glittering chandeliers overhead. The entrance from the street is to the north, and there are doorways south and west.
 
-> 
+> south
+It is pitch black. You can't see a thing.
+
+> east
+You grope around clumsily in the dark. Better be careful.
+
+> take off cloak
+You grope around clumsily in the dark. Better be careful.
+
+> north
+Foyer of the Opera House
+
+> drop cloak
+You drop the cloak.
+
+> south
+Foyer Bar
+The bar, much rougher than you'd have guessed after the opulence of the foyer to the north, is completely empty.
+
+There seems to be some sort of message scrawled in the sawdust on the floor.
+
+> examine message
+The message simply reads: "You lose."
+Are you sure you want to quit? (y/n) >y
+
+Thanks for playing.
