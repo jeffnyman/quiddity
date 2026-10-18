@@ -631,6 +631,11 @@ static void expect_fault(const story *s, const char *needle, output *out)
             fprintf(stderr, "    fault was: %s\n", fault_message);
         }
         CHECK(strstr(fault_message, needle) != NULL);
+
+        /* What a front end does after a fault: shows whatever the screen
+         * was still holding, so that the text printed before it is not
+         * lost with it. */
+        zm_screen_flush(&m.screen);
     }
     zm_set_fatal_handler(NULL);
 

@@ -213,6 +213,11 @@ typedef struct zm_screen {
     /* Spec §8.1.2: the current font; 1 unless the front end has more. */
     unsigned font;
 
+    /* The font last passed to the front end's set_font by the Version 6
+     * fallback that prints through print_char, so that a front end
+     * without a canvas still knows which font a character is in. */
+    unsigned told_font;
+
     /*
      * Version 6 (Spec §8.8).
      */

@@ -1,0 +1,7 @@
+# The simplest story there is: it prints one line and quits, so this
+# script has no commands. It is here so that the acceptance runner is
+# exercised on every machine, including ones without the games the
+# other scripts play.
+
+! SEED=1
+! GAME=../tests/data/simple-test-r1-s260727.z5

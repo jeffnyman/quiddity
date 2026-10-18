@@ -34,3 +34,25 @@ quiddity_add_test(test_object test_object.c zmachine)
 quiddity_add_test(test_machine test_machine.c zmachine)
 quiddity_add_test(test_quetzal test_quetzal.c zmachine)
 quiddity_add_test(test_blorb   test_blorb.c   zmachine)
+quiddity_add_test(test_accept  test_accept.c  quiddity_accept)
+
+# Acceptance scripts (see src/quiddity/script.h). Each script under
+# acceptance/ is a test of its own that plays it and compares the play with
+# the recording beside it. The games most of them name live outside the
+# repository, in the directory QUIDDITY_GAMES_DIR points at, and a script
+# whose game is not there is reported as skipped rather than failed, which
+# is what the runner's exit status of 77 tells CTest.
+#
+# The glob is re-evaluated when the build runs, so a new script needs no
+# CMake change, only a rebuild.
+
+set(QUIDDITY_GAMES_DIR "${CMAKE_SOURCE_DIR}/../entharion" CACHE PATH
+    "Where the story files that acceptance scripts name are kept")
+
+file(GLOB acceptance_scripts CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/acceptance/*.accept")
+foreach(script IN LISTS acceptance_scripts)
+    get_filename_component(stem "${script}" NAME_WLE)
+    add_test(NAME accept_${stem}
+             COMMAND quiddity --accept "${script}" --games "${QUIDDITY_GAMES_DIR}")
+    set_tests_properties(accept_${stem} PROPERTIES SKIP_RETURN_CODE 77)
+endforeach()

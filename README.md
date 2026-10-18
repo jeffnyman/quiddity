@@ -106,6 +106,20 @@ ctest --preset msvc -R test_check
 
 Each test is also an ordinary executable in the same `bin` folder as the interpreter, so it can be run directly or under a debugger. The tests use the small harness in `tests/check.h`; a new test is one C file plus one line in `tests/CMakeLists.txt`. In VS Code, CMake Tools adds a test button to the status bar and lists the tests in the Testing sidebar.
 
+### Acceptance scripts
+
+The unit tests check the machine piece by piece; the acceptance scripts check that whole games play as they did. A script is a small text file under `acceptance/` naming a story, a seed, and the commands to type, and beside it lies a recording of the play, with the extension `.expected`, that the runner made the first time and compares against ever after:
+
+```
+build/gcc/bin/quiddity --accept acceptance/cutthroats-r23-s840809.accept
+```
+
+The play is shown as it happens, and the verdict comes at the end: passed, or the first line that differs and the line of the script that was being played. When a change in the play is meant, `--update` records it afresh; while a script is being written, `--resume` plays it and then hands the game over at the keyboard, so that the next commands can be tried before they go into the file. The seed is what makes this work: the game's dice come from the interpreter's own generator, which is pinned by its source and shared with Rezrov, so the same seed rolls the same dice in every build and a script written for either interpreter plays on the other.
+
+The play is recorded through the plainest front end there is, a stream of text in which the lower window is everything: no wrapping, no status line, no upper window, and the game told as much through its header. That keeps a recording about what the game said rather than how a screen arranged it. A script's directives (`GAME`, `SEED`, `BLORB`, `INTERPRETER`, `TANDY`, `UPPER`, `PICTURES`) and its command format are described in `src/quiddity/script.h`; a line beginning with `!` is a directive, `#` a comment, three backticks fence off a part not to be played, and anything else is typed into the game, with a key that is not a character written as `[code]` or by name, such as `<down>`.
+
+The games themselves are not in the repository. A script names its game relative to itself, and when the file is not there the runner looks under a games directory instead, given by `--games`, by the `QUIDDITY_GAMES` environment variable, or, for the CTest runs, by the CMake cache variable `QUIDDITY_GAMES_DIR`, which defaults to an `entharion` directory beside the repository. Every script under `acceptance/` is a CTest test; one whose game cannot be found is reported as skipped rather than failed, so the suite passes on a machine without the corpus.
+
 ## License
 
 **Quiddity**, An Interactive Fiction Interpreter\

@@ -107,12 +107,17 @@ void zm_screen_write_header(zm_screen *s)
          * would claim a variable-pitch default font, and the front ends
          * so far print in one pitch. */
         flags1 &= ~(unsigned)(ZM_FLAGS1_V3_NO_STATUS_LINE | ZM_FLAGS1_V3_SCREEN_SPLITTING
-                              | ZM_FLAGS1_V3_VARIABLE_PITCH);
+                              | ZM_FLAGS1_V3_VARIABLE_PITCH | ZM_FLAGS1_V3_TANDY);
         if (io->show_status == NULL) {
             flags1 |= (unsigned)ZM_FLAGS1_V3_NO_STATUS_LINE;
         }
         if (io->split_window != NULL) {
             flags1 |= (unsigned)ZM_FLAGS1_V3_SCREEN_SPLITTING;
+        }
+        /* Spec §11 Remarks: bit 3 is the Tandy bit, which is nothing the
+         * game can ask for; the front end says whether it is set. */
+        if (io->tandy) {
+            flags1 |= (unsigned)ZM_FLAGS1_V3_TANDY;
         }
     } else {
         /* Spec §11.1.4: each bit says whether the front end can do the
@@ -161,7 +166,9 @@ void zm_screen_write_header(zm_screen *s)
     if (mem->version >= 4) {
         /* Spec §11.1.3, §8.4: who the interpreter is and how big the
          * screen is, in lines and characters. */
-        zm_write_byte(mem, ZM_HEADER_INTERPRETER_NUMBER, is_v6(s) ? INTERPRETER_NUMBER_V6 : INTERPRETER_NUMBER);
+        zm_write_byte(mem, ZM_HEADER_INTERPRETER_NUMBER,
+                      (uint8_t)(io->interpreter_number != 0 ? io->interpreter_number
+                                : is_v6(s) ? INTERPRETER_NUMBER_V6 : INTERPRETER_NUMBER));
         zm_write_byte(mem, ZM_HEADER_INTERPRETER_VERSION, INTERPRETER_VERSION);
         zm_write_byte(mem, ZM_HEADER_SCREEN_HEIGHT, (uint8_t)(s->height > 255 ? 255 : s->height));
         zm_write_byte(mem, ZM_HEADER_SCREEN_WIDTH, (uint8_t)(s->width > 255 ? 255 : s->width));
@@ -589,6 +596,13 @@ static void plot(zm_screen *s, zm_window *w, const uint16_t *text, unsigned coun
         s->io->plot_text(s->io->context, (unsigned)w->y + w->cursor_y - 1u, (unsigned)w->x + w->cursor_x - 1u,
                          text, count, &pen);
     } else if (s->io->plot_text == NULL && s->io->print_char != NULL) {
+        /* A front end without a canvas gets the text in printing order,
+         * and is told the font when it changes, since a character of
+         * the graphics font (Spec §16) means nothing without that. */
+        if (s->io->set_font != NULL && w->font != s->told_font) {
+            s->io->set_font(s->io->context, w->font);
+            s->told_font = w->font;
+        }
         for (unsigned i = 0; i < count; i++) {
             uint16_t zscii = zm_unicode_to_zscii(s->mem, text[i]);
 
@@ -725,7 +739,12 @@ static void v6_print(zm_screen *s, uint16_t unicode, uint16_t zscii)
     if (zscii == ZM_ZSCII_NEWLINE) {
         flush_word(s);
         window_newline(s, w);
-    } else if ((w->attributes & ZM_WINDOW_BUFFERING) && s->io->plot_text != NULL) {
+    } else if (w->attributes & ZM_WINDOW_BUFFERING) {
+        /* Buffered text is gathered into words so that a word is never
+         * broken at the margin (Spec §8.8.3.1.1), on a canvas or in a
+         * front end that only gets print_char; the latter must flush
+         * the screen before it stops looking, as zm_screen_flush() is
+         * called before every read and at quit. */
         gather(s, unicode);
     } else {
         put_char(s, w, unicode);
@@ -809,6 +828,13 @@ void zm_screen_print(zm_screen *s, uint16_t zscii)
     }
 }
 
+/* Spec §3.8.5.4.5: the control characters, which no screen shows and
+ * a story must not print. */
+static int is_control(uint16_t unicode)
+{
+    return unicode < 0x20 || (unicode >= 0x7f && unicode <= 0x9f);
+}
+
 void zm_screen_print_unicode(zm_screen *s, uint16_t unicode)
 {
     uint16_t zscii = zm_unicode_to_zscii(s->mem, unicode);
@@ -833,7 +859,7 @@ void zm_screen_print_unicode(zm_screen *s, uint16_t unicode)
     }
     if (s->window == ZM_WINDOW_UPPER) {
         if (upper_window_shows(s)) {
-            if (s->io->print_unicode != NULL) {
+            if (s->io->print_unicode != NULL && !is_control(unicode)) {
                 s->io->print_unicode(s->io->context, unicode);
             } else {
                 s->io->print_char(s->io->context, '?');
@@ -843,7 +869,10 @@ void zm_screen_print_unicode(zm_screen *s, uint16_t unicode)
         return;
     }
     if (s->streams & ZM_STREAM_SCREEN) {
-        if (s->io->print_unicode != NULL) {
+        /* Spec §3.8.5.4.5: a control character is not printed, and a
+         * question mark says so, as for a character the front end does
+         * not have. */
+        if (s->io->print_unicode != NULL && !is_control(unicode)) {
             s->io->print_unicode(s->io->context, unicode);
         } else {
             s->io->print_char(s->io->context, '?');
@@ -859,11 +888,15 @@ void zm_screen_print_unicode(zm_screen *s, uint16_t unicode)
 uint16_t zm_screen_check_unicode(const zm_screen *s, uint16_t unicode)
 {
     /* Spec §15 check_unicode: bit 0 for printing, bit 1 for typing. A
-     * character with a ZSCII code goes both ways; one without can be
+     * character with a ZSCII code goes both ways, unless it is a control
+     * character, which is never printable; one without a code can be
      * printed if the front end prints Unicode, which a Version 6 canvas
      * always does, and typed never, since read stores ZSCII. */
     if (zm_unicode_to_zscii(s->mem, unicode) != 0) {
-        return 3;
+        return is_control(unicode) ? 2 : 3;
+    }
+    if (is_control(unicode)) {
+        return 0;
     }
     if (is_v6(s)) {
         return s->io->plot_text != NULL ? 1 : 0;

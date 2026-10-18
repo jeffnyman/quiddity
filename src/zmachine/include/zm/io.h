@@ -104,6 +104,18 @@ typedef struct zm_io {
     unsigned font_width;
     unsigned font_height;
 
+    /* Spec §11.1.3: the interpreter number the game is told, 1 to 11,
+     * or 0 for the core's own choice (the DEC-20, or the IBM PC for
+     * Version 6, whose surviving games are the MS-DOS releases). Some
+     * games behave differently by it, so a front end replaying a
+     * recorded session says which machine the recording was made as. */
+    unsigned interpreter_number;
+
+    /* Spec §11.1 and §11 Remarks: whether to set the Tandy bit for a
+     * Version 1 to 3 game. A few early games read it and censor
+     * themselves, which is a thing a tester may want to see. */
+    int tandy;
+
     /*
      * Output.
      */

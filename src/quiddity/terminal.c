@@ -7,6 +7,7 @@
 #endif
 
 #include "terminal.h"
+#include "utf8.h"
 
 #include <ctype.h>
 #include <stdio.h>
@@ -33,29 +34,12 @@
  * Output.
  */
 
-/* Write a Unicode character to a stream as UTF-8. The Z-machine never
- * needs more than the Basic Multilingual Plane (Spec §3.8.5.1), so three
- * bytes is the most it takes. */
-static void put_utf8(FILE *out, uint16_t c)
-{
-    if (c < 0x80) {
-        putc((int)c, out);
-    } else if (c < 0x800) {
-        putc(0xc0 | (c >> 6), out);
-        putc(0x80 | (c & 0x3f), out);
-    } else {
-        putc(0xe0 | (c >> 12), out);
-        putc(0x80 | ((c >> 6) & 0x3f), out);
-        putc(0x80 | (c & 0x3f), out);
-    }
-}
-
 /* Write the first count characters of the held-back line without ending
  * it, and keep the rest. */
 static void emit_line(terminal *t, unsigned count)
 {
     for (unsigned i = 0; i < count; i++) {
-        put_utf8(stdout, t->line[i]);
+        utf8_put(stdout, t->line[i]);
     }
     memmove(t->line, t->line + count, (t->line_length - count) * sizeof t->line[0]);
     t->line_length -= count;
@@ -198,7 +182,7 @@ static void show_upper(terminal *t)
             end--;
         }
         for (unsigned c = 0; c < end; c++) {
-            put_utf8(stdout, t->upper[r][c]);
+            utf8_put(stdout, t->upper[r][c]);
         }
         putchar('\n');
     }
@@ -238,13 +222,13 @@ static void terminal_show_status(void *context, const uint16_t *name, unsigned n
     room = TERMINAL_WIDTH > right_length + 2u ? TERMINAL_WIDTH - right_length - 2u : 0;
     if (name_length > room && room > 3) {
         for (unsigned i = 0; i < room - 3; i++) {
-            put_utf8(stdout, zm_zscii_to_unicode(t->mem, name[i]));
+            utf8_put(stdout, zm_zscii_to_unicode(t->mem, name[i]));
         }
         fputs("...", stdout);
         used = room;
     } else {
         for (unsigned i = 0; i < name_length && i < room; i++) {
-            put_utf8(stdout, zm_zscii_to_unicode(t->mem, name[i]));
+            utf8_put(stdout, zm_zscii_to_unicode(t->mem, name[i]));
         }
         used = name_length < room ? name_length : room;
     }
@@ -360,7 +344,7 @@ static void emit_row(terminal *t, unsigned row, unsigned from, unsigned to)
         end--;
     }
     for (unsigned c = 0; c < end; c++) {
-        put_utf8(stdout, c < from ? ' ' : t->cells[row][c]);
+        utf8_put(stdout, c < from ? ' ' : t->cells[row][c]);
     }
     putchar('\n');
     t->row_changed[row] = 0;
@@ -599,7 +583,7 @@ static void terminal_transcript_char(void *context, uint16_t zscii)
     }
     unicode = zm_zscii_to_unicode(t->mem, zscii);
     if (unicode != 0) {
-        put_utf8(t->transcript, unicode);
+        utf8_put(t->transcript, unicode);
     }
 }
 
@@ -623,7 +607,7 @@ static void terminal_record_input(void *context, const uint16_t *zscii, unsigned
         uint16_t unicode = zm_zscii_to_unicode(t->mem, zscii[i]);
 
         if (unicode != 0) {
-            put_utf8(t->record, unicode);
+            utf8_put(t->record, unicode);
         } else {
             fprintf(t->record, "[%u]", (unsigned)zscii[i]);
         }
@@ -635,41 +619,6 @@ static void terminal_record_input(void *context, const uint16_t *zscii, unsigned
 /*
  * Input.
  */
-
-/* Decode one UTF-8 sequence from a byte string, advancing the index.
- * Malformed input yields the replacement character, which ZSCII cannot
- * hold, so it is dropped. */
-static uint32_t next_utf8(const unsigned char *s, size_t *i)
-{
-    unsigned char lead = s[*i];
-    uint32_t c;
-    unsigned extra;
-
-    (*i)++;
-    if (lead < 0x80) {
-        return lead;
-    }
-    if ((lead & 0xe0) == 0xc0) {
-        c = lead & 0x1fu;
-        extra = 1;
-    } else if ((lead & 0xf0) == 0xe0) {
-        c = lead & 0x0fu;
-        extra = 2;
-    } else if ((lead & 0xf8) == 0xf0) {
-        c = lead & 0x07u;
-        extra = 3;
-    } else {
-        return 0xfffd;
-    }
-    for (unsigned k = 0; k < extra; k++) {
-        if ((s[*i] & 0xc0) != 0x80) {
-            return 0xfffd;
-        }
-        c = (c << 6) | (s[*i] & 0x3fu);
-        (*i)++;
-    }
-    return c;
-}
 
 /* Translate a Unicode character typed by the player into ZSCII, or 0 if
  * ZSCII has no code for it (Spec §3.8, §10.7). */
@@ -793,7 +742,7 @@ static int terminal_read_line(void *context, uint16_t *buffer, unsigned *count, 
     length = strlen(line);
 
     while (i < length && *count < max) {
-        uint16_t zscii = unicode_to_zscii(t, next_utf8((const unsigned char *)line, &i));
+        uint16_t zscii = unicode_to_zscii(t, utf8_next((const unsigned char *)line, &i));
 
         if (zscii != 0) {
             buffer[(*count)++] = zscii;
@@ -839,7 +788,7 @@ static int terminal_read_char(void *context, unsigned timeout)
             bytes[k] = (unsigned char)next;
         }
     }
-    zscii = unicode_to_zscii(t, next_utf8(bytes, &i));
+    zscii = unicode_to_zscii(t, utf8_next(bytes, &i));
     return zscii != 0 ? zscii : ZM_ZSCII_SPACE;
 }
 

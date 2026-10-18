@@ -23,6 +23,7 @@
 #include "zm/memory.h"
 #include "zm/status.h"
 
+#include "accept.h"
 #include "info.h"
 #include "terminal.h"
 
@@ -34,6 +35,7 @@
 static void print_usage(FILE *out)
 {
     fputs("Usage: quiddity [options] <story-file>\n"
+          "       quiddity --accept <script> [--update | --resume] [--games <dir>]\n"
           "\n"
           "Options:\n"
           "  -i, --info               Describe the story file's header and exit.\n"
@@ -41,8 +43,54 @@ static void print_usage(FILE *out)
           "  -r, --record <file>      Append the commands typed to <file> when the game asks.\n"
           "  -s, --seed <number>      Seed the game's random numbers, so that a play repeats.\n"
           "  -h, --help               Show this help and exit.\n"
-          "  -v, --version            Show the version and exit.\n",
+          "  -v, --version            Show the version and exit.\n"
+          "\n"
+          "The acceptance command plays a script and checks the play against the\n"
+          "recording beside it: --update records the play afresh, and --resume hands\n"
+          "the game over at the console where the script ends. A game the script\n"
+          "names is looked for beside the script, then under --games or $QUIDDITY_GAMES.\n",
           out);
+}
+
+/* The acceptance command (see accept.h). It stands on its own, since
+ * the script says which story to play and how. */
+static int accept_command(int argc, char **argv)
+{
+    accept_mode mode = ACCEPT_CHECK;
+    const char *script = NULL;
+    const char *games = getenv("QUIDDITY_GAMES");
+
+    for (int i = 2; i < argc; i++) {
+        const char *arg = argv[i];
+
+        if (strcmp(arg, "--update") == 0) {
+            mode = ACCEPT_UPDATE;
+        } else if (strcmp(arg, "--resume") == 0) {
+            mode = ACCEPT_RESUME;
+        } else if (strcmp(arg, "--games") == 0) {
+            if (i + 1 >= argc) {
+                fprintf(stderr, "quiddity: option '--games' needs a directory\n\n");
+                print_usage(stderr);
+                return EXIT_USAGE;
+            }
+            games = argv[++i];
+        } else if (arg[0] == '-') {
+            fprintf(stderr, "quiddity: unknown option '%s'\n\n", arg);
+            print_usage(stderr);
+            return EXIT_USAGE;
+        } else if (script == NULL) {
+            script = arg;
+        } else {
+            fprintf(stderr, "quiddity: --accept takes one script\n\n");
+            print_usage(stderr);
+            return EXIT_USAGE;
+        }
+    }
+    if (script == NULL) {
+        print_usage(stderr);
+        return EXIT_USAGE;
+    }
+    return accept_run(script, mode, games);
 }
 
 static void print_version(void)
@@ -123,6 +171,10 @@ int main(int argc, char **argv)
     terminal term;
     zm_io io;
     zm_status status;
+
+    if (argc >= 2 && strcmp(argv[1], "--accept") == 0) {
+        return accept_command(argc, argv);
+    }
 
     /* Options come first and are only recorded here. The loop stops at the
      * first argument that does not begin with a dash, which is taken to be
