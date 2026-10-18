@@ -111,7 +111,7 @@ Each test is also an ordinary executable in the same `bin` folder as the interpr
 The unit tests check the machine piece by piece; the acceptance scripts check that whole games play as they did. A script is a small text file under `acceptance/` naming a story, a seed, and the commands to type, and beside it lies a recording of the play, with the extension `.expected`, that the runner made the first time and compares against ever after:
 
 ```
-build/gcc/bin/quiddity --accept acceptance/cutthroats-r23-s840809.accept
+build/gcc/bin/quiddity --accept acceptance/cutthroats-r23-s840809.accept --games ../entharion
 ```
 
 The play is shown as it happens, and the verdict comes at the end: passed, or the first line that differs and the line of the script that was being played. When a change in the play is meant, `--update` records it afresh; while a script is being written, `--resume` plays it and then hands the game over at the keyboard, so that the next commands can be tried before they go into the file. The seed is what makes this work: the game's dice come from the interpreter's own generator, which is pinned by its source and shared with Rezrov, so the same seed rolls the same dice in every build and a script written for either interpreter plays on the other.
