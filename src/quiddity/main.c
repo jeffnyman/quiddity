@@ -39,6 +39,7 @@ static void print_usage(FILE *out)
           "  -i, --info               Describe the story file's header and exit.\n"
           "  -t, --transcript <file>  Append a transcript to <file> when the game asks for one.\n"
           "  -r, --record <file>      Append the commands typed to <file> when the game asks.\n"
+          "  -s, --seed <number>      Seed the game's random numbers, so that a play repeats.\n"
           "  -h, --help               Show this help and exit.\n"
           "  -v, --version            Show the version and exit.\n",
           out);
@@ -112,6 +113,7 @@ int main(int argc, char **argv)
     int show_info = 0;
     const char *transcript_path = NULL;
     const char *record_path = NULL;
+    unsigned long seed = 0;
     int i = 1;
     const char *path;
     zm_memory mem;
@@ -152,6 +154,23 @@ int main(int argc, char **argv)
                 transcript_path = argv[++i];
             } else {
                 record_path = argv[++i];
+            }
+        } else if (strcmp(arg, "-s") == 0 || strcmp(arg, "--seed") == 0) {
+            /* Spec §2.4: the dice are the game's own, but a session can
+             * be made to roll the same ones every time, which is how a
+             * play is repeated and how a recorded one is reproduced. */
+            char *end = NULL;
+
+            if (i + 1 >= argc) {
+                fprintf(stderr, "quiddity: option '%s' needs a number\n\n", arg);
+                print_usage(stderr);
+                return EXIT_USAGE;
+            }
+            seed = strtoul(argv[++i], &end, 10);
+            if (*argv[i] == '\0' || *end != '\0' || seed == 0 || seed > 0xffffffffUL) {
+                fprintf(stderr, "quiddity: the seed must be a whole number from 1 to 4294967295\n\n");
+                print_usage(stderr);
+                return EXIT_USAGE;
             }
         } else {
             fprintf(stderr, "quiddity: unknown option '%s'\n\n", arg);
@@ -201,6 +220,9 @@ int main(int argc, char **argv)
     }
     if (have_resources) {
         zm_machine_use_resources(&machine, &resources);
+    }
+    if (seed != 0) {
+        zm_machine_seed_session(&machine, (uint32_t)seed);
     }
 
     /* Runs until the game quits. A fault inside the machine goes through

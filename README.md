@@ -84,6 +84,8 @@ The `--transcript <file>` option names a file for the game's transcript (output 
 
 Saved games are written in the Quetzal format, so a game saved by Quiddity can be restored by Frotz or any other Quetzal interpreter, and theirs by Quiddity. When a game saves or restores, Quiddity asks for a file name, offering the story file's name with the extension `.sav` the first time and the name last used after that; it will not write over an existing file without a yes. Undo is kept in memory, 32 turns deep, for the games that offer an `undo` command. The Version 5 forms of `save` and `restore` that copy a table of bytes to a file of the game's own write that file in the current directory, under the game's name for it reduced to letters and digits with the extension `.AUX`.
 
+The `--seed <number>` option seeds the game's random numbers for the session. The game is not told and sees ordinary dice, only the same dice every time the number is given, so that a play can be repeated exactly. The generator is fixed by the interpreter itself rather than by any library, and it is the same one Rezrov uses, so a seed means the same play in both.
+
 The `--info` option prints what the story file's header says about it, including its Version, release, serial code, memory map, and whether its checksum verifies, and then exits without running it.
 
 In VS Code with the CMake Tools extension, pick a configure preset when prompted, then use the build, run, and debug buttons on the status bar; the tracked `.vscode` files wire F5 to the `quiddity` target.

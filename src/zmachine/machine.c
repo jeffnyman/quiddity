@@ -506,29 +506,69 @@ static uint16_t shift(const zm_instruction *inst, uint16_t value, uint16_t place
  * Random numbers (Spec §2.4).
  *
  * Spec §2 Remarks warns against the C library's rand(). The generator
- * here is xorshift64*, a small, well-studied generator whose high bits
- * are the good ones, which is why the draw below uses them. It is
- * seeded through a mixing function so that seeds that differ in a bit
- * or two give unrelated sequences (Spec §2.4.2).
+ * here is xorshift32 (Marsaglia, 2003): three shifts and three
+ * exclusive-ors on a 32-bit state. That is more than enough for dice,
+ * and it has a property that matters more here than quality: the whole
+ * generator is written out below, so the stream a seed gives is fixed
+ * for ever by this file and not by any library. A recorded playthrough
+ * depends on that. A script that names a seed and a list of commands
+ * is only worth keeping if the same seed rolls the same dice in every
+ * later build and on every machine. The generator is also, step for
+ * step, the one in Rezrov, Quiddity's C# sibling, so that a play
+ * recorded with either interpreter repeats on the other.
+ *
+ * A seed is first put through a mixing function (the finaliser of
+ * MurmurHash3), so that seeds a bit apart give unrelated streams (Spec
+ * §2.4.2) and so that the state is never 0, which xorshift can never
+ * leave.
+ *
+ * There are three ways to seed, and the difference matters:
+ *
+ * - "Random" mode (Spec §2.4): from the clock, at the start of a game
+ *   and whenever the game asks with random 0.
+ *
+ * - "Predictable" mode (Spec §2.4.2): the game asks with a negative
+ *   operand. A seed below 1000 gives the sequence 1, 2, ..., seed,
+ *   repeating (Spec §2 Remarks), so that every value turns up in turn,
+ *   which suits a test; a larger seed seeds the stream.
+ *
+ * - A session seed, which the front end gives for the player's --seed
+ *   option or for a script. The game is not told: it sees ordinary
+ *   dice, only the same dice every time. Such a session must stay a
+ *   function of its seed, so when the game then asks for "random" mode
+ *   the new state is drawn from the stream rather than the clock. That
+ *   is a deviation from Spec §2.4, and the only one, and only then.
  */
 
-static uint64_t mix64(uint64_t z)
+static uint32_t mix32(uint32_t z)
 {
-    z += 0x9e3779b97f4a7c15u;
-    z = (z ^ (z >> 30)) * 0xbf58476d1ce4e5b9u;
-    z = (z ^ (z >> 27)) * 0x94d049bb133111ebu;
-    return z ^ (z >> 31);
+    z += 0x9e3779b9u;
+    z ^= z >> 16;
+    z *= 0x85ebca6bu;
+    z ^= z >> 13;
+    z *= 0xc2b2ae35u;
+    z ^= z >> 16;
+    return z != 0 ? z : 0x9e3779b9u;
 }
 
-static uint64_t next_random(zm_machine *m)
+static uint32_t next_random(zm_machine *m)
 {
-    uint64_t x = m->random_state;
+    uint32_t x = m->random_state;
 
-    x ^= x >> 12;
-    x ^= x << 25;
-    x ^= x >> 27;
+    x ^= x << 13;
+    x ^= x >> 17;
+    x ^= x << 5;
     m->random_state = x;
-    return x * 0x2545f4914f6cdd1du;
+    return x;
+}
+
+/* The clock, with the address of the machine stirred in so that two
+ * machines started in the same second differ. */
+static uint32_t entropy(const zm_machine *m)
+{
+    uint64_t now = (uint64_t)time(NULL) ^ ((uint64_t)clock() << 32) ^ (uint64_t)(uintptr_t)m;
+
+    return mix32((uint32_t)now ^ (uint32_t)(now >> 32));
 }
 
 void zm_machine_seed_random(zm_machine *m, uint16_t seed)
@@ -537,17 +577,22 @@ void zm_machine_seed_random(zm_machine *m, uint16_t seed)
     m->random_counter = 0;
 
     if (seed == 0) {
-        /* "Random" mode (Spec §2.4): the clock, with the address of the
-         * machine stirred in so that two machines started in the same
-         * second differ. mix64() never yields 0, which xorshift needs. */
-        m->random_state = mix64((uint64_t)time(NULL) ^ ((uint64_t)clock() << 32) ^ (uint64_t)(uintptr_t)m);
+        m->random_state = m->random_session ? mix32(next_random(m)) : entropy(m);
     } else if (seed < 1000) {
         /* Spec §2 Remarks: a small seed asks for the sequence 1, 2, ...,
          * seed, repeating, so that every value turns up in order. */
         m->random_interval = seed;
     } else {
-        m->random_state = mix64(seed);
+        m->random_state = mix32(seed);
     }
+}
+
+void zm_machine_seed_session(zm_machine *m, uint32_t seed)
+{
+    m->random_interval = 0;
+    m->random_counter = 0;
+    m->random_session = 1;
+    m->random_state = mix32(seed);
 }
 
 uint16_t zm_machine_random(zm_machine *m, uint16_t range)
@@ -563,7 +608,10 @@ uint16_t zm_machine_random(zm_machine *m, uint16_t range)
         return value;
     }
 
-    return (uint16_t)((next_random(m) >> 32) % range + 1u);
+    /* Folding by modulo favours the low values by under one part in
+     * 65536 for the largest range a game can ask for, which no game's
+     * dice could notice. */
+    return (uint16_t)(next_random(m) % range + 1u);
 }
 
 /*

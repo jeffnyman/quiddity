@@ -115,12 +115,14 @@ typedef struct zm_machine {
     unsigned undo_count;
     unsigned undo_next;
 
-    /* The random number generator (Spec §2.4). In "random" mode the
-     * state is a 64-bit generator seeded from the clock. In
-     * "predictable" mode with a seed below 1000 the generator counts
-     * 1, 2, ..., seed and repeats (Spec §2 Remarks); with a larger seed
-     * the 64-bit generator is seeded with it. */
-    uint64_t random_state;
+    /* The random number generator (Spec §2.4): a 32-bit xorshift
+     * stream, seeded from the clock in "random" mode, from the game in
+     * "predictable" mode, or from the front end for a session that is
+     * to repeat (see machine.c). A predictable seed below 1000 does not
+     * use the stream: the generator counts 1, 2, ..., seed and repeats
+     * (Spec §2 Remarks). */
+    uint32_t random_state;
+    int random_session;         /* seeded by the front end, so never by the clock */
     uint16_t random_interval;   /* 0 unless predictable with a small seed */
     uint16_t random_counter;
 
@@ -182,6 +184,14 @@ void zm_machine_write_variable(zm_machine *m, uint8_t variable, uint16_t value);
  * front end may offer this to the player for testing (Spec §2.4.3).
  * Seed 0 returns the generator to "random" mode. */
 void zm_machine_seed_random(zm_machine *m, uint16_t seed);
+
+/* Seed the session: the game goes on seeing ordinary dice, but the same
+ * dice every time this seed is given, so that a play can be repeated
+ * exactly. Unlike a predictable seed, the game is not told, and a
+ * seed below 1000 is a seed like any other. From here on the generator
+ * is never seeded from the clock, even when the game asks for "random"
+ * mode, so the whole session is a function of the seed. */
+void zm_machine_seed_session(zm_machine *m, uint32_t seed);
 
 /* Draw a number from 1 to range, which must be at least 1 (Spec
  * §2.4.1). */

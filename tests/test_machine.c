@@ -1568,6 +1568,51 @@ static void test_random_numbers(void)
         CHECK(memcmp(first, second, sizeof first) != 0);
     }
 
+    /* The stream itself is pinned, because recorded plays depend on it.
+     * These are the draws Rezrov's generator makes from the same seeds,
+     * checked against it directly, and a change to any of them would
+     * make every recording made so far wrong. */
+    {
+        static const uint16_t from_20[8] = { 114, 126, 689, 190, 790, 690, 694, 87 };
+        static const uint16_t from_4321[8] = { 788, 853, 943, 953, 650, 666, 795, 583 };
+        static const uint16_t from_1[12] = { 2, 5, 6, 1, 6, 3, 6, 2, 6, 3, 3, 2 };
+
+        zm_machine_seed_session(&m, 20);
+        for (int i = 0; i < 8; i++) CHECK_EQ_INT(zm_machine_random(&m, 1000), from_20[i]);
+        zm_machine_seed_session(&m, 1);
+        for (int i = 0; i < 12; i++) CHECK_EQ_INT(zm_machine_random(&m, 6), from_1[i]);
+
+        /* A predictable seed of 1000 or more seeds the same stream the
+         * same way, and a session seed below 1000 is not a sequence. */
+        zm_machine_seed_random(&m, 4321);
+        for (int i = 0; i < 8; i++) CHECK_EQ_INT(zm_machine_random(&m, 1000), from_4321[i]);
+        zm_machine_seed_session(&m, 4321);
+        for (int i = 0; i < 8; i++) CHECK_EQ_INT(zm_machine_random(&m, 1000), from_4321[i]);
+        CHECK_EQ_INT(m.random_interval, 0);
+
+        /* In a seeded session, random 0 moves to a fresh point on the
+         * stream rather than the clock, so the session stays repeatable
+         * even through a game that reseeds itself. */
+        zm_machine_seed_session(&m, 20);
+        CHECK_EQ_INT(zm_machine_random(&m, 1000), 114);
+        zm_machine_seed_random(&m, 0);
+        CHECK_EQ_INT(zm_machine_random(&m, 1000), 136);
+        CHECK_EQ_INT(m.random_interval, 0);
+        CHECK_EQ_INT(m.random_session, 1);
+
+        /* The game's own predictable sequence still works in a session,
+         * and random 0 leaves it. */
+        zm_machine_seed_random(&m, 5);
+        CHECK_EQ_INT(zm_machine_random(&m, 3), 1);
+        CHECK_EQ_INT(zm_machine_random(&m, 3), 2);
+        CHECK_EQ_INT(zm_machine_random(&m, 3), 3);
+        CHECK_EQ_INT(zm_machine_random(&m, 3), 1);
+        CHECK_EQ_INT(zm_machine_random(&m, 3), 2);
+        CHECK_EQ_INT(zm_machine_random(&m, 3), 1);
+        zm_machine_seed_random(&m, 0);
+        CHECK_EQ_INT(m.random_interval, 0);
+    }
+
     zm_machine_free(&m);
     zm_memory_free(&mem);
 }
