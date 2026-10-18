@@ -1,0 +1,28 @@
+# Cloak of Darkness with extras, the ZIL port: the same route to the
+# message, past the sleeping pets. An odd situation where a lit
+# object still indicates the room is in darkness.
+
+! SEED=1
+! GAME=zcode-checkers/cloak-plus.z5
+
+west
+west
+drop cloak
+west
+west
+west
+east
+take the sphere
+west
+east
+east
+east
+take the cloak
+east
+south
+examine message
+north
+drop cloak
+south
+examine message
+y
