@@ -44,14 +44,19 @@ quiddity_add_test(test_accept  test_accept.c  quiddity_accept)
 # is what the runner's exit status of 77 tells CTest.
 #
 # The glob is re-evaluated when the build runs, so a new script needs no
-# CMake change, only a rebuild.
+# CMake change, only a rebuild. Scripts may be grouped in subdirectories,
+# and a test is named after its path under acceptance/ with the slashes
+# turned to dots, so checkers/czech-z3.accept becomes accept_checkers.czech-z3
+# and ctest -R checkers runs the group.
 
 set(QUIDDITY_GAMES_DIR "${CMAKE_SOURCE_DIR}/../entharion" CACHE PATH
     "Where the story files that acceptance scripts name are kept")
 
-file(GLOB acceptance_scripts CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/acceptance/*.accept")
+file(GLOB_RECURSE acceptance_scripts CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/acceptance/*.accept")
 foreach(script IN LISTS acceptance_scripts)
-    get_filename_component(stem "${script}" NAME_WLE)
+    file(RELATIVE_PATH stem "${CMAKE_SOURCE_DIR}/acceptance" "${script}")
+    string(REGEX REPLACE "\\.accept$" "" stem "${stem}")
+    string(REPLACE "/" "." stem "${stem}")
     add_test(NAME accept_${stem}
              COMMAND quiddity --accept "${script}" --games "${QUIDDITY_GAMES_DIR}")
     set_tests_properties(accept_${stem} PROPERTIES SKIP_RETURN_CODE 77)
