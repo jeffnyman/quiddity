@@ -28,7 +28,10 @@
  * nothing inside it is read until a bare line of three backticks closes
  * it, or the file ends; that lets a script keep an alternative path
  * through the game, or the rest of a path still being worked out,
- * without playing it. Every other line is a command, in the format the
+ * without playing it. A resumed session keeps what was typed at the
+ * console under a fence labelled tried, at the end of the script, for
+ * the same reason: the lines worth keeping are moved above it, and the
+ * rest deleted. Every other line is a command, in the format the
  * Z-machine's command files use (Spec §7.1.2.3 and §7 Remarks): a key
  * that is not a printable character is written as its ZSCII code in
  * square brackets, or by name for the ones a menu is worked with,
@@ -85,6 +88,8 @@ typedef struct accept_script {
 
     accept_seed_change *seed_changes;
     unsigned seed_change_count;
+
+    int ends_fenced;         /* the file ended inside a fenced section */
 } accept_script;
 
 /* Read a script from a file. Returns 1, or 0 with an explanation in

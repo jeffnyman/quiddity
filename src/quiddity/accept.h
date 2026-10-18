@@ -64,6 +64,8 @@ typedef struct accept_result {
     char *message;          /* why, for a fault */
     unsigned *offsets;      /* how long the output was when each command was read */
     unsigned offset_count;
+    char **typed;           /* the lines typed at the console in a resumed session */
+    unsigned typed_count;
 } accept_result;
 
 /* Where an expected text and a play first part company. */
@@ -101,6 +103,15 @@ char *accept_describe(const accept_difference *difference, const accept_result *
  * not be run; ACCEPT_EXIT_SKIPPED when its game is not there. games_dir
  * may be NULL. */
 int accept_run(const char *script_path, accept_mode mode, const char *games_dir);
+
+/* Keep the lines typed in a resumed session at the end of the script,
+ * under a fence labelled tried, which the runner never plays, so that
+ * the ones that worked can be moved above it. A line that would read
+ * as a comment, a directive, or a fence is written with the prompt in
+ * front, so that it is the command it was when it moves. With
+ * close_fence, a fence the script ended inside is closed first. Nothing
+ * is written for no lines. Returns 1, or 0 after filling in error. */
+int accept_append_tried(const char *script_path, int close_fence, char *const *lines, unsigned count, char *error);
 
 /* The --create option: write a new script at script_path that names
  * game, with seed 1 and no commands, so that a run with --resume hands

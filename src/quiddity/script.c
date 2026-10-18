@@ -530,6 +530,8 @@ static int parse(accept_script *s, const char *text, const char *path, const cha
         }
     }
 
+    s->ends_fenced = fenced_from != 0;
+
     if (s->game_path == NULL) {
         snprintf(error, ACCEPT_ERROR_MAX, "%s: no GAME directive names the story file", name);
         return 0;

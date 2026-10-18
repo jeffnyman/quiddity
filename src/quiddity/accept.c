@@ -111,6 +111,11 @@ typedef struct accept_play_state {
     int script_ended;
     int announced;
 
+    /* What was typed at the console once the script ran out. */
+    char **typed;
+    unsigned typed_count;
+    unsigned typed_capacity;
+
     /* The read whose timer was last allowed to run: see timer_fires(). */
     int timed_pending;
     uint32_t timed_pc;
@@ -399,6 +404,31 @@ static int timer_fires(accept_play_state *p, unsigned timeout, int key_read)
     return 1;
 }
 
+static char *copy_string(const char *s);
+
+/* Keep a line typed at the console, so that the session can be put
+ * into the script afterwards. Running out of memory loses the line and
+ * nothing else. */
+static void remember_typed(accept_play_state *p, const char *line)
+{
+    char *copy;
+
+    if (p->typed_count == p->typed_capacity) {
+        unsigned capacity = p->typed_capacity != 0 ? p->typed_capacity * 2 : 16;
+        char **typed = realloc(p->typed, capacity * sizeof *typed);
+
+        if (typed == NULL) {
+            return;
+        }
+        p->typed = typed;
+        p->typed_capacity = capacity;
+    }
+    copy = copy_string(line);
+    if (copy != NULL) {
+        p->typed[p->typed_count++] = copy;
+    }
+}
+
 /* The next line of input: the script's next command, or, once the
  * script has run out and the game is to go on, a line from the console.
  * Returns 0 when there is nothing more, which ends the game. */
@@ -431,6 +461,7 @@ static int take_line(accept_play_state *p, uint16_t *codes, unsigned *count)
         while (length > 0 && (line[length - 1] == '\n' || line[length - 1] == '\r')) {
             line[--length] = '\0';
         }
+        remember_typed(p, line);
         decode_line(p, line, codes, count);
         return 1;
     }
@@ -684,6 +715,10 @@ static void free_play(accept_play_state *p)
 {
     free(p->out);
     free(p->offsets);
+    for (unsigned i = 0; i < p->typed_count; i++) {
+        free(p->typed[i]);
+    }
+    free(p->typed);
     free(p->saved);
     for (unsigned i = 0; i < p->file_count; i++) {
         free(p->files[i].name);
@@ -852,6 +887,10 @@ int accept_play(const accept_script *script, int display, int resume, accept_res
     result->offsets = p->offsets;
     result->offset_count = p->offset_count;
     p->offsets = NULL;
+    result->typed = p->typed;
+    result->typed_count = p->typed_count;
+    p->typed = NULL;
+    p->typed_count = 0;
 
     zm_machine_free(&p->machine);
     if (p->have_resources) {
@@ -867,6 +906,10 @@ void accept_result_free(accept_result *result)
     free(result->text);
     free(result->message);
     free(result->offsets);
+    for (unsigned i = 0; i < result->typed_count; i++) {
+        free(result->typed[i]);
+    }
+    free(result->typed);
     memset(result, 0, sizeof *result);
 }
 
@@ -1106,6 +1149,60 @@ static int write_whole_file(const char *path, const char *text)
     return ok;
 }
 
+int accept_append_tried(const char *script_path, int close_fence, char *const *lines, unsigned count, char *error)
+{
+    char *text;
+    size_t length;
+    FILE *file;
+    int ok = 1;
+
+    if (count == 0) {
+        return 1;
+    }
+
+    /* The last line of the script may have been left without its
+     * newline by an editor, and the fence must start on a line of its
+     * own. */
+    text = read_whole_file(script_path);
+    if (text == NULL) {
+        snprintf(error, ACCEPT_ERROR_MAX, "%s cannot be read: %s", script_path, strerror(errno));
+        return 0;
+    }
+    length = strlen(text);
+    file = fopen(script_path, "ab");
+    if (file == NULL) {
+        snprintf(error, ACCEPT_ERROR_MAX, "%s cannot be written: %s", script_path, strerror(errno));
+        free(text);
+        return 0;
+    }
+    if (length > 0 && text[length - 1] != '\n') {
+        ok = fputc('\n', file) != EOF;
+    }
+    free(text);
+    if (close_fence) {
+        ok = fputs("```\n", file) >= 0 && ok;
+    }
+    ok = fputs("\n```tried\n", file) >= 0 && ok;
+    for (unsigned i = 0; i < count; i++) {
+        const char *line = lines[i];
+
+        /* A line that would be read as something other than a command
+         * once it is moved above the fence gets the prompt in front,
+         * which is how such a command is written (script.h). */
+        if (line[0] == '#' || line[0] == '!' || line[0] == '`') {
+            ok = fputs("> ", file) >= 0 && ok;
+        }
+        ok = fputs(line, file) >= 0 && ok;
+        ok = fputc('\n', file) != EOF && ok;
+    }
+    ok = fputs("```\n", file) >= 0 && ok;
+    ok = fclose(file) == 0 && ok;
+    if (!ok) {
+        snprintf(error, ACCEPT_ERROR_MAX, "%s cannot be written: %s", script_path, strerror(errno));
+    }
+    return ok;
+}
+
 int accept_create(const char *script_path, const char *game, const char *games_dir, char *error)
 {
     const char *name = script_path;
@@ -1199,9 +1296,23 @@ int accept_run(const char *script_path, accept_mode mode, const char *games_dir)
     }
 
     if (mode == ACCEPT_RESUME) {
+        /* What was typed goes to the end of the script, fenced off, so
+         * that nothing of the session is lost and nothing of it is
+         * played until it has been looked over. */
+        status = 0;
+        if (result.typed_count > 0) {
+            if (!accept_append_tried(script_path, script.ends_fenced, result.typed, result.typed_count, error)) {
+                fprintf(stderr, "quiddity: %s: %s\n", script.name, error);
+                status = 1;
+            } else {
+                printf("quiddity: %s: kept the %u line%s typed under a ```tried fence; "
+                       "move the ones worth keeping above it\n",
+                       script.name, result.typed_count, result.typed_count == 1 ? "" : "s");
+            }
+        }
         accept_result_free(&result);
         accept_script_free(&script);
-        return 0;
+        return status;
     }
 
     /* A gap before the verdict. */

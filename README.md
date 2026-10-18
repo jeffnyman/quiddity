@@ -114,9 +114,9 @@ The unit tests check the machine piece by piece; the acceptance scripts check th
 build/gcc/bin/quiddity --accept acceptance/cutthroats-r23-s840809.accept --games ../entharion
 ```
 
-The play is shown as it happens, and the verdict comes at the end: passed, or the first line that differs and the line of the script that was being played. When a change in the play is meant, `--update` records it afresh; while a script is being written, `--resume` plays it and then hands the game over at the keyboard, so that the next commands can be tried before they go into the file. The seed is what makes this work: the game's dice come from the interpreter's own generator, which is pinned by its source and shared with Rezrov, so the same seed rolls the same dice in every build and a script written for either interpreter plays on the other.
+The play is shown as it happens, and the verdict comes at the end: passed, or the first line that differs and the line of the script that was being played. When a change in the play is meant, `--update` records it afresh; while a script is being written, `--resume` plays it and then hands the game over at the keyboard, so that the next commands can be tried before they go into the file. What is typed there is kept at the end of the script under a fence labelled `tried`, which the runner never plays: move the lines that worked above the fence, delete the rest, and the next run plays them for real. The seed is what makes this work: the game's dice come from the interpreter's own generator, which is pinned by its source and shared with Rezrov, so the same seed rolls the same dice in every build and a script written for either interpreter plays on the other.
 
-A new script begins with `--create`, which writes the file naming the story given by `--game`, seeded with 1 and with no commands yet, and then hands the game over at the keyboard as `--resume` would, so that the opening commands can be tried before they go into the file:
+A new script begins with `--create`, which writes the file naming the story given by `--game`, seeded with 1 and with no commands yet, and then hands the game over at the keyboard as `--resume` would, with the session kept under the same `tried` fence:
 
 ```
 build/gcc/bin/quiddity --accept --create acceptance/checkers/cloak-plus.accept --game zcode-checkers/cloak-plus.z5 --games ../entharion

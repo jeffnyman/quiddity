@@ -351,6 +351,69 @@ static void test_a_script_can_be_created_for_a_game(void)
     }
 }
 
+static size_t read_file(const char *path, char *text, size_t size)
+{
+    FILE *file = fopen(path, "rb");
+    size_t read = 0;
+
+    if (file != NULL) {
+        read = fread(text, 1, size - 1, file);
+        fclose(file);
+    }
+    text[read] = '\0';
+    return read;
+}
+
+static void test_what_was_tried_is_kept_under_a_fence(void)
+{
+    static const char path[] = "tried-by-test.accept";
+    static char look[] = "look", note[] = "#not a comment", quit[] = "quit";
+    char *typed[] = { look, note, quit };
+    accept_script script;
+    char error[ACCEPT_ERROR_MAX];
+    char text[512];
+    FILE *file;
+
+    remove(path);
+    CHECK(accept_create(path, "simple-test-r1-s260727.z3", QUIDDITY_TEST_DATA_DIR, error));
+
+    /* Nothing typed leaves the script as it was. */
+    CHECK(accept_append_tried(path, 0, typed, 0, error));
+    read_file(path, text, sizeof text);
+    CHECK_EQ_STR(text, "# tried-by-test\n\n! SEED=1\n! GAME=simple-test-r1-s260727.z3\n");
+
+    /* The session goes under a fence, and a line that would read as a
+     * comment gets the prompt in front; none of it is played. */
+    CHECK(accept_append_tried(path, 0, typed, 3, error));
+    read_file(path, text, sizeof text);
+    CHECK_EQ_STR(text, "# tried-by-test\n\n! SEED=1\n! GAME=simple-test-r1-s260727.z3\n"
+                       "\n```tried\nlook\n> #not a comment\nquit\n```\n");
+    CHECK(accept_script_load(&script, path, QUIDDITY_TEST_DATA_DIR, error));
+    CHECK_EQ_INT(script.command_count, 0);
+    CHECK_EQ_INT(script.ends_fenced, 0);
+    accept_script_free(&script);
+
+    /* A script that ends inside a fence, on a line without its newline,
+     * has the line finished and the fence closed before the session. */
+    file = fopen(path, "wb");
+    CHECK(file != NULL);
+    if (file != NULL) {
+        fputs("! SEED=1\n! GAME=simple-test-r1-s260727.z3\n```maybe\nnorth", file);
+        fclose(file);
+    }
+    CHECK(accept_script_load(&script, path, QUIDDITY_TEST_DATA_DIR, error));
+    CHECK_EQ_INT(script.ends_fenced, 1);
+    accept_script_free(&script);
+    CHECK(accept_append_tried(path, 1, typed, 1, error));
+    read_file(path, text, sizeof text);
+    CHECK_EQ_STR(text, "! SEED=1\n! GAME=simple-test-r1-s260727.z3\n```maybe\nnorth\n```\n\n```tried\nlook\n```\n");
+    CHECK(accept_script_load(&script, path, QUIDDITY_TEST_DATA_DIR, error));
+    CHECK_EQ_INT(script.command_count, 0);
+    accept_script_free(&script);
+
+    remove(path);
+}
+
 int main(void)
 {
     RUN_TEST(test_a_script_has_directives_comments_and_commands);
@@ -363,5 +426,6 @@ int main(void)
     RUN_TEST(test_a_difference_is_placed_in_both_files);
     RUN_TEST(test_a_play_is_recorded_as_text);
     RUN_TEST(test_a_script_can_be_created_for_a_game);
+    RUN_TEST(test_what_was_tried_is_kept_under_a_fence);
     return CHECK_SUMMARY();
 }

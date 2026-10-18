@@ -48,8 +48,9 @@ static void print_usage(FILE *out)
           "\n"
           "The acceptance command plays a script and checks the play against the\n"
           "recording beside it: --update records the play afresh, and --resume hands\n"
-          "the game over at the console where the script ends. A game the script\n"
-          "names is looked for beside the script, then under --games or $QUIDDITY_GAMES.\n"
+          "the game over at the console where the script ends, keeping what is typed\n"
+          "there at the end of the script under a fence labelled tried. A game the\n"
+          "script names is looked for beside it, then under --games or $QUIDDITY_GAMES.\n"
           "--create writes a new script naming the story given by --game, with seed 1\n"
           "and no commands, and hands the game over at once, so that the commands\n"
           "that work can be tried before they go into the file.\n",
