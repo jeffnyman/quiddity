@@ -28,6 +28,10 @@ target_compile_definitions(quiddity PRIVATE
     QUIDDITY_VERSION="${PROJECT_VERSION}"
 )
 
-target_link_libraries(quiddity PRIVATE zmachine quiddity_accept)
+# The runner comes first: it carries zmachine as a public dependency, and
+# naming the machine after it keeps the static libraries in dependency
+# order, so the linker is not handed zmachine twice. The front end uses
+# the machine directly as well, which is why it is still named here.
+target_link_libraries(quiddity PRIVATE quiddity_accept zmachine)
 
 quiddity_apply_warnings(quiddity)
