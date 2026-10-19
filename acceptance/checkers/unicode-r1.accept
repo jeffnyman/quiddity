@@ -1,0 +1,19 @@
+# David Kinder's Unicode test prints the Unicode table the game
+# carries and then reads characters until escape.
+#
+# A typed character has to have a ZSCII code (Spec §10.7): the default
+# extra characters table covers Latin-1, and this game's own Zcharacter
+# table adds ©, ™, and €. Anything else, such as Ē, Ϟ, я, or ڿ from the
+# blocks the game prints, is as if it had not been typed, and leaves
+# nothing to record, so it is not tried here.
+
+! SEED=1
+! GAME=zcode-checkers/unicode-r1.z5
+
+# Basic Latin
+x
+# Latin-1 Supplement, from the default extra characters table
+À
+# The Euro sign, from this game's own table
+€
+<escape>
