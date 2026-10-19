@@ -1,0 +1,22 @@
+# Graham Nelson's six programs from Standard 0.99: fonts, accents,
+# colors, and the header, then exit. Input codes and timed input
+# need a keyboard.
+
+! SEED=1
+! GAME=zcode-checkers/gntests.z5
+
+1
+2
+3
+x
+ô
+<space>
+4
+5
+
+# Item 6 (TimedInput) is left out. The acceptance runner has no clock:
+# a timed read runs its interrupt routine once and then takes the
+# script's key, so one message is shown where the test wants five, one
+# second apart. Timed input is checked at the terminal instead.
+
+0

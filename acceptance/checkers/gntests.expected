@@ -1,0 +1,52 @@
+
+This is a collection of the six test programs which came attached to the Z-Spec 0.99 file (spec.tex.) No changes have been made, except for the idiot menu system glued to the front.
+
+1: Fonts; 2: Accents; 3: InputCodes, 4: Colours, 5: Header, 6: TimedInput, 0: Exit
+
+1: Fonts; 2: Accents; 3: InputCodes, 4: Colours, 5: Header, 6: TimedInput, 0: Exit
+Keyboard input code testing
+(Press keys to see how they respond, and press SPACE to finish.)
+
+120 character 'x'
+194 accented character 'ô'
+32 
+1: Fonts; 2: Accents; 3: InputCodes, 4: Colours, 5: Header, 6: TimedInput, 0: Exit
+Colour display testing
+Fine: the interpreter says colours are unavailable.
+
+1: Fonts; 2: Accents; 3: InputCodes, 4: Colours, 5: Header, 6: TimedInput, 0: Exit
+Interpreter declarations:
+
+(In Flags 1...)
+Colours available?  no
+Boldface available?  no
+Italic available?  no
+Fixed-pitch font available?  yes
+Timed keyboard input available?  no
+
+(In Flags 2.  The following four questions have meaningful answers only if bits 3, 4, 5 and 7 of Flags 2 were set in advance: to do this, alter the game file by setting byte 16 to 184 and then run it again.)
+Pictures available?  no
+UNDO available?  no
+Mouse available?  no
+Sound effects available?  no
+
+Interpreter (machine) number 6 version Q
+
+Screen height: infinite
+Screen width: 80 fixed-pitch font characters
+Screen height in units: 255
+Screen width in units: 80
+Font height in units: 1
+Font width (of a '0') in units: 1
+
+Font 1 available?  yes
+Font 2 available?  no
+Font 3 available?  yes
+Font 4 available?  yes
+
+Standard specification claimed by the interpreter: 1.1
+
+
+(Press SPACE to clear.)
+
+1: Fonts; 2: Accents; 3: InputCodes, 4: Colours, 5: Header, 6: TimedInput, 0: Exit
