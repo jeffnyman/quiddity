@@ -169,6 +169,9 @@ static void test_a_script_that_cannot_be_used_says_why(void)
         { "! GAME=zork1.z3\n! SEED=1\n! SAVE=here\n", "line 3: there is no SAVE directive" },
         { "! GAME=zork1.z3\n! SEED=1\n! hello\n", "line 3: a directive is written" },
         { "! GAME=zork1.z3\n! SEED=1\n! TANDY=maybe\n", "line 3: TANDY must be yes or no" },
+        { "! GAME=zork1.z3\n! SEED=1\n! HEIGHT=0\n", "line 3: HEIGHT must be a whole number of 1 to 255" },
+        { "! GAME=zork1.z3\n! SEED=1\n! HEIGHT=256\n", "line 3: HEIGHT must be" },
+        { "! GAME=zork1.z3\n! SEED=1\n! HEIGHT=tall\n", "line 3: HEIGHT must be" },
     };
     accept_script s;
     char error[ACCEPT_ERROR_MAX];
@@ -179,13 +182,20 @@ static void test_a_script_that_cannot_be_used_says_why(void)
         CHECK(contains(error, cases[i].reason));
     }
 
-    CHECK(accept_script_parse(&s, "! GAME=zork1.z3\n! SEED=1\n! TANDY=yes\n! UPPER=On\n! PICTURES=1\n! INTERPRETER=amiga\n",
+    CHECK(accept_script_parse(&s, "! GAME=zork1.z3\n! SEED=1\n! TANDY=yes\n! UPPER=On\n! PICTURES=1\n! INTERPRETER=amiga\n"
+                                  "! HEIGHT=24\n",
                               SCRIPT_PATH, NULL, error));
     CHECK_EQ_INT(s.tandy, 1);
     CHECK_EQ_INT(s.upper, 1);
     CHECK_EQ_INT(s.pictures, 1);
     CHECK_EQ_INT(s.graphics, 0);
+    CHECK_EQ_INT(s.height, 24);
     CHECK_EQ_STR(s.interpreter, "amiga");
+    accept_script_free(&s);
+
+    /* Without a HEIGHT the stream's own height stands. */
+    CHECK(accept_script_parse(&s, "! GAME=zork1.z3\n! SEED=1\n", SCRIPT_PATH, NULL, error));
+    CHECK_EQ_INT(s.height, 0);
     accept_script_free(&s);
 }
 
@@ -384,6 +394,16 @@ static void test_the_upper_window_is_shown_when_asked(void)
     CHECK_EQ_INT(accept_play(&script, 0, 0, &result), 1);
     CHECK_EQ_INT(result.ending, ACCEPT_QUIT);
     CHECK_EQ_STR(result.text, "Hello\nHi\nScore\n\nHelloBye\nYo\nScore\n\nHelloBye");
+    accept_result_free(&result);
+    accept_script_free(&script);
+
+    /* A HEIGHT is the screen the game is told it has: on one line the
+     * split is cut to that line, the new-line stays on it, and "Score"
+     * overwrites "Hi" (Spec §8.7.3.1). */
+    CHECK(accept_script_parse(&script, "! SEED=1\n! GAME=upper-by-test.z5\n! UPPER=yes\n! HEIGHT=1\n\na\nb\nc\n",
+                              SCRIPT_PATH, ".", error));
+    CHECK_EQ_INT(accept_play(&script, 0, 0, &result), 1);
+    CHECK_EQ_STR(result.text, "Hello\nScore\n\nHelloBye\nYoore\n\nHelloBye");
     accept_result_free(&result);
     accept_script_free(&script);
 

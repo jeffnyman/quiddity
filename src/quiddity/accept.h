@@ -26,7 +26,9 @@
  * Beyond Zork's map); then it is written into the stream as a block of
  * rows whenever the game pauses for input and the window has changed.
  * The game is told as much through the header (Spec §11.1.4), sees a
- * screen 80 characters wide and 255 lines high (Spec §8.4.1), has the
+ * screen 80 characters wide and 255 lines high (Spec §8.4.1), or as
+ * high as a HEIGHT directive says for a game that fills the screen it
+ * is given, has the
  * fixed-pitch and character graphics fonts (Spec §8.1.2, §16), and is
  * told it is an IBM PC, or for a Version 6 game without pictures a
  * DEC-20, the machines whose interpreters shipped plain text (Spec

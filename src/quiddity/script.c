@@ -192,6 +192,18 @@ static int parse_seed(const char *value, uint32_t *seed)
     return 1;
 }
 
+/* A whole number of 1 to 255, as HEIGHT wants. */
+static int parse_height(const char *value, unsigned *height)
+{
+    uint32_t parsed;
+
+    if (!parse_seed(value, &parsed) || parsed > 255) {
+        return 0;
+    }
+    *height = (unsigned)parsed;
+    return 1;
+}
+
 /* A touch of a window or a link, as "<click column,row>" or "<link
  * value>", which belong to Glulx games: turned into the command form a
  * display understands, "[click column,row]" or "[link value]". Returns
@@ -501,6 +513,12 @@ static int parse(accept_script *s, const char *text, const char *path, const cha
                     snprintf(error, ACCEPT_ERROR_MAX, "%s, line %u: %s must be yes or no", name, line_number, key);
                     return 0;
                 }
+            } else if (strcmp(key, "HEIGHT") == 0) {
+                if (!parse_height(value, &s->height)) {
+                    snprintf(error, ACCEPT_ERROR_MAX, "%s, line %u: HEIGHT must be a whole number of 1 to 255", name,
+                             line_number);
+                    return 0;
+                }
             } else if (strcmp(key, "SEED") == 0) {
                 uint32_t seed;
 
@@ -523,7 +541,7 @@ static int parse(accept_script *s, const char *text, const char *path, const cha
             } else {
                 snprintf(error, ACCEPT_ERROR_MAX,
                          "%s, line %u: there is no %.*s directive; the directives are GAME, SEED, BLORB, INTERPRETER, "
-                         "TANDY, UPPER, PICTURES, and GRAPHICS",
+                         "TANDY, UPPER, HEIGHT, PICTURES, and GRAPHICS",
                          name, line_number, (int)key_length, directive);
                 return 0;
             }

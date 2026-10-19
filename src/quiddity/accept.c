@@ -1080,7 +1080,10 @@ int accept_play(const accept_script *script, int display, int resume, accept_res
     /* The stream as a zm_io; see the remarks in accept.h. */
     p->io.context = p;
     p->io.screen_width = STREAM_WIDTH;
-    p->io.screen_height = STREAM_HEIGHT;
+    /* Spec §8.4.1: 255 lines means infinite, which a stream is; a script
+     * may name a smaller screen for a game that lays its upper window
+     * out by the height, so that the window recorded is that size. */
+    p->io.screen_height = script->height != 0 ? script->height : STREAM_HEIGHT;
     p->io.styles = ZM_STYLE_FIXED_PITCH;
     p->io.fonts = (1u << 3) | (1u << 4);
     p->io.timed_input = 0;

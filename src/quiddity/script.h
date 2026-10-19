@@ -16,6 +16,9 @@
  *                early games read
  *   UPPER        yes to put the upper window into the play, for a game
  *                that draws its text there
+ *   HEIGHT       the screen height in lines the game is told, 1 to 255,
+ *                for a game that lays its upper window out by it; the
+ *                stream's own height, 255, means infinite (Spec §8.4.1)
  *   PICTURES     yes to tell a Version 6 game it has pictures
  *   GRAPHICS     yes to let a Glulx game open a graphics window
  *
@@ -80,6 +83,7 @@ typedef struct accept_script {
     int upper;
     int pictures;
     int graphics;
+    unsigned height;         /* the HEIGHT directive, or 0 for the stream's own */
     uint32_t seed;           /* the seed at the start */
 
     char **commands;         /* the commands to play, in order */
