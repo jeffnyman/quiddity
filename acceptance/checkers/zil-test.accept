@@ -1,0 +1,11 @@
+# A ZILF test file: a look around the testing lab and out.
+# Realistically, there is little reason for this test beyond
+# just proving that a simple ZILF compiled test will work.
+
+! SEED=1
+! GAME=zcode-checkers/zil-test.z3
+
+look
+inventory
+quit
+y

@@ -1,0 +1,20 @@
+
+
+A TEST FILE
+
+TESTING
+An Interactive Fiction by Jeff Nyman
+Release 1 / Serial number 181101 / ZILF 0.8 lib J4
+
+TESTING LAB
+
+> look
+TESTING LAB
+
+> inventory
+You are empty-handed.
+
+> quit
+Are you sure you want to quit? (y/n) >y
+
+Thanks for playing.
