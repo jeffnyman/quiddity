@@ -381,13 +381,49 @@ static void memory_newline(zm_screen *s)
     zm_write_word(s->mem, s->tables[top], 0);
 }
 
+/* Spec §3.8.2.4, §3.8.2.5: in Version 6 ZSCII 9 is a tab, which indents
+ * a paragraph by three spaces at the start of a line and is one space
+ * anywhere else, and ZSCII 11 a sentence space, two spaces wide; so
+ * Infocom's interpreters printed them. Each is kept as its code through
+ * the word it leads (gather) and becomes its spaces when the word is
+ * laid out (plot_word), so that the whole of it is dropped when the
+ * word is moved to a new line, as on those interpreters and in Frotz. */
+static unsigned code_units(const zm_screen *s, uint16_t code, int at_line_start)
+{
+    unsigned spaces = code == ZM_ZSCII_SPACE_SENTENCE ? 2u : code == ZM_ZSCII_TAB ? (at_line_start ? 3u : 1u) : 1u;
+
+    return spaces * s->font_width;
+}
+
+static unsigned text_units(const zm_screen *s, const uint16_t *text, unsigned count, int at_line_start)
+{
+    unsigned units = 0;
+
+    for (unsigned i = 0; i < count; i++) {
+        units += code_units(s, text[i], at_line_start && i == 0);
+    }
+    return units;
+}
+
+static int is_spacing_code(uint16_t code)
+{
+    return code == ZM_ZSCII_TAB || code == ZM_ZSCII_SPACE_SENTENCE;
+}
+
+/* A space, tab, or sentence space: where a word ends, and what is lost
+ * from the front of a word moved to a new line. */
+static int is_spacing(uint16_t code)
+{
+    return code == ' ' || code == ZM_ZSCII_TAB || code == ZM_ZSCII_SPACE_SENTENCE;
+}
+
 static void memory_char(zm_screen *s, uint16_t zscii)
 {
     unsigned top = s->table_depth - 1u;
 
     zm_write_byte(s->mem, s->tables[top] + 2u + s->table_counts[top], (uint8_t)zscii);
     s->table_counts[top]++;
-    s->table_line_width[top] = (uint16_t)(s->table_line_width[top] + s->font_width);
+    s->table_line_width[top] = (uint16_t)(s->table_line_width[top] + code_units(s, zscii, s->table_line_width[top] == 0));
 }
 
 static void flush_word(zm_screen *s);
@@ -620,8 +656,37 @@ static void plot(zm_screen *s, zm_window *w, const uint16_t *text, unsigned coun
 
 /* One character, unbuffered: Spec §8.8.3.1.1, wrapping or clipping at
  * the right margin. */
+static int at_line_start(const zm_window *w)
+{
+    return w->cursor_x == w->left_margin + 1u;
+}
+
+/* Plot a word, with a tab or a sentence space in it as its spaces. */
+static void plot_word(zm_screen *s, zm_window *w, const uint16_t *text, unsigned count)
+{
+    static const uint16_t spaces[3] = { ' ', ' ', ' ' };
+    unsigned start = 0;
+
+    for (unsigned i = 0; i < count; i++) {
+        if (is_spacing_code(text[i])) {
+            plot(s, w, text + start, i - start);
+            plot(s, w, spaces, code_units(s, text[i], at_line_start(w)) / s->font_width);
+            start = i + 1;
+        }
+    }
+    plot(s, w, text + start, count - start);
+}
+
 static void put_char(zm_screen *s, zm_window *w, uint16_t unicode)
 {
+    if (is_spacing_code(unicode)) {
+        unsigned spaces = code_units(s, unicode, at_line_start(w)) / s->font_width;
+
+        for (unsigned i = 0; i < spaces; i++) {
+            put_char(s, w, ' ');
+        }
+        return;
+    }
     if ((int)s->font_width > units_left(w)) {
         if (!(w->attributes & ZM_WINDOW_WRAPPING)) {
             int edge = (int)w->width - (int)w->right_margin;
@@ -636,13 +701,13 @@ static void put_char(zm_screen *s, zm_window *w, uint16_t unicode)
 
 /* A whole word, which buffered printing lays out at once (Spec
  * §8.8.3.1.2.2): it goes on the next line if it would cross the right
- * margin and the window wraps, losing the space that led it there. */
+ * margin and the window wraps, losing the spacing that led it there. */
 static void put_word(zm_screen *s, zm_window *w, const uint16_t *text, unsigned count)
 {
-    int width = (int)(count * s->font_width);
+    int width = (int)text_units(s, text, count, at_line_start(w));
 
     if (width <= units_left(w)) {
-        plot(s, w, text, count);
+        plot_word(s, w, text, count);
         return;
     }
     if (!(w->attributes & ZM_WINDOW_WRAPPING)) {
@@ -651,17 +716,17 @@ static void put_word(zm_screen *s, zm_window *w, const uint16_t *text, unsigned 
         }
         return;
     }
-    if (text[0] == ' ') {
+    if (is_spacing(text[0])) {
         text++;
         count--;
-        width -= (int)s->font_width;
     }
     if (count == 0) {
         return;
     }
     window_newline(s, w);
+    width = (int)text_units(s, text, count, 1);
     if (width <= units_left(w)) {
-        plot(s, w, text, count);
+        plot_word(s, w, text, count);
     } else {
         for (unsigned i = 0; i < count; i++) {
             put_char(s, w, text[i]);
@@ -670,21 +735,24 @@ static void put_word(zm_screen *s, zm_window *w, const uint16_t *text, unsigned 
 }
 
 /* Store a word in a formatted stream 3 table (Spec §15 output_stream):
- * on a new line if it would not fit the width, losing a leading space. */
+ * on a new line if it would not fit the width, losing the spacing in
+ * front of it, as Frotz does. The word is Unicode, except that a tab or
+ * a sentence space is still its ZSCII code, and goes into the table as
+ * that, to print as spaces when the table is printed back. */
 static void memory_word(zm_screen *s, const uint16_t *text, unsigned count)
 {
     unsigned top = s->table_depth - 1u;
-    unsigned width = count * s->font_width;
+    unsigned width = text_units(s, text, count, s->table_line_width[top] == 0);
 
     if (s->table_widths[top] != ZM_TABLE_PLAIN && s->table_line_width[top] + width > s->table_widths[top]) {
-        if (text[0] == ' ') {
+        if (is_spacing(text[0])) {
             text++;
             count--;
         }
         memory_newline(s);
     }
     for (unsigned i = 0; i < count; i++) {
-        uint16_t zscii = zm_unicode_to_zscii(s->mem, text[i]);
+        uint16_t zscii = is_spacing_code(text[i]) ? text[i] : zm_unicode_to_zscii(s->mem, text[i]);
 
         memory_char(s, zscii != 0 ? zscii : '?');
     }
@@ -714,11 +782,31 @@ void zm_screen_flush(zm_screen *s)
     flush_word(s);
 }
 
-/* Gather a character into the word, breaking words at spaces and after
+/* A change of appearance ends the word so far, which is laid out as it
+ * was, unless the word is only spacing, which belongs to the word to
+ * come: Infocom's ZIP test sets a style after a sentence space, and the
+ * space has to go with that word when it is moved to a new line. Text
+ * on its way to a table is left alone altogether, since appearance
+ * means nothing there and a line is never broken inside a word. Frotz
+ * keeps the change in the word in both cases. */
+static void flush_text(zm_screen *s)
+{
+    if (s->streams & ZM_STREAM_MEMORY) {
+        return;
+    }
+    for (unsigned i = 0; i < s->word_length; i++) {
+        if (!is_spacing(s->word[i])) {
+            flush_word(s);
+            return;
+        }
+    }
+}
+
+/* Gather a character into the word, breaking words at spacing and after
  * hyphens, as Infocom's interpreters did. */
 static void gather(zm_screen *s, uint16_t unicode)
 {
-    if (unicode == ' ' || (s->word_length > 0 && s->word[s->word_length - 1] == '-' && unicode != '-')) {
+    if (is_spacing(unicode) || (s->word_length > 0 && s->word[s->word_length - 1] == '-' && unicode != '-')) {
         flush_word(s);
     }
     if (s->word_length == ZM_WORD_MAX) {
@@ -734,10 +822,18 @@ static void v6_print(zm_screen *s, uint16_t unicode, uint16_t zscii)
     zm_window *w = current_window(s);
 
     /* Spec §8.8.3.1: attribute 2 copies the window's text to the
-     * transcript. */
+     * transcript, a tab or a sentence space as its spaces. */
     if ((s->streams & ZM_STREAM_TRANSCRIPT) && (w->attributes & ZM_WINDOW_TRANSCRIPT)
         && s->io->transcript_char != NULL) {
-        s->io->transcript_char(s->io->context, zscii != 0 ? zscii : '?');
+        if (is_spacing_code(zscii)) {
+            unsigned spaces = code_units(s, zscii, s->word_length == 0 && at_line_start(w)) / s->font_width;
+
+            for (unsigned i = 0; i < spaces; i++) {
+                s->io->transcript_char(s->io->context, ' ');
+            }
+        } else {
+            s->io->transcript_char(s->io->context, zscii != 0 ? zscii : '?');
+        }
     }
     if (!(s->streams & ZM_STREAM_SCREEN)) {
         return;
@@ -786,9 +882,11 @@ void zm_screen_print(zm_screen *s, uint16_t zscii)
      * what they already are here. */
     if (s->streams & ZM_STREAM_MEMORY) {
         if (is_v6(s)) {
+            /* A tab or a sentence space keeps its code (memory_word);
+             * every other character is gathered as Unicode. */
             uint16_t unicode = zm_zscii_to_unicode(s->mem, zscii);
 
-            memory_print(s, unicode != 0 ? unicode : '?', zscii);
+            memory_print(s, is_spacing_code(zscii) ? zscii : unicode != 0 ? unicode : '?', zscii);
         } else {
             memory_char(s, zscii);
         }
@@ -798,21 +896,9 @@ void zm_screen_print(zm_screen *s, uint16_t zscii)
     if (is_v6(s)) {
         uint16_t unicode = zm_zscii_to_unicode(s->mem, zscii);
 
-        /* Spec §3.8.2.4, §3.8.2.5: in Version 6 ZSCII 9 is a tab, which
-         * indents a paragraph by three spaces at the start of a line and
-         * is one space anywhere else, and ZSCII 11 a sentence space, two
-         * spaces wide; so Infocom's interpreters printed them. */
-        if (zscii == ZM_ZSCII_TAB || zscii == ZM_ZSCII_SPACE_SENTENCE) {
-            const zm_window *w = current_window(s);
-            unsigned spaces = zscii == ZM_ZSCII_SPACE_SENTENCE ? 2u
-                            : (s->word_length == 0 && w->cursor_x == w->left_margin + 1u) ? 3u : 1u;
-
-            for (unsigned i = 0; i < spaces; i++) {
-                v6_print(s, ' ', ' ');
-            }
-            return;
-        }
-        v6_print(s, unicode != 0 ? unicode : '?', zscii);
+        /* A tab or a sentence space keeps its code to the window
+         * (code_units); every other character goes as Unicode. */
+        v6_print(s, is_spacing_code(zscii) ? zscii : unicode != 0 ? unicode : '?', zscii);
         return;
     }
 
@@ -1278,7 +1364,7 @@ void zm_screen_set_style(zm_screen *s, unsigned style)
     if (is_v6(s)) {
         zm_window *w = current_window(s);
 
-        flush_word(s);
+        flush_text(s);
         w->style = (uint16_t)(style == ZM_STYLE_ROMAN ? ZM_STYLE_ROMAN : (w->style | style));
         return;
     }
@@ -1310,7 +1396,7 @@ void zm_screen_set_colour(zm_screen *s, unsigned window, int16_t foreground, int
         zm_window *w = window_at(s, window);
 
         /* Spec §8.3: in Version 6 each window has its own pair. */
-        flush_word(s);
+        flush_text(s);
         w->foreground = (uint16_t)resolve_colour(foreground, w->foreground, default_foreground(s));
         w->background = (uint16_t)resolve_colour(background, w->background, default_background(s));
         return;
@@ -1380,7 +1466,7 @@ unsigned zm_screen_set_font(zm_screen *s, unsigned window, unsigned font)
         if (font != 1 && (font == 2 || font > 31 || !(s->io->fonts & (1u << font)))) {
             return 0;
         }
-        flush_word(s);
+        flush_text(s);
         w->font = (uint16_t)font;
         return previous;
     }

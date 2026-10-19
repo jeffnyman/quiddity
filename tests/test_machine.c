@@ -2762,6 +2762,40 @@ static void test_v6_text_is_laid_out_in_windows(void)
     canvas_hooks(0);
 }
 
+/* Spec §3.8.2.4, §3.8.2.5: a tab or a sentence space goes with the
+ * word after it, so that when the word is moved to the next line the
+ * whole of the spacing goes with it and the line ends clean, as on
+ * Infocom's interpreters and in Frotz; a change of style between the
+ * two, which Infocom's ZIP test makes, does not part them. A tab opens
+ * a paragraph with three spaces and is one space anywhere else. A
+ * front end without a canvas sees the text in printing order. */
+static void test_v6_spacing_goes_with_its_word(void)
+{
+    story s;
+    output out;
+    zm_machine m;
+    zm_memory mem;
+
+    io.screen_width = 20;
+    io.screen_height = 5;
+    story_init_v6(&s);
+    emit_text(&s, "Seventeen letters\x0b" "Eta");
+    EMIT(&s, 0xbb);                                             /* new_line */
+    emit_text(&s, "Seventeen letters\x0b");
+    EMIT(&s, 0xf1, 0x7f, 0x02);                                 /* set_text_style 2 */
+    emit_text(&s, "Eta");
+    EMIT(&s, 0xf1, 0x7f, 0x00);                                 /* set_text_style 0 */
+    EMIT(&s, 0xbb);                                             /* new_line */
+    emit_text(&s, "\tx\ty.\x0bz");
+    EMIT(&s, 0xba);
+    run(&s, &out, &m, &mem);
+    CHECK_EQ_STR(out.text, "Seventeen letters\nEta\nSeventeen letters\nEta\n   x y.  z");
+    zm_machine_free(&m);
+    zm_memory_free(&mem);
+    io.screen_width = 0;
+    io.screen_height = 0;
+}
+
 static void test_v6_window_properties_and_appearance(void)
 {
     story s;
@@ -3000,6 +3034,52 @@ static void test_v6_formatted_stream_and_print_form(void)
     CHECK_EQ_INT(zm_read_word(&mem, GLOBALS), 17);
     CHECK_EQ_STR(canvas_row(1), "one two");
     CHECK_EQ_STR(canvas_row(2), "three four");
+    zm_machine_free(&m);
+    zm_memory_free(&mem);
+
+    /* Spec §3.8.2.5: a sentence space (ZSCII 11) ends a word and keeps
+     * its code in the table, two spaces wide, so that the table prints
+     * back as the text would have; at a line break it is dropped like
+     * a space. Infocom's ZIP test prints its wrapped text this way. */
+    story_init_v6(&s);
+    EMIT(&s, 0xf3, 0x43, 0x03, TABLE >> 8, TABLE & 0xff, 0xff, 0xf4); /* output_stream 3 TABLE -12 */
+    emit_text(&s, "ab.");
+    EMIT(&s, 0xe5, 0x7f, 11);                                   /* print_char 11 */
+    emit_text(&s, "cd");
+    EMIT(&s, 0xe5, 0x7f, 11);                                   /* print_char 11 */
+    emit_text(&s, "efghij");
+    EMIT(&s, 0xf3, 0x3f, 0xff, 0xfd);                           /* output_stream -3 */
+    EMIT(&s, 0x0f, 0x00, 0x18, G0);                             /* loadw 0 $18 -> G0 (header $30) */
+    EMIT(&s, 0xbe, 0x1a, 0x3f, TABLE >> 8, TABLE & 0xff);       /* print_form TABLE */
+    EMIT(&s, 0xba);
+    run(&s, &out, &m, &mem);
+    CHECK_EQ_INT(zm_read_word(&mem, TABLE), 6);
+    CHECK(memcmp(mem.bytes + TABLE + 2, "ab.\x0b" "cd", 6) == 0);
+    CHECK_EQ_INT(zm_read_word(&mem, TABLE + 8), 6);
+    CHECK(memcmp(mem.bytes + TABLE + 10, "efghij", 6) == 0);
+    CHECK_EQ_INT(zm_read_word(&mem, TABLE + 16), 0);
+    CHECK_EQ_INT(zm_read_word(&mem, GLOBALS), 13);
+    CHECK_EQ_STR(canvas_row(1), "ab.  cd");
+    CHECK_EQ_STR(canvas_row(2), "efghij");
+    zm_machine_free(&m);
+    zm_memory_free(&mem);
+
+    /* A change of style on the way to the table does not end the word,
+     * so a line is never broken inside one, as in Frotz. */
+    story_init_v6(&s);
+    EMIT(&s, 0xf3, 0x43, 0x03, TABLE >> 8, TABLE & 0xff, 0xff, 0xf4); /* output_stream 3 TABLE -12 */
+    emit_text(&s, "one two thr");
+    EMIT(&s, 0xf1, 0x7f, 0x02);                                 /* set_text_style 2 */
+    emit_text(&s, "ee");
+    EMIT(&s, 0xf1, 0x7f, 0x00);                                 /* set_text_style 0 */
+    EMIT(&s, 0xf3, 0x3f, 0xff, 0xfd);                           /* output_stream -3 */
+    EMIT(&s, 0xba);
+    run(&s, &out, &m, &mem);
+    CHECK_EQ_INT(zm_read_word(&mem, TABLE), 7);
+    CHECK(memcmp(mem.bytes + TABLE + 2, "one two", 7) == 0);
+    CHECK_EQ_INT(zm_read_word(&mem, TABLE + 9), 5);
+    CHECK(memcmp(mem.bytes + TABLE + 11, "three", 5) == 0);
+    CHECK_EQ_INT(zm_read_word(&mem, TABLE + 16), 0);
     zm_machine_free(&m);
     zm_memory_free(&mem);
 
@@ -3520,6 +3600,7 @@ int main(void)
     RUN_TEST(test_unicode_printing);
     RUN_TEST(test_screen_faults);
     RUN_TEST(test_v6_text_is_laid_out_in_windows);
+    RUN_TEST(test_v6_spacing_goes_with_its_word);
     RUN_TEST(test_v6_window_properties_and_appearance);
     RUN_TEST(test_v6_newline_interrupt);
     RUN_TEST(test_v6_user_stacks);
