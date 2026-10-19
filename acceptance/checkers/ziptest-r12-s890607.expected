@@ -1,0 +1,725 @@
+FOO
+ZIPTEST: Interpreter 1, Version 81/ Screen 320 x 255
+
+ZIPTEST Tests:
+
+Q = QUIT             S = Partial SAVE/RESTORE
+A = Arithmetic       L = Looping/Predicates     1 = DIROUT wrapping
+O = Objects/Tables   C = Call/Stacks            2 = User Stacks
+P = Print            R = ReRead                 3 = Window info
+T = Read/Timeouts    W = Windows/Displays       4 = SCROLL test
+D = Pictures         M = Margins & Pictures     5 = Multiwindows
+F = Function keys    Z = Character Set 1
+B = Character Set 2  U = Charsets 1 & 2 Mixed
+K = Color Text       V = Verify test
+                     Y = YZIP windows test
+
+Which?: 
+
+Operation: End of test.  Hit RETURN to continue. [Press RETURN]
+ZIPTEST Tests:
+
+Q = QUIT             S = Partial SAVE/RESTORE
+A = Arithmetic       L = Looping/Predicates     1 = DIROUT wrapping
+O = Objects/Tables   C = Call/Stacks            2 = User Stacks
+P = Print            R = ReRead                 3 = Window info
+T = Read/Timeouts    W = Windows/Displays       4 = SCROLL test
+D = Pictures         M = Margins & Pictures     5 = Multiwindows
+F = Function keys    Z = Character Set 1
+B = Character Set 2  U = Charsets 1 & 2 Mixed
+K = Color Text       V = Verify test
+                     Y = YZIP windows test
+
+Which?: 
+
+Arithmetic testing: ADD, SUB, MUL, DIV, MOD/
+3+7=10
+21765-9870=11895
+45*216=9720
+6543/78=83
+1234MOD17=10
+1023AND77=77
+444OR333=509
+Negative numbers.
+100-102=-2
+57 * -3 = -171
+-103 * -12 = 1236
+-69 / 3 = -23
+-105 / -3 = 35
+BCOM 126 = -127
+SHIFT 1,4 = 16
+SHIFT 32,-4 = 2
+SHIFT -1,-4 = 4095
+ASHIFT -1,-4 = -1
+BTST/ Wins!
+RANDOM check - Type 2-100 or just RETURN to skip this test.
+>
+
+Test of RANDOM disable (10).
+ Should print 1-10 twice: 1 2 3 4 5 6 7 8 9 10 1 2 3 4 5 6 7 8 9 10 
+
+Operation: End of test.  Hit RETURN to continue. [Press RETURN]
+ZIPTEST Tests:
+
+Q = QUIT             S = Partial SAVE/RESTORE
+A = Arithmetic       L = Looping/Predicates     1 = DIROUT wrapping
+O = Objects/Tables   C = Call/Stacks            2 = User Stacks
+P = Print            R = ReRead                 3 = Window info
+T = Read/Timeouts    W = Windows/Displays       4 = SCROLL test
+D = Pictures         M = Margins & Pictures     5 = Multiwindows
+F = Function keys    Z = Character Set 1
+B = Character Set 2  U = Charsets 1 & 2 Mixed
+K = Color Text       V = Verify test
+                     Y = YZIP windows test
+
+Which?: 
+
+IGRTR?/ One instruction loop running 10000 times...
+
+Done.
+DLESS?/ Numbers from 18 to 1: 18 17 16 15 14 13 12 11 10 9 8 7 6 5 4 3 2 1 
+VALUE/ Should print '100': 100
+INC & DEC/ Should print '10 11 10': 10 11 10
+GRTR? seems to win...
+LESS? seems to win...
+EQUAL? seems to win...
+ZERO?/ Wins!
+Operation: End of test.  Hit RETURN to continue. [Press RETURN]
+ZIPTEST Tests:
+
+Q = QUIT             S = Partial SAVE/RESTORE
+A = Arithmetic       L = Looping/Predicates     1 = DIROUT wrapping
+O = Objects/Tables   C = Call/Stacks            2 = User Stacks
+P = Print            R = ReRead                 3 = Window info
+T = Read/Timeouts    W = Windows/Displays       4 = SCROLL test
+D = Pictures         M = Margins & Pictures     5 = Multiwindows
+F = Function keys    Z = Character Set 1
+B = Character Set 2  U = Charsets 1 & 2 Mixed
+K = Color Text       V = Verify test
+                     Y = YZIP windows test
+
+Which?: 
+
+LOC/ A is in B, as God intended.
+REMOVE/ But not for long!!!
+MOVE and PRINTD/ The container of B: AN A
+FIRST?/ Wins!
+NEXT?/ Wins!
+FSET? & FSET & FCLEAR/
+TURN bit is on, as God intended.
+TURN bit is now off, as God intended.
+TURN bit is now on, as God intended.
+GETP/ The size of A (should be 10): 10
+PRINT/ Should print the long description of A: THIS IS AN A
+PUTP/ The new size of A (should be 100): 100
+GETPT & PTSIZE/ The length of synonyms of A (should be 8): 8
+GET & PRINT/ Should print 'FOO BAR BLETCH': FOO BAR BLETCH 
+PUT (should print FROB): FROB
+NEXTP (should print A's properties - 59 58 57 56 55): 59 58 57 56 55 
+Operation: End of test.  Hit RETURN to continue. [Press RETURN]
+ZIPTEST Tests:
+
+Q = QUIT             S = Partial SAVE/RESTORE
+A = Arithmetic       L = Looping/Predicates     1 = DIROUT wrapping
+O = Objects/Tables   C = Call/Stacks            2 = User Stacks
+P = Print            R = ReRead                 3 = Window info
+T = Read/Timeouts    W = Windows/Displays       4 = SCROLL test
+D = Pictures         M = Margins & Pictures     5 = Multiwindows
+F = Function keys    Z = Character Set 1
+B = Character Set 2  U = Charsets 1 & 2 Mixed
+K = Color Text       V = Verify test
+                     Y = YZIP windows test
+
+Which?: 
+
+RSTACK (should print 10): 10
+XCALL (should print 1 2 3 4 5 6 7): 1 2 3 4 5 6 7
+PUSH and POP/ Should print 105: 105
+OPTIONALs/ASSIGNED?: Should print 'Yes, No'/ Yes, No
+
+CATCH/THROW: The windup! The pitch! Yerrout!
+Operation: End of test.  Hit RETURN to continue. [Press RETURN]
+ZIPTEST Tests:
+
+Q = QUIT             S = Partial SAVE/RESTORE
+A = Arithmetic       L = Looping/Predicates     1 = DIROUT wrapping
+O = Objects/Tables   C = Call/Stacks            2 = User Stacks
+P = Print            R = ReRead                 3 = Window info
+T = Read/Timeouts    W = Windows/Displays       4 = SCROLL test
+D = Pictures         M = Margins & Pictures     5 = Multiwindows
+F = Function keys    Z = Character Set 1
+B = Character Set 2  U = Charsets 1 & 2 Mixed
+K = Color Text       V = Verify test
+                     Y = YZIP windows test
+
+Which?: 
+
+PRINTC (should print A-Z): ABCDEFGHIJKLMNOPQRSTUVWXYZ
+More counter test with many screens (Y?) 
+More counter test with INPUT (Y?) 
+More counter test with READ (Y?) 
+
+MARGIN: should print same text with different margins.
+(0,0)
+MARGIN sets the left margin and right margin in pixels.  Left and right are the
+widths of the margins, not the locations of the margins, so both are initially
+0.  The margins are stored in the LMRG and RMRG words of the interpreter.
+(10,10)
+MARGIN sets the left margin and right margin in pixels.
+Left and right are the widths of the margins, not the
+locations of the margins, so both are initially 0.  The
+margins are stored in the LMRG and RMRG words of the
+interpreter.
+(160,0)
+MARGIN sets the left margin and right
+margin in pixels.  Left and right are
+the widths of the margins, not the
+locations of the margins, so both are
+initially 0.  The margins are stored in
+the LMRG and RMRG words of the
+interpreter.
+(0,160)
+MARGIN sets the left margin and right
+margin in pixels.  Left and right are
+the widths of the margins, not the
+locations of the margins, so both are
+initially 0.  The margins are stored in
+the LMRG and RMRG words of the
+interpreter.
+Operation: CR interrupt test. [Press Y for this test]Y
+MARGIN sets the left margin and right margin in pixels.  Left and right are the
+widths of the margins, not the locations of the margins, so both are initially
+0.  The margins are stored in the LMRG and RMRG words of the interpreter.
+
+
+SOUND not implemented.
+Operation: End of test.  Hit RETURN to continue. [Press RETURN]
+ZIPTEST Tests:
+
+Q = QUIT             S = Partial SAVE/RESTORE
+A = Arithmetic       L = Looping/Predicates     1 = DIROUT wrapping
+O = Objects/Tables   C = Call/Stacks            2 = User Stacks
+P = Print            R = ReRead                 3 = Window info
+T = Read/Timeouts    W = Windows/Displays       4 = SCROLL test
+D = Pictures         M = Margins & Pictures     5 = Multiwindows
+F = Function keys    Z = Character Set 1
+B = Character Set 2  U = Charsets 1 & 2 Mixed
+K = Color Text       V = Verify test
+                     Y = YZIP windows test
+
+Which?: 
+
+Reentrant READ:
+
+>hello world
+I don't know the word 'hello'.
+
+Operation: End of test.  Hit RETURN to continue. [Press RETURN]
+ZIPTEST Tests:
+
+Q = QUIT             S = Partial SAVE/RESTORE
+A = Arithmetic       L = Looping/Predicates     1 = DIROUT wrapping
+O = Objects/Tables   C = Call/Stacks            2 = User Stacks
+P = Print            R = ReRead                 3 = Window info
+T = Read/Timeouts    W = Windows/Displays       4 = SCROLL test
+D = Pictures         M = Margins & Pictures     5 = Multiwindows
+F = Function keys    Z = Character Set 1
+B = Character Set 2  U = Charsets 1 & 2 Mixed
+K = Color Text       V = Verify test
+                     Y = YZIP windows test
+
+Which?: 
+
+READ check - Type THE AA BBBB at the prompt.
+>THE AA BBBB
+the aa bbbb 
+(terminated by 13)
+
+COPYT/PRINTT: should reprint typein twice: the aa bbbb + the aa bbbb
+ZWSTR/
+I don't know any interesting words.
+Tell me a word I don't know: xyzzy
+
+Now type your word again: 
+
+I know these words: xyzzy
+Tell me a word I don't know: a
+I already know that word! Be creative!
+Tell me a word I don't know: 
+
+READ/Timeout check (Countdown in 2-second intervals)
+>>10..
+
+End of READ/Timeout check. 
+DIROUT check (Table Mode)
+Here's a nice string // Length is 20 ==> HERE'S A NICE STRING
+AN A // Length is 4 ==> AN A
+
+INPUT check.  Hit any key and the ASCII value will be printed: 13
+
+INPUT/Timeout check (Countdown in 1-second intervals)
+>>10..
+End of READ/Timeout check. 
+Operation: End of test.  Hit RETURN to continue. [Press RETURN]
+ZIPTEST Tests:
+
+Q = QUIT             S = Partial SAVE/RESTORE
+A = Arithmetic       L = Looping/Predicates     1 = DIROUT wrapping
+O = Objects/Tables   C = Call/Stacks            2 = User Stacks
+P = Print            R = ReRead                 3 = Window info
+T = Read/Timeouts    W = Windows/Displays       4 = SCROLL test
+D = Pictures         M = Margins & Pictures     5 = Multiwindows
+F = Function keys    Z = Character Set 1
+B = Character Set 2  U = Charsets 1 & 2 Mixed
+K = Color Text       V = Verify test
+                     Y = YZIP windows test
+
+Which?: 
+
+SCREEN OPERATIONS
+
+Capabilities: SPLIT/INVERSE/BOLD/UNDERLINE-ITALIC/CURSOR-CONTROL
+Has: NO COLOR/NO DISPLAY/NO BOLD/NO UNDERLINE-ITALIC/MONOSPACED
+
+Highlight test: INVERSE REGULAR BOLD UNDERLINE/ITALIC
+
+CURGET/Hpos/Vpos Test
+Line=24, Column=65
+Line=25, Column=65
+Line=26, Column=65
+Line=27, Column=65
+Line=28, Column=65
+Line=29, Column=65
+Line=30, Column=65
+Line=31, Column=65
+Line=32, Column=65
+Line=33, Column=65
+Line=34, Column=65
+Line=35, Column=65
+Line=36, Column=65
+Line=37, Column=65
+Line=38, Column=65
+Line=39, Column=65
+Line=40, Column=65
+Line=41, Column=65
+Line=42, Column=65
+Line=43, Column=65
+Line=44, Column=65
+Line=45, Column=65
+Line=46, Column=65
+Line=47, Column=65
+Line=48, Column=65
+Line=49, Column=65
+Line=50, Column=65
+Line=51, Column=65
+Line=52, Column=65
+Line=53, Column=65
+
+
+Screen/Cursor Tests Operation: <SPLIT 6> [Press RETURN]
+Operation: <SCREEN 1> + WRITE LINES + <SCREEN 0> [Press RETURN]
+Line #1
+Line #2
+Line #3
+Line #4
+Line #5
+Line #6
+Operation: <CLEAR 0> [Press RETURN]
+Operation: <CLEAR 1> [Press RETURN]
+Operation: <DO-CURSET ...> [Press RETURN]
+HELLOOperation: <CLEAR -1> [Press RETURN]
+Operation: 2-Line Status Line Test [Press RETURN]
+                                                                                                                                                            Operation: Write Status Line [Press RETURN]
+Robot: MARVINLocation: Hallway TScore This Life-Cycle: 104Ranking:  Lord ChomperOperation: Erase Location to EOL on Status Line [Press RETURN]
+Operation: PRINTT Test. [Press RETURN]
+             KEEP      OUT     CHOMPER!           Operation: FONT Test (VT100 dependent). [Press Y for this test]
+
+Operation: End of Screen Tests. [Press RETURN]
+
+Operation: End of test.  Hit RETURN to continue. [Press RETURN]
+ZIPTEST Tests:
+
+Q = QUIT             S = Partial SAVE/RESTORE
+A = Arithmetic       L = Looping/Predicates     1 = DIROUT wrapping
+O = Objects/Tables   C = Call/Stacks            2 = User Stacks
+P = Print            R = ReRead                 3 = Window info
+T = Read/Timeouts    W = Windows/Displays       4 = SCROLL test
+D = Pictures         M = Margins & Pictures     5 = Multiwindows
+F = Function keys    Z = Character Set 1
+B = Character Set 2  U = Charsets 1 & 2 Mixed
+K = Color Text       V = Verify test
+                     Y = YZIP windows test
+
+Which?: 
+
+INPUT test, type a space to exit.
+Type a key: 129
+Type a key: 130
+Type a key: 131
+Type a key: 132
+Type a key: 133
+Type a key: 27
+Type a key: 
+Operation: End of test.  Hit RETURN to continue. [Press RETURN]
+ZIPTEST Tests:
+
+Q = QUIT             S = Partial SAVE/RESTORE
+A = Arithmetic       L = Looping/Predicates     1 = DIROUT wrapping
+O = Objects/Tables   C = Call/Stacks            2 = User Stacks
+P = Print            R = ReRead                 3 = Window info
+T = Read/Timeouts    W = Windows/Displays       4 = SCROLL test
+D = Pictures         M = Margins & Pictures     5 = Multiwindows
+F = Function keys    Z = Character Set 1
+B = Character Set 2  U = Charsets 1 & 2 Mixed
+K = Color Text       V = Verify test
+                     Y = YZIP windows test
+
+Which?: 
+   WINPOS Sets the location of the top
+left corner of the specified window,
+relative to the top left corner of the
+screen.  The coordinates are 1-based, as
+for CURGET/SET, and are in screen units
+(thus, a window whose origin is at the
+origin has WINPOS 1,1).
+Operation: End of window test. [Press
+RETURN]
+
+Operation: End of test.  Hit RETURN to
+continue. [Press RETURN]
+ZIPTEST Tests:
+
+Q = QUIT             S = Partial SAVE/RESTORE
+A = Arithmetic       L = Looping/Predicates     1 = DIROUT wrapping
+O = Objects/Tables   C = Call/Stacks            2 = User Stacks
+P = Print            R = ReRead                 3 = Window info
+T = Read/Timeouts    W = Windows/Displays       4 = SCROLL test
+D = Pictures         M = Margins & Pictures     5 = Multiwindows
+F = Function keys    Z = Character Set 1
+B = Character Set 2  U = Charsets 1 & 2 Mixed
+K = Color Text       V = Verify test
+                     Y = YZIP windows test
+
+Which?: 
+What width do you want? 40
+WINPOS
+Sets the
+location
+of the top
+left
+corner of
+the
+specified
+window,
+relative
+to the top
+left
+corner of
+the
+screen.
+The
+coordinates
+are 1-
+based, as
+for
+CURGET/SET,
+and are in
+screen
+units
+(thus, a
+window
+whose
+origin is
+at the
+origin has
+WINPOS
+1,1).What width do you want? x
+Width of `This is a test string' is 84 pixels.
+Operation: End of dirout test. [Press RETURN]
+
+Operation: End of test.  Hit RETURN to continue. [Press RETURN]
+ZIPTEST Tests:
+
+Q = QUIT             S = Partial SAVE/RESTORE
+A = Arithmetic       L = Looping/Predicates     1 = DIROUT wrapping
+O = Objects/Tables   C = Call/Stacks            2 = User Stacks
+P = Print            R = ReRead                 3 = Window info
+T = Read/Timeouts    W = Windows/Displays       4 = SCROLL test
+D = Pictures         M = Margins & Pictures     5 = Multiwindows
+F = Function keys    Z = Character Set 1
+B = Character Set 2  U = Charsets 1 & 2 Mixed
+K = Color Text       V = Verify test
+                     Y = YZIP windows test
+
+Which?: 
+User stacks test.
+Should print 1 2 3 4 5: 1 2 3 4 5
+User stack overflow test.  Stack has ten elements.
+Slots left: 10
+Character to push or space to leave: 
+Slots left: 9
+Character to push or space to leave: 
+Slots left: 8
+Character to push or space to leave: 
+Slots left: 7
+Character to push or space to leave: 
+Slots left: 6
+Character to push or space to leave: 
+Slots left: 5
+Character to push or space to leave: 
+Slots left: 4
+Character to push or space to leave: 
+Slots left: 3
+Character to push or space to leave: 
+Slots left: 2
+Character to push or space to leave: 
+Slots left: 1
+Character to push or space to leave: 
+Slots left: 0
+Character to push or space to leave: 
+Stack overflow!
+Slots left: 0
+Character to push or space to leave: 
+Stack overflow!
+Slots left: 0
+Character to push or space to leave: 
+Operation: End of stack test. [Press RETURN]
+
+Operation: End of test.  Hit RETURN to continue. [Press RETURN]
+ZIPTEST Tests:
+
+Q = QUIT             S = Partial SAVE/RESTORE
+A = Arithmetic       L = Looping/Predicates     1 = DIROUT wrapping
+O = Objects/Tables   C = Call/Stacks            2 = User Stacks
+P = Print            R = ReRead                 3 = Window info
+T = Read/Timeouts    W = Windows/Displays       4 = SCROLL test
+D = Pictures         M = Margins & Pictures     5 = Multiwindows
+F = Function keys    Z = Character Set 1
+B = Character Set 2  U = Charsets 1 & 2 Mixed
+K = Color Text       V = Verify test
+                     Y = YZIP windows test
+
+Which?: 
+
+Window number (0-7)? 0
+First property (0-15)? 0
+How many (1-16)? 16
+0:y pos = 1
+1:x pos = 1
+2:y size = 255
+3:x size = 320
+4:y cursor = 23
+5:x cursor = 85
+6:left margin = 0
+7:right margin = 0
+8:crlf int fcn = 0
+9:crlf int cnt = 0
+10:hlight = 0
+11:color word = 2,9
+12:font = 1
+13:font size = 1,4
+14:attributes = 15
+15:more counter = 33
+Operation: Another window? [Press Y for this test]Y
+Window number (0-7)? 1
+First property (0-15)? 0
+How many (1-16)? 16
+0:y pos = 1
+1:x pos = 1
+2:y size = 0
+3:x size = 320
+4:y cursor = 1
+5:x cursor = 1
+6:left margin = 0
+7:right margin = 0
+8:crlf int fcn = 0
+9:crlf int cnt = 0
+10:hlight = 0
+11:color word = 2,9
+12:font = 1
+13:font size = 1,4
+14:attributes = 8
+15:more counter = 0
+Operation: Another window? [Press Y for this test]N
+
+Operation: End of test.  Hit RETURN to continue. [Press RETURN]
+ZIPTEST Tests:
+
+Q = QUIT             S = Partial SAVE/RESTORE
+A = Arithmetic       L = Looping/Predicates     1 = DIROUT wrapping
+O = Objects/Tables   C = Call/Stacks            2 = User Stacks
+P = Print            R = ReRead                 3 = Window info
+T = Read/Timeouts    W = Windows/Displays       4 = SCROLL test
+D = Pictures         M = Margins & Pictures     5 = Multiwindows
+F = Function keys    Z = Character Set 1
+B = Character Set 2  U = Charsets 1 & 2 Mixed
+K = Color Text       V = Verify test
+                     Y = YZIP windows test
+
+Which?: 
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20U(p), (D)own, or (Q)uit U(p), (D)own, or (Q)uit U(p), (D)own, or (Q)uit U(p), (D)own, or (Q)uit 
+Operation: End of test.  Hit RETURN to continue. [Press RETURN]
+ZIPTEST Tests:
+
+Q = QUIT             S = Partial SAVE/RESTORE
+A = Arithmetic       L = Looping/Predicates     1 = DIROUT wrapping
+O = Objects/Tables   C = Call/Stacks            2 = User Stacks
+P = Print            R = ReRead                 3 = Window info
+T = Read/Timeouts    W = Windows/Displays       4 = SCROLL test
+D = Pictures         M = Margins & Pictures     5 = Multiwindows
+F = Function keys    Z = Character Set 1
+B = Character Set 2  U = Charsets 1 & 2 Mixed
+K = Color Text       V = Verify test
+                     Y = YZIP windows test
+
+Which?: 
+
+Window number (1-7)? 1
+ New Y position (1-255, now 1)? 1
+ New X position (1-320, now 1)? 1
+ New Height (1-255, now 16)? 16
+ New Width (1-320, now 320)? 320
+ New Wrapping (Now no)? N
+ New Scrolling (Now no)? N
+ New Scripting (Now no)? N
+ New Buffered (Now yes)? Y
+Thirty days hath September,
+April, June, and November.
+All the rest have thirty-one,
+Except February which has twenty-eight or twenty-nine,
+depending on whether it's a Leap Year.
+[Again?]Operation: Another? [Press Y for this test]
+
+
+Operation: End of test.  Hit RETURN to continue. [Press RETURN]
+ZIPTEST Tests:
+
+Q = QUIT             S = Partial SAVE/RESTORE
+A = Arithmetic       L = Looping/Predicates     1 = DIROUT wrapping
+O = Objects/Tables   C = Call/Stacks            2 = User Stacks
+P = Print            R = ReRead                 3 = Window info
+T = Read/Timeouts    W = Windows/Displays       4 = SCROLL test
+D = Pictures         M = Margins & Pictures     5 = Multiwindows
+F = Function keys    Z = Character Set 1
+B = Character Set 2  U = Charsets 1 & 2 Mixed
+K = Color Text       V = Verify test
+                     Y = YZIP windows test
+
+Which?: 
+╲┬←┴┌│─├─┤└╲┬ │┬←┴┌│┌┴┌│╱├──├→└┤│┬ ┴┌│╱├→
+┌ Have ┌ a nice ┌ day! ┌
+
+Operation: End of test.  Hit RETURN to continue. [Press RETURN]
+ZIPTEST Tests:
+
+Q = QUIT             S = Partial SAVE/RESTORE
+A = Arithmetic       L = Looping/Predicates     1 = DIROUT wrapping
+O = Objects/Tables   C = Call/Stacks            2 = User Stacks
+P = Print            R = ReRead                 3 = Window info
+T = Read/Timeouts    W = Windows/Displays       4 = SCROLL test
+D = Pictures         M = Margins & Pictures     5 = Multiwindows
+F = Function keys    Z = Character Set 1
+B = Character Set 2  U = Charsets 1 & 2 Mixed
+K = Color Text       V = Verify test
+                     Y = YZIP windows test
+
+Which?: 
+( ! %    & " '$   #    #   $' " &    % ! (
+Up = !  Down = "  Left = $  Right = #
+
+Operation: End of test.  Hit RETURN to continue. [Press RETURN]
+ZIPTEST Tests:
+
+Q = QUIT             S = Partial SAVE/RESTORE
+A = Arithmetic       L = Looping/Predicates     1 = DIROUT wrapping
+O = Objects/Tables   C = Call/Stacks            2 = User Stacks
+P = Print            R = ReRead                 3 = Window info
+T = Read/Timeouts    W = Windows/Displays       4 = SCROLL test
+D = Pictures         M = Margins & Pictures     5 = Multiwindows
+F = Function keys    Z = Character Set 1
+B = Character Set 2  U = Charsets 1 & 2 Mixed
+K = Color Text       V = Verify test
+                     Y = YZIP windows test
+
+Which?: 
+( ! %    & " '$ ┌ #    # ┌ $' " &    % ! (
+Up = !  Down = "  Left = $  Right = #
+
+┌ Have ┌ a nice ┌ day! ┌
+
+Operation: End of test.  Hit RETURN to continue. [Press RETURN]
+ZIPTEST Tests:
+
+Q = QUIT             S = Partial SAVE/RESTORE
+A = Arithmetic       L = Looping/Predicates     1 = DIROUT wrapping
+O = Objects/Tables   C = Call/Stacks            2 = User Stacks
+P = Print            R = ReRead                 3 = Window info
+T = Read/Timeouts    W = Windows/Displays       4 = SCROLL test
+D = Pictures         M = Margins & Pictures     5 = Multiwindows
+F = Function keys    Z = Character Set 1
+B = Character Set 2  U = Charsets 1 & 2 Mixed
+K = Color Text       V = Verify test
+                     Y = YZIP windows test
+
+Which?: 
+Default colors; 8-line window.This sentence should be red.Isn't this a lovely blue line?This line is obviously green.A whiter shade of pale.Back to the default colors.BOXBOXBOX
+RED GREEN YELLOW BLUE MAGENTA CYAN WHITE
+Back to the defaults.
+
+The 3 boxes above should be:
+
+1) White fore, blue background
+2) Yellow fore, green background
+3) Black fore, white background
+
+Operation: End of test.  Hit RETURN to continue. [Press RETURN]
+ZIPTEST Tests:
+
+Q = QUIT             S = Partial SAVE/RESTORE
+A = Arithmetic       L = Looping/Predicates     1 = DIROUT wrapping
+O = Objects/Tables   C = Call/Stacks            2 = User Stacks
+P = Print            R = ReRead                 3 = Window info
+T = Read/Timeouts    W = Windows/Displays       4 = SCROLL test
+D = Pictures         M = Margins & Pictures     5 = Multiwindows
+F = Function keys    Z = Character Set 1
+B = Character Set 2  U = Charsets 1 & 2 Mixed
+K = Color Text       V = Verify test
+                     Y = YZIP windows test
+
+Which?: 
+Verify says "Okay!"
+
+Operation: End of test.  Hit RETURN to continue. [Press RETURN]
+ZIPTEST Tests:
+
+Q = QUIT             S = Partial SAVE/RESTORE
+A = Arithmetic       L = Looping/Predicates     1 = DIROUT wrapping
+O = Objects/Tables   C = Call/Stacks            2 = User Stacks
+P = Print            R = ReRead                 3 = Window info
+T = Read/Timeouts    W = Windows/Displays       4 = SCROLL test
+D = Pictures         M = Margins & Pictures     5 = Multiwindows
+F = Function keys    Z = Character Set 1
+B = Character Set 2  U = Charsets 1 & 2 Mixed
+K = Color Text       V = Verify test
+                     Y = YZIP windows test
+
+Which?: 

@@ -1,0 +1,167 @@
+# Infocom's own ZIP test for Version 6, driven from a menu: a letter or
+# a digit picks a section, and return at "End of test" goes back to the
+# menu. Every section is run except the two that want pictures, D and
+# M, since the game has no picture file and asks for picture numbers
+# without end. The sections that draw in windows (K, W, Y, 4, 5) come
+# out as their text in printing order, which is what the stream can
+# show. The timed reads in T run their interrupt once before the
+# script's key, so each countdown prints one step.
+
+! SEED=1
+! GAME=zcode-checkers/ziptest-r12-s890607.z6
+
+# S: a partial save and restore through an auxiliary file, which the
+# stream keeps in memory. The game says nothing either way, so this is
+# a check that it runs through.
+S
+>
+
+# A: arithmetic; return skips the RANDOM check, which random.accept
+# covers.
+A
+>
+>
+
+# L: looping and predicates.
+L
+>
+
+# O: objects, properties, and tables.
+O
+>
+
+# C: calls, stacks, catch and throw.
+C
+>
+
+# P: printing and margins; no to the three MORE-counter tests, yes to
+# the CR interrupt test.
+P
+>
+>
+>
+Y
+>
+
+# R: a reentrant READ, given a command and then nothing.
+R
+hello world
+>
+>
+
+# T: READ, COPYT and PRINTT, ZWSTR with a new word and then a known
+# one, the timed READ, DIROUT in table mode, INPUT and the timed INPUT.
+T
+THE AA BBBB
+xyzzy
+>
+a
+>
+>
+>
+>
+>
+
+# W: windows and displays, return through each operation; no to the
+# VT100 font test.
+W
+>
+>
+>
+>
+>
+>
+>
+>
+>
+>
+>
+>
+>
+
+# F: function keys: the cursor keys, F1, escape, and space to leave.
+F
+<up>
+<down>
+<left>
+<right>
+[133]
+<escape>
+<space>
+>
+
+# Y: the YZIP windows test.
+Y
+>
+>
+
+# 1: DIROUT wrapping at 40 units, which is ten characters; a word
+# instead of a second width ends it.
+1
+40
+x
+>
+>
+
+# 2: user stacks: twelve characters pushed on a stack of ten, then
+# space to leave.
+2
+ABCDEFGHIJKL
+<space>
+>
+>
+
+# 3: window info, all sixteen properties of windows 0 and 1.
+3
+0
+0
+16
+Y
+1
+0
+16
+N
+>
+
+# 4: the scroll test: down, down, up, quit.
+4
+D
+D
+U
+Q
+>
+
+# 5: multiwindows, window 1 given its own position, size, and
+# attributes again in so many words, since release 12 takes an empty
+# answer as zero and leaves the window unusable for what follows.
+5
+1
+1
+1
+16
+320
+N
+N
+N
+Y
+>
+>
+>
+
+# Z, B, U: the two character sets, and the two mixed.
+Z
+>
+B
+>
+U
+>
+
+# K: coloured text.
+K
+>
+
+# V: the verify test.
+V
+>
+
+Q
