@@ -21,14 +21,18 @@
  * The front end is a stream rather than a screen for a reason: a
  * recording should hold what the game said, not how a particular
  * display arranged it. So the text is not wrapped, no status line is
- * drawn, and the upper window is not shown; the game is told as much
- * through the header (Spec §11.1.4), sees a screen 80 characters wide
- * and 255 lines high (Spec §8.4.1), has the fixed-pitch and character
- * graphics fonts (Spec §8.1.2, §16), and is told it is an IBM PC, or
- * for a Version 6 game without pictures a DEC-20, the machines whose
- * interpreters shipped plain text (Spec §11.1.3). Those are the choices
- * Rezrov's recordings were made with, so that a script and its
- * recording can be shared between the two interpreters.
+ * drawn, and the upper window is not shown unless the script's UPPER
+ * directive asks for it, for a game that draws its text there (Custard,
+ * Beyond Zork's map); then it is written into the stream as a block of
+ * rows whenever the game pauses for input and the window has changed.
+ * The game is told as much through the header (Spec §11.1.4), sees a
+ * screen 80 characters wide and 255 lines high (Spec §8.4.1), has the
+ * fixed-pitch and character graphics fonts (Spec §8.1.2, §16), and is
+ * told it is an IBM PC, or for a Version 6 game without pictures a
+ * DEC-20, the machines whose interpreters shipped plain text (Spec
+ * §11.1.3). Those are the choices Rezrov's recordings were made with,
+ * so that a script and its recording can be shared between the two
+ * interpreters.
  */
 
 #ifndef QUIDDITY_ACCEPT_H

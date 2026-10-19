@@ -1460,6 +1460,36 @@ static void test_object_opcodes(void)
     zm_memory_free(&mem);
 }
 
+/* Spec §1.2.1: an object's address is a byte address of 16 bits, so a
+ * number past the end of the table comes round to an entry inside it,
+ * as it did on Infocom's interpreters. Beyond Zork relies on that
+ * (object.c): with 14-byte entries, 32768 objects on is exactly seven
+ * times round. */
+static void test_an_object_number_past_the_table_comes_round(void)
+{
+    story s;
+    output out;
+    zm_machine m;
+    zm_memory mem;
+    char expected[64];
+
+    story_init(&s, 5);
+    put_word(s.bytes, ZM_HEADER_OBJECTS, OBJECTS);
+    put_word(s.bytes, OBJECTS + 126 + 12, PROPS1);              /* object 1's properties */
+    at(&s, PROPS1); EMIT(&s, 0x00, 0x03, 0xaa, 0x00);           /* no name; property 3, one byte */
+    at(&s, CODE);
+    EMIT(&s, 0x12, 1, 3, G0);                                   /* get_prop_addr 1 3 -> G0 */
+    EMIT(&s, 0xe6, 0xbf, G0, 0xe5, 0x7f, ' ');
+    EMIT(&s, 0xd2, 0x1f, 0x80, 0x01, 3, G0);                    /* get_prop_addr 32769 3 -> G0 */
+    EMIT(&s, 0xe6, 0xbf, G0);
+    EMIT(&s, 0xba);
+    run(&s, &out, &m, &mem);
+    snprintf(expected, sizeof expected, "%u %u", (unsigned)(PROPS1 + 2), (unsigned)(PROPS1 + 2));
+    CHECK_EQ_STR(out.text, expected);
+    zm_machine_free(&m);
+    zm_memory_free(&mem);
+}
+
 static void test_object_faults(void)
 {
     story s;
@@ -2091,6 +2121,19 @@ static void test_header_flags_are_set_at_start(void)
     CHECK_EQ_INT(zm_read_byte(&mem, ZM_HEADER_STANDARD_MINOR), 1);
     zm_machine_free(&m);
     zm_memory_free(&mem);
+
+    /* Spec §8.1.5.1: in Version 5, bit 3 of Flags 2 asks for the
+     * character graphics font, and stays set for a front end that has
+     * it. Beyond Zork reads it back to choose how to draw its arrows. */
+    io.fonts = 1u << 3;
+    story_init(&s, 5);
+    put_word(s.bytes, ZM_HEADER_FLAGS2, ZM_FLAGS2_PICTURES);
+    EMIT(&s, 0xba);
+    run(&s, &out, &m, &mem);
+    CHECK_EQ_INT(zm_read_word(&mem, ZM_HEADER_FLAGS2), ZM_FLAGS2_PICTURES);
+    zm_machine_free(&m);
+    zm_memory_free(&mem);
+    io.fonts = 0;
 
     /* With a front end that has colours, bold and italic, and a screen
      * of its own size, the header says so. */
@@ -3450,6 +3493,7 @@ int main(void)
     RUN_TEST(test_inc_chk_and_dec_chk);
     RUN_TEST(test_memory_access);
     RUN_TEST(test_object_opcodes);
+    RUN_TEST(test_an_object_number_past_the_table_comes_round);
     RUN_TEST(test_object_faults);
     RUN_TEST(test_random_numbers);
     RUN_TEST(test_shifts_and_argument_counts);

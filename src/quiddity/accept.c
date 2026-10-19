@@ -131,6 +131,25 @@ typedef struct accept_play_state {
     /* The first half of a surrogate pair, waiting for the second. */
     uint16_t high_surrogate;
 
+    /* The upper window (Spec §8.6, §8.7), kept only when the script's
+     * UPPER directive asks for it to be shown: a grid of characters as
+     * wide as the screen, the window's height in lines, the cursor, and
+     * which window printing goes to. The grid is kept beyond the current
+     * height, as a real screen keeps what the window gave up, so that a
+     * window shrunk and regrown in Version 5, which does not clear on a
+     * split, shows what was there before. The window as last seen at a
+     * pause and as last written out are kept for show_upper(). */
+    int show_upper;
+    unsigned window;
+    unsigned upper_lines;
+    unsigned upper_row;
+    unsigned upper_column;
+    uint16_t upper[STREAM_HEIGHT][STREAM_WIDTH];
+    uint16_t upper_seen[STREAM_HEIGHT][STREAM_WIDTH];
+    unsigned seen_lines;
+    uint16_t upper_shown[STREAM_HEIGHT][STREAM_WIDTH];
+    unsigned shown_lines;
+
     /* The saved game and the auxiliary files, in memory. */
     uint8_t *saved;
     uint32_t saved_size;
@@ -194,30 +213,272 @@ static void emit_char(accept_play_state *p, uint16_t unicode)
     emit_bytes(p, bytes, utf8_encode(unicode, bytes));
 }
 
-static void emit_zscii(accept_play_state *p, uint16_t zscii)
+/* What a ZSCII code looks like in the current font: a glyph of the
+ * character graphics font, or the character itself. */
+static uint16_t glyph(const accept_play_state *p, uint16_t zscii)
 {
     uint16_t unicode;
 
-    if (zscii == ZM_ZSCII_NEWLINE) {
-        emit_char(p, '\n');
+    if (p->font == 3 && zscii >= 32 && zscii <= 126) {
+        return font3_glyphs[zscii - 32];
+    }
+    unicode = zm_zscii_to_unicode(&p->mem, zscii);
+    return unicode != 0 ? unicode : '?';
+}
+
+static void emit_zscii(accept_play_state *p, uint16_t zscii)
+{
+    emit_char(p, zscii == ZM_ZSCII_NEWLINE ? '\n' : glyph(p, zscii));
+}
+
+/*
+ * The upper window.
+ *
+ * Spec §8.6.1.1.1 and §8.7.2.5: printing in the upper window overlays
+ * the cell at the cursor and is never buffered, and Spec §8.7.3.1: the
+ * window never scrolls. So it is a grid, and this puts one character on
+ * it. A character may be printed in the last column, after which the
+ * cursor is past the edge and anything further is dropped rather than
+ * wrapped; a new-line on the last line only returns to the left.
+ */
+static void put_upper(accept_play_state *p, uint16_t unicode)
+{
+    unsigned lines = p->upper_lines > 0 ? p->upper_lines : 1;
+
+    if (unicode == '\n') {
+        p->upper_column = 1;
+        if (p->upper_row < lines) {
+            p->upper_row++;
+        }
         return;
     }
-    if (p->font == 3 && zscii >= 32 && zscii <= 126) {
-        unicode = font3_glyphs[zscii - 32];
-    } else {
-        unicode = zm_zscii_to_unicode(&p->mem, zscii);
+    if (p->upper_column > STREAM_WIDTH || p->upper_row > STREAM_HEIGHT) {
+        return;
     }
-    emit_char(p, unicode != 0 ? unicode : '?');
+    p->upper[p->upper_row - 1][p->upper_column - 1] = unicode;
+    p->upper_column++;
+}
+
+static void put_char(accept_play_state *p, uint16_t unicode)
+{
+    if (p->window == ZM_WINDOW_UPPER) {
+        put_upper(p, unicode);
+    } else {
+        emit_char(p, unicode);
+    }
 }
 
 static void stream_print_char(void *context, uint16_t zscii)
 {
-    emit_zscii(context, zscii);
+    accept_play_state *p = context;
+
+    put_char(p, zscii == ZM_ZSCII_NEWLINE ? '\n' : glyph(p, zscii));
 }
 
 static void stream_print_unicode(void *context, uint16_t unicode)
 {
-    emit_char(context, unicode);
+    put_char(context, unicode);
+}
+
+static void clear_upper(accept_play_state *p)
+{
+    for (unsigned r = 0; r < STREAM_HEIGHT; r++) {
+        for (unsigned c = 0; c < STREAM_WIDTH; c++) {
+            p->upper[r][c] = ' ';
+        }
+    }
+}
+
+static void stream_split_window(void *context, unsigned lines)
+{
+    accept_play_state *p = context;
+
+    /* Spec §8.7.2.1.1: a cursor left outside the window goes to its top
+     * left. The core clears the window for Version 3 (Spec §8.6.1.1.2)
+     * through erase_window. */
+    p->upper_lines = lines > STREAM_HEIGHT ? STREAM_HEIGHT : lines;
+    if (p->upper_row > p->upper_lines) {
+        p->upper_row = 1;
+        p->upper_column = 1;
+    }
+}
+
+static void stream_set_window(void *context, unsigned window)
+{
+    accept_play_state *p = context;
+
+    p->window = window;
+    if (window == ZM_WINDOW_UPPER) {
+        p->upper_row = 1;
+        p->upper_column = 1;
+    }
+}
+
+static void stream_erase_window(void *context, int window)
+{
+    accept_play_state *p = context;
+
+    /* Spec §15 erase_window. The stream itself keeps everything, so
+     * erasing the lower window does nothing to it. Spec §8.7.3.3: -1
+     * unsplits the screen and selects the lower window; Spec
+     * §8.7.3.2.1: an erased upper window's cursor goes to its top
+     * left; -2 clears without moving anything. */
+    if (window == -1) {
+        clear_upper(p);
+        p->upper_lines = 0;
+        p->upper_row = 1;
+        p->upper_column = 1;
+        p->window = ZM_WINDOW_LOWER;
+    } else if (window == -2) {
+        clear_upper(p);
+    } else if (window == ZM_WINDOW_UPPER) {
+        clear_upper(p);
+        p->upper_row = 1;
+        p->upper_column = 1;
+    }
+}
+
+static void stream_erase_line(void *context)
+{
+    accept_play_state *p = context;
+
+    /* Spec §8.7.3.4: from the cursor to the right edge of the upper
+     * window. A line of the stream has nothing to its right. */
+    if (p->window == ZM_WINDOW_UPPER && p->upper_column <= STREAM_WIDTH && p->upper_row <= STREAM_HEIGHT) {
+        for (unsigned c = p->upper_column - 1; c < STREAM_WIDTH; c++) {
+            p->upper[p->upper_row - 1][c] = ' ';
+        }
+    }
+}
+
+static void stream_set_cursor(void *context, unsigned row, unsigned column)
+{
+    accept_play_state *p = context;
+
+    p->upper_row = row > STREAM_HEIGHT ? STREAM_HEIGHT : row;
+    p->upper_column = column > STREAM_WIDTH ? STREAM_WIDTH : column;
+}
+
+/* How much two states of the upper window differ: in cells, and in the
+ * rows that hold a difference. A row one state has and the other does
+ * not counts as wholly different. The grids are given by their first
+ * cell, rows of STREAM_WIDTH in turn. */
+static void upper_difference(const uint16_t *before, unsigned before_lines, const uint16_t *after,
+                             unsigned after_lines, unsigned *cells, unsigned *rows)
+{
+    unsigned most = before_lines > after_lines ? before_lines : after_lines;
+
+    *cells = 0;
+    *rows = 0;
+    for (unsigned r = 0; r < most; r++) {
+        unsigned changed = 0;
+
+        if (r >= before_lines || r >= after_lines) {
+            changed = STREAM_WIDTH;
+        } else {
+            for (unsigned c = 0; c < STREAM_WIDTH; c++) {
+                if (before[r * STREAM_WIDTH + c] != after[r * STREAM_WIDTH + c]) {
+                    changed++;
+                }
+            }
+        }
+        if (changed > 0) {
+            *cells += changed;
+            (*rows)++;
+        }
+    }
+}
+
+static int row_is_blank(const uint16_t *row)
+{
+    for (unsigned c = 0; c < STREAM_WIDTH; c++) {
+        if (row[c] != ' ') {
+            return 0;
+        }
+    }
+    return 1;
+}
+
+/*
+ * Write the upper window into the stream, if the script asked for it
+ * and the window has changed since it was last written.
+ *
+ * Called when the game pauses, for input or to quit, and only then: a
+ * game redraws the window several times in a turn (Beyond Zork paints
+ * its title, then its map, then its text), and a stream wants the
+ * finished picture once, as the player would see it. A key typed into
+ * the window changes one cell, and the keys of a command stay on one
+ * row, so a change of one cell on one row since the window was last
+ * seen is an echo and not a repaint yet; Custard and Bureaucracy take
+ * their commands that way. Rows down to the last with anything on them
+ * are written with trailing blanks cut, and a blank line after them. A
+ * line of the stream in progress, a prompt as a rule, is ended first and
+ * begun again after, so that what the player types next still follows
+ * the prompt. This is, step for step, what Rezrov's stream does, so that
+ * a recording made with either interpreter plays on the other.
+ */
+static void show_upper(accept_play_state *p)
+{
+    unsigned since_seen, since_seen_rows, since_shown, since_shown_rows, last;
+    size_t start;
+    char *interrupted = NULL;
+    size_t interrupted_length;
+
+    if (!p->show_upper) {
+        return;
+    }
+    upper_difference(&p->upper_seen[0][0], p->seen_lines, &p->upper[0][0], p->upper_lines, &since_seen,
+                     &since_seen_rows);
+    upper_difference(&p->upper_shown[0][0], p->shown_lines, &p->upper[0][0], p->upper_lines, &since_shown,
+                     &since_shown_rows);
+    memcpy(p->upper_seen, p->upper, sizeof p->upper_seen);
+    p->seen_lines = p->upper_lines;
+    if (since_shown == 0) {
+        return;
+    }
+    if (since_seen <= 1 && since_shown_rows <= 1) {
+        return;
+    }
+    memcpy(p->upper_shown, p->upper, sizeof p->upper_shown);
+    p->shown_lines = p->upper_lines;
+
+    last = p->upper_lines;
+    while (last > 0 && row_is_blank(p->upper[last - 1])) {
+        last--;
+    }
+    if (last == 0) {
+        return;
+    }
+
+    start = p->out_length;
+    while (start > 0 && p->out[start - 1] != '\n') {
+        start--;
+    }
+    interrupted_length = p->out_length - start;
+    if (interrupted_length > 0) {
+        interrupted = malloc(interrupted_length);
+        if (interrupted == NULL) {
+            return;
+        }
+        memcpy(interrupted, p->out + start, interrupted_length);
+        emit_char(p, '\n');
+    }
+    for (unsigned r = 0; r < last; r++) {
+        unsigned end = STREAM_WIDTH;
+
+        while (end > 0 && p->upper[r][end - 1] == ' ') {
+            end--;
+        }
+        for (unsigned c = 0; c < end; c++) {
+            emit_char(p, p->upper[r][c]);
+        }
+        emit_char(p, '\n');
+    }
+    emit_char(p, '\n');
+    if (interrupted != NULL) {
+        emit_bytes(p, interrupted, interrupted_length);
+        free(interrupted);
+    }
 }
 
 /* Spec §8.1.2: the normal font, the fixed-pitch one, which a stream of
@@ -470,6 +731,23 @@ static int take_line(accept_play_state *p, uint16_t *codes, unsigned *count)
     return 1;
 }
 
+/* The game is about to wait for input, which is the moment to show the
+ * upper window as the game leaves it. A read continued after its timer
+ * routine ran and let it go on (timer_fires) is the same wait, not a
+ * new one: the window was shown as it stood before the routine, which
+ * is when the player would have been looking at it, and the routine's
+ * changes wait for the next pause. A routine that ended the read leaves
+ * the same mark on the same address, but the next read there is a new
+ * one, and is shown. Rezrov shows the window once per read opcode too. */
+static void pausing(accept_play_state *p)
+{
+    int continuing = p->timed_pending && p->timed_pc == p->machine.pc && p->machine.interrupt_result == 0;
+
+    if (!continuing) {
+        show_upper(p);
+    }
+}
+
 static int stream_read_line(void *context, uint16_t *buffer, unsigned *count, unsigned max, uint16_t *terminator,
                             unsigned timeout)
 {
@@ -481,6 +759,7 @@ static int stream_read_line(void *context, uint16_t *buffer, unsigned *count, un
     /* Whatever a line of keys still held is left behind: a command
      * starts on a line of its own. */
     p->key_count = p->key_next = 0;
+    pausing(p);
     peek_line(p);
     if (timer_fires(p, timeout, 0)) {
         return ZM_INPUT_TIMEOUT;
@@ -528,6 +807,7 @@ static int stream_read_char(void *context, unsigned timeout)
 {
     accept_play_state *p = context;
 
+    pausing(p);
     if (p->key_next < p->key_count) {
         p->timed_pending = 0;
         return p->keys[p->key_next++];
@@ -788,10 +1068,6 @@ int accept_play(const accept_script *script, int display, int resume, accept_res
 
     /* The directives this front end cannot honour yet are said so,
      * rather than left to wonder why they did nothing. */
-    if (script->upper) {
-        fprintf(stderr, "quiddity: %s: the UPPER directive is not supported yet; the upper window is not shown\n",
-                name);
-    }
     if (script->pictures) {
         fprintf(stderr, "quiddity: %s: the PICTURES directive is not supported yet; the game is told it has none\n",
                 name);
@@ -820,6 +1096,20 @@ int accept_play(const accept_script *script, int display, int resume, accept_res
     p->io.read_line = stream_read_line;
     p->io.read_char = stream_read_char;
     p->io.set_font = stream_set_font;
+    if (script->upper) {
+        /* With these the core sends the upper window's text here instead
+         * of dropping it, and says in a Version 3 header that the screen
+         * can be split (Spec §8.6.1.2). */
+        p->show_upper = 1;
+        p->io.split_window = stream_split_window;
+        p->io.set_window = stream_set_window;
+        p->io.erase_window = stream_erase_window;
+        p->io.erase_line = stream_erase_line;
+        p->io.set_cursor = stream_set_cursor;
+        clear_upper(p);
+        p->upper_row = 1;
+        p->upper_column = 1;
+    }
     p->io.set_transcript = stream_set_transcript;
     p->io.transcript_char = stream_transcript_char;
     p->io.record_input = stream_record_input;
@@ -846,6 +1136,12 @@ int accept_play(const accept_script *script, int display, int resume, accept_res
     if (setjmp(fault_return) == 0) {
         zm_machine_run(&p->machine);
         result->ending = p->script_ended ? ACCEPT_SCRIPT_ENDED : ACCEPT_QUIT;
+
+        /* The game has quit, or the script has run out at a read: the
+         * last pause of all, with the upper window as the game leaves
+         * it, which for a game that ends by drawing its last words
+         * there (Custard) is the ending itself. */
+        show_upper(p);
     } else {
         result->ending = ACCEPT_FAILED;
 

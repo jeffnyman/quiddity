@@ -8,6 +8,7 @@
  * and are tests of their own.
  */
 
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -307,6 +308,88 @@ static void test_a_play_is_recorded_as_text(void)
     accept_script_free(&script);
 }
 
+/* A Version 5 story that draws in the upper window: "Hi" over "Score"
+ * on two lines, then "Hello" below and a key read; then "Bye", "Yo"
+ * over the "Hi", and a key read; then one more cell, "!", and a key
+ * read; then quit. Written to a file, since a play names its game by
+ * path. */
+static void write_upper_story(const char *path)
+{
+    static const uint8_t code[] = {
+        0xea, 0x7f, 2,                                          /* split_window 2 */
+        0xeb, 0x7f, 1,                                          /* set_window 1 */
+        0xe5, 0x7f, 'H', 0xe5, 0x7f, 'i', 0xbb,                 /* print_char H i, new_line */
+        0xe5, 0x7f, 'S', 0xe5, 0x7f, 'c', 0xe5, 0x7f, 'o', 0xe5, 0x7f, 'r', 0xe5, 0x7f, 'e',
+        0xeb, 0x7f, 0,                                          /* set_window 0 */
+        0xe5, 0x7f, 'H', 0xe5, 0x7f, 'e', 0xe5, 0x7f, 'l', 0xe5, 0x7f, 'l', 0xe5, 0x7f, 'o',
+        0xf6, 0x7f, 1, 0x10,                                    /* read_char 1 -> G0 */
+        0xe5, 0x7f, 'B', 0xe5, 0x7f, 'y', 0xe5, 0x7f, 'e',
+        0xeb, 0x7f, 1,                                          /* set_window 1 */
+        0xef, 0x5f, 1, 1,                                       /* set_cursor 1 1 */
+        0xe5, 0x7f, 'Y', 0xe5, 0x7f, 'o',
+        0xeb, 0x7f, 0,                                          /* set_window 0 */
+        0xf6, 0x7f, 1, 0x10,                                    /* read_char 1 -> G0 */
+        0xeb, 0x7f, 1,                                          /* set_window 1 */
+        0xef, 0x5f, 1, 3,                                       /* set_cursor 1 3 */
+        0xe5, 0x7f, '!',
+        0xeb, 0x7f, 0,                                          /* set_window 0 */
+        0xf6, 0x7f, 1, 0x10,                                    /* read_char 1 -> G0 */
+        0xba                                                    /* quit */
+    };
+    uint8_t story[0x800] = { 0 };
+    FILE *file;
+
+    story[0] = 5;                                               /* Version */
+    story[0x04] = 0x04;                                         /* high memory at $400 */
+    story[0x06] = 0x04;                                         /* initial PC $400 */
+    story[0x08] = 0x02;                                         /* dictionary at $200 */
+    story[0x0a] = 0x01;                                         /* objects at $100 */
+    story[0x0d] = 0x40;                                         /* globals at $40 */
+    story[0x0e] = 0x04;                                         /* static memory at $400 */
+    story[0x201] = 6;                                           /* a dictionary with no words */
+    memcpy(story + 0x400, code, sizeof code);
+    file = fopen(path, "wb");
+    CHECK(file != NULL);
+    if (file != NULL) {
+        fwrite(story, 1, sizeof story, file);
+        fclose(file);
+    }
+}
+
+static void test_the_upper_window_is_shown_when_asked(void)
+{
+    static const char path[] = "upper-by-test.z5";
+    accept_script script;
+    accept_result result;
+    char error[ACCEPT_ERROR_MAX];
+
+    write_upper_story(path);
+
+    /* Without UPPER the upper window is dropped and the keys are not
+     * echoed, so the play is the lower window alone. */
+    CHECK(accept_script_parse(&script, "! SEED=1\n! GAME=upper-by-test.z5\n\na\nb\nc\n", SCRIPT_PATH, ".", error));
+    CHECK_EQ_INT(accept_play(&script, 0, 0, &result), 1);
+    CHECK_EQ_INT(result.ending, ACCEPT_QUIT);
+    CHECK_EQ_STR(result.text, "HelloBye");
+    accept_result_free(&result);
+    accept_script_free(&script);
+
+    /* With it, the window is written at each pause it has changed by
+     * more than one cell on one row, as rows with trailing blanks cut
+     * and a blank line after, breaking the line in progress and taking
+     * it up again. The "!" is a single cell, the echo of a key as far
+     * as the stream can tell, and is never shown. */
+    CHECK(accept_script_parse(&script, "! SEED=1\n! GAME=upper-by-test.z5\n! UPPER=yes\n\na\nb\nc\n", SCRIPT_PATH, ".",
+                              error));
+    CHECK_EQ_INT(accept_play(&script, 0, 0, &result), 1);
+    CHECK_EQ_INT(result.ending, ACCEPT_QUIT);
+    CHECK_EQ_STR(result.text, "Hello\nHi\nScore\n\nHelloBye\nYo\nScore\n\nHelloBye");
+    accept_result_free(&result);
+    accept_script_free(&script);
+
+    remove(path);
+}
+
 static void test_a_script_can_be_created_for_a_game(void)
 {
     static const char path[] = "created-by-test.accept";
@@ -425,6 +508,7 @@ int main(void)
     RUN_TEST(test_the_first_difference_is_found_by_line);
     RUN_TEST(test_a_difference_is_placed_in_both_files);
     RUN_TEST(test_a_play_is_recorded_as_text);
+    RUN_TEST(test_the_upper_window_is_shown_when_asked);
     RUN_TEST(test_a_script_can_be_created_for_a_game);
     RUN_TEST(test_what_was_tried_is_kept_under_a_fence);
     return CHECK_SUMMARY();

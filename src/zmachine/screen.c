@@ -155,7 +155,13 @@ void zm_screen_write_header(zm_screen *s)
      * zm_screen_sync_transcript(). No front end has a mouse or menus
      * yet. */
     flags2 &= ~(unsigned)(ZM_FLAGS2_MOUSE | ZM_FLAGS2_MENUS);
-    if (!pictures_available(s)) {
+
+    /* Bit 3 asks for pictures in Version 6 (Spec §8.8.6) and for the
+     * character graphics font in Version 5 (Spec §8.1.5.1): Beyond Zork
+     * reads it back to decide whether its arrows and its map can be
+     * drawn in that font, and on an IBM PC without it prints the
+     * machine's own arrow codes instead. */
+    if (is_v6(s) ? !pictures_available(s) : !(io->fonts & (1u << 3))) {
         flags2 &= ~(unsigned)ZM_FLAGS2_PICTURES;
     }
     if (io->sound_effect == NULL) {

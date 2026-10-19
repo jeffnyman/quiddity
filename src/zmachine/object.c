@@ -48,8 +48,16 @@ uint32_t zm_object_address(const zm_memory *mem, uint16_t object)
     }
 
     /* Spec §12.3: the tree follows the defaults table, with objects
-     * numbered from 1. */
-    return table_base(mem) + 2u * default_count(mem) + (uint32_t)(object - 1u) * entry_size(mem);
+     * numbered from 1. Spec §1.2.1: an entry's address is a byte
+     * address, which is 16 bits wide, so a number past the end of the
+     * table wraps around, as it did on the interpreters the games were
+     * written against. Beyond Zork depends on that: when the circlet's
+     * film is used up it hands a dictionary word to a routine that
+     * wants an object, and whatever the word's address lands on, 16
+     * bits around, is read as that object's entry and found to have no
+     * synonyms to replace. Without the wrap the read is outside memory
+     * and the game stops mid-sentence. */
+    return (table_base(mem) + 2u * default_count(mem) + (uint32_t)(object - 1u) * entry_size(mem)) & 0xffffu;
 }
 
 /*
