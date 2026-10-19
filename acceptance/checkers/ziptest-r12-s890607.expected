@@ -327,12 +327,26 @@ Line #6
 Operation: <CLEAR 0> [Press RETURN]
 Operation: <CLEAR 1> [Press RETURN]
 Operation: <DO-CURSET ...> [Press RETURN]
-HELLOOperation: <CLEAR -1> [Press RETURN]
+H
+E
+L
+L
+O
+Operation: <CLEAR -1> [Press RETURN]
 Operation: 2-Line Status Line Test [Press RETURN]
-                                                                                                                                                            Operation: Write Status Line [Press RETURN]
-Robot: MARVINLocation: Hallway TScore This Life-Cycle: 104Ranking:  Lord ChomperOperation: Erase Location to EOL on Status Line [Press RETURN]
+                                                                              
+                                                                              
+Operation: Write Status Line [Press RETURN]
+Robot: MARVINLocation: Hallway T
+Score This Life-Cycle: 104Ranking:  Lord Chomper
+Operation: Erase Location to EOL on Status Line [Press RETURN]
 Operation: PRINTT Test. [Press RETURN]
-             KEEP      OUT     CHOMPER!           Operation: FONT Test (VT100 dependent). [Press Y for this test]
+          
+   KEEP   
+   OUT    
+ CHOMPER! 
+          
+Operation: FONT Test (VT100 dependent). [Press Y for this test]
 
 Operation: End of Screen Tests. [Press RETURN]
 
@@ -433,7 +447,8 @@ origin is
 at the
 origin has
 WINPOS
-1,1).What width do you want? x
+1,1).
+What width do you want? x
 Width of `This is a test string' is 84 pixels.
 Operation: End of dirout test. [Press RETURN]
 
@@ -576,7 +591,11 @@ Which?:
 17
 18
 19
-20U(p), (D)own, or (Q)uit U(p), (D)own, or (Q)uit U(p), (D)own, or (Q)uit U(p), (D)own, or (Q)uit 
+20
+U(p), (D)own, or (Q)uit 
+U(p), (D)own, or (Q)uit 
+U(p), (D)own, or (Q)uit 
+U(p), (D)own, or (Q)uit 
 Operation: End of test.  Hit RETURN to continue. [Press RETURN]
 ZIPTEST Tests:
 
@@ -607,7 +626,8 @@ April, June, and November.
 All the rest have thirty-one,
 Except February which has twenty-eight or twenty-nine,
 depending on whether it's a Leap Year.
-[Again?]Operation: Another? [Press Y for this test]
+[Again?]
+Operation: Another? [Press Y for this test]
 
 
 Operation: End of test.  Hit RETURN to continue. [Press RETURN]
@@ -625,44 +645,17 @@ K = Color Text       V = Verify test
                      Y = YZIP windows test
 
 Which?: 
-╲┬←┴┌│─├─┤└╲┬ │┬←┴┌│┌┴┌│╱├──├→└┤│┬ ┴┌│╱├→
-┌ Have ┌ a nice ┌ day! ┌
-
-Operation: End of test.  Hit RETURN to continue. [Press RETURN]
-ZIPTEST Tests:
-
-Q = QUIT             S = Partial SAVE/RESTORE
-A = Arithmetic       L = Looping/Predicates     1 = DIROUT wrapping
-O = Objects/Tables   C = Call/Stacks            2 = User Stacks
-P = Print            R = ReRead                 3 = Window info
-T = Read/Timeouts    W = Windows/Displays       4 = SCROLL test
-D = Pictures         M = Margins & Pictures     5 = Multiwindows
-F = Function keys    Z = Character Set 1
-B = Character Set 2  U = Charsets 1 & 2 Mixed
-K = Color Text       V = Verify test
-                     Y = YZIP windows test
-
-Which?: 
-( ! %    & " '$   #    #   $' " &    % ! (
-Up = !  Down = "  Left = $  Right = #
-
-Operation: End of test.  Hit RETURN to continue. [Press RETURN]
-ZIPTEST Tests:
-
-Q = QUIT             S = Partial SAVE/RESTORE
-A = Arithmetic       L = Looping/Predicates     1 = DIROUT wrapping
-O = Objects/Tables   C = Call/Stacks            2 = User Stacks
-P = Print            R = ReRead                 3 = Window info
-T = Read/Timeouts    W = Windows/Displays       4 = SCROLL test
-D = Pictures         M = Margins & Pictures     5 = Multiwindows
-F = Function keys    Z = Character Set 1
-B = Character Set 2  U = Charsets 1 & 2 Mixed
-K = Color Text       V = Verify test
-                     Y = YZIP windows test
-
-Which?: 
-( ! %    & " '$ ┌ #    # ┌ $' " &    % ! (
-Up = !  Down = "  Left = $  Right = #
+╲┬←
+┴┌│
+─├─
+┤└
+╲┬ │┬←
+┴┌│┌┴┌│
+╱├──├→
+└┤
+│┬ 
+┴┌│
+╱├→
 
 ┌ Have ┌ a nice ┌ day! ┌
 
@@ -681,7 +674,60 @@ K = Color Text       V = Verify test
                      Y = YZIP windows test
 
 Which?: 
-Default colors; 8-line window.This sentence should be red.Isn't this a lovely blue line?This line is obviously green.A whiter shade of pale.Back to the default colors.BOXBOXBOX
+( ! %    & " '
+$   #    #   $
+' " &    % ! (
+
+Up = !  Down = "  Left = $  Right = #
+
+Operation: End of test.  Hit RETURN to continue. [Press RETURN]
+ZIPTEST Tests:
+
+Q = QUIT             S = Partial SAVE/RESTORE
+A = Arithmetic       L = Looping/Predicates     1 = DIROUT wrapping
+O = Objects/Tables   C = Call/Stacks            2 = User Stacks
+P = Print            R = ReRead                 3 = Window info
+T = Read/Timeouts    W = Windows/Displays       4 = SCROLL test
+D = Pictures         M = Margins & Pictures     5 = Multiwindows
+F = Function keys    Z = Character Set 1
+B = Character Set 2  U = Charsets 1 & 2 Mixed
+K = Color Text       V = Verify test
+                     Y = YZIP windows test
+
+Which?: 
+( ! %    & " '
+$ ┌ #    # ┌ $
+' " &    % ! (
+
+Up = !  Down = "  Left = $  Right = #
+
+┌ Have ┌ a nice ┌ day! ┌
+
+Operation: End of test.  Hit RETURN to continue. [Press RETURN]
+ZIPTEST Tests:
+
+Q = QUIT             S = Partial SAVE/RESTORE
+A = Arithmetic       L = Looping/Predicates     1 = DIROUT wrapping
+O = Objects/Tables   C = Call/Stacks            2 = User Stacks
+P = Print            R = ReRead                 3 = Window info
+T = Read/Timeouts    W = Windows/Displays       4 = SCROLL test
+D = Pictures         M = Margins & Pictures     5 = Multiwindows
+F = Function keys    Z = Character Set 1
+B = Character Set 2  U = Charsets 1 & 2 Mixed
+K = Color Text       V = Verify test
+                     Y = YZIP windows test
+
+Which?: 
+Default colors; 8-line window.
+This sentence should be red.
+Isn't this a lovely blue line?
+This line is obviously green.
+A whiter shade of pale.
+Back to the default colors.
+BOX
+BOX
+BOX
+
 RED GREEN YELLOW BLUE MAGENTA CYAN WHITE
 Back to the defaults.
 

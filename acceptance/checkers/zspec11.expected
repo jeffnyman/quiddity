@@ -1,0 +1,205 @@
+Z-Machine Standard 1.1 Conformance Test
+
+1) Header
+2) Save and Restore
+3) Text Styles
+4) True Colour
+5) Screen Buffering
+6) Fonts
+7) Colour Numbers
+8) Transparency
+
+Enter a number to run a test, or press 'Esc' to exit.
+Header Test
+
+The header extension table in this file is 4 words long. (Standard 1.1 defines a
+total of 6 header extension words.)
+
+This interpreter cannot draw transparent text.
+(31,31,31) is white, and (31,0,0) is red.)
+
+Press a key to continue...
+Z-Machine Standard 1.1 Conformance Test
+
+1) Header
+2) Save and Restore
+3) Text Styles
+4) True Colour
+5) Screen Buffering
+6) Fonts
+7) Colour Numbers
+8) Transparency
+
+Enter a number to run a test, or press 'Esc' to exit.
+Save and Restore Test
+
+A file selection dialog should not appear for the first save and restore calls.
+
+Saving data without prompting for a file name ... successful.
+Restoring data without prompting for a file name ... successful.
+Saving data with prompting for a file name ... successful.
+Restoring data with prompting for a file name ... successful.
+Saving data without a prompt argument ... successful.
+Restoring data without a prompt argument ... successful.
+Saving data with default arguments ... successful.
+Restoring data with default arguments ... successful.
+
+Press a key to continue...
+Z-Machine Standard 1.1 Conformance Test
+
+1) Header
+2) Save and Restore
+3) Text Styles
+4) True Colour
+5) Screen Buffering
+6) Fonts
+7) Colour Numbers
+8) Transparency
+
+Enter a number to run a test, or press 'Esc' to exit.
+Text Style Combination Test
+
+Text styles can now be combined. This should be reflected in the appearance of
+the text below, and the values of the style window property.
+
+This text should appear bold (style property is 2).
+This text should appear italic (style property is 4).
+This text should appear bold and italic (style property is 6).
+This text should appear reversed (style property is 1).
+This text should appear fixed width (style property is 8).
+This text should appear reversed and fixed width (style property is 9).
+
+Press a key to continue...
+Z-Machine Standard 1.1 Conformance Test
+
+1) Header
+2) Save and Restore
+3) Text Styles
+4) True Colour
+5) Screen Buffering
+6) Fonts
+7) Colour Numbers
+8) Transparency
+
+Enter a number to run a test, or press 'Esc' to exit.
+True Colour Test
+
+This text should be dark red on black.
+This text should be light red on black.
+This text should be black on light blue.
+This text should be light green on dark green.
+This text should be light green on the default background.
+This text should be the default foreground on dark red.
+
+Click the mouse on a colour
+This text should be white with the background matching the clicked colour.
+Click the mouse on a colour
+This text should be the clicked colour on black.
+
+Press a key to continue...
+Z-Machine Standard 1.1 Conformance Test
+
+1) Header
+2) Save and Restore
+3) Text Styles
+4) True Colour
+5) Screen Buffering
+6) Fonts
+7) Colour Numbers
+8) Transparency
+
+Enter a number to run a test, or press 'Esc' to exit.
+Screen Buffering Test
+
+buffer_screen 0 returned 0
+buffer_screen 1 returned 0
+buffer_screen -1 returned 0
+
+Press a key to continue...
+Z-Machine Standard 1.1 Conformance Test
+
+1) Header
+2) Save and Restore
+3) Text Styles
+4) True Colour
+5) Screen Buffering
+6) Fonts
+7) Colour Numbers
+8) Transparency
+
+Enter a number to run a test, or press 'Esc' to exit.
+Font Change Test
+
+Set the font of window 1 to fixed width. This text should be in the normal font.
+Set the font of window 0 to fixed width. This text should be in the fixed width
+font.
+Set the font of the current window to normal. This text should be in the normal
+font.
+
+Press a key to continue...
+Z-Machine Standard 1.1 Conformance Test
+
+1) Header
+2) Save and Restore
+3) Text Styles
+4) True Colour
+5) Screen Buffering
+6) Fonts
+7) Colour Numbers
+8) Transparency
+
+Enter a number to run a test, or press 'Esc' to exit.
+Test of the relationship between true colours and colour numbers.
+
+Setting true colours in window 0...
+This text should be light red on dark red.
+The foreground and background true colours are (29,0,0) and (29,0,0).
+The foreground and background colour numbers are 3 and 3.
+
+Setting many different true colours in window 1...
+Setting the colour numbers for window 0 to be (3, 3)...
+Ideally, this text should also be light red on black.
+The foreground and background true colours are (29,0,0) and (29,0,0).
+
+Press a key to continue...
+Z-Machine Standard 1.1 Conformance Test
+
+1) Header
+2) Save and Restore
+3) Text Styles
+4) True Colour
+5) Screen Buffering
+6) Fonts
+7) Colour Numbers
+8) Transparency
+
+Enter a number to run a test, or press 'Esc' to exit.
+Transparent Background Test
+
+    This text should have a transparent background ...
+    So should this text, too ...
+
+
+
+
+
+When printing the above text, the true background colour property was 0 (it
+should be -4), and the background colour number was 2 (it should be 15).
+
+Now calling erase_line and erase_window with the background set to transparent.
+If any solid rectangles have appeared in the display, the interpreter is at
+fault.
+
+Press a key to continue...
+Z-Machine Standard 1.1 Conformance Test
+
+1) Header
+2) Save and Restore
+3) Text Styles
+4) True Colour
+5) Screen Buffering
+6) Fonts
+7) Colour Numbers
+8) Transparency
+
+Enter a number to run a test, or press 'Esc' to exit.
