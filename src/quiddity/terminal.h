@@ -10,6 +10,11 @@
  * The screen model (Spec §8) asks for more than a teletype has, so two
  * things are arranged here:
  *
+ * A command is typed with the terminal's own line editor. A single key
+ * is read as it is pressed, the console being switched to a key-at-a-
+ * time mode for the length of the read, so that Escape and the cursor
+ * keys reach the game by their ZSCII codes (Spec §3.8.4).
+ *
  * The lower window's output is held back one line at a time. A game
  * prints its prompt and then asks for the status line, which on a real
  * screen sits above the prompt; keeping the unfinished line until

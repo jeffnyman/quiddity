@@ -26,6 +26,7 @@
 #define terminal_isatty(stream) _isatty(_fileno(stream))
 #else
 #include <sys/select.h>
+#include <termios.h>
 #include <unistd.h>
 #define terminal_isatty(stream) isatty(fileno(stream))
 #endif
@@ -700,6 +701,85 @@ static int input_ready(unsigned tenths)
 #endif
 }
 
+/*
+ * Keys (Spec §10.6, §3.8.4).
+ *
+ * A line is typed with the terminal's own line editor, but a single key
+ * has to arrive as it is pressed, without a return after it, or
+ * "press any key" waits for two. So for a read_char the console is put
+ * into a mode that hands keys over one at a time and does not echo
+ * them, and put back after. The Escape key arrives as its own code, 27,
+ * which is also what the console's line editor would have swallowed;
+ * the cursor keys arrive as the sequences ESC [ A to D, which become
+ * the cursor codes 129 to 132; backspace, as 8 or 127, becomes the
+ * delete code 8. Nothing of this applies when input is a file.
+ */
+
+#ifdef _WIN32
+static DWORD cooked_mode;
+#else
+static struct termios cooked_mode;
+#endif
+
+static void keys_mode(const terminal *t, int on)
+{
+    if (!t->interactive) {
+        return;
+    }
+#ifdef _WIN32
+    {
+        HANDLE in = GetStdHandle(STD_INPUT_HANDLE);
+
+        if (on) {
+            if (!GetConsoleMode(in, &cooked_mode)) {
+                return;
+            }
+            SetConsoleMode(in, (cooked_mode & ~(DWORD)(ENABLE_LINE_INPUT | ENABLE_ECHO_INPUT))
+                                   | ENABLE_VIRTUAL_TERMINAL_INPUT);
+        } else {
+            SetConsoleMode(in, cooked_mode);
+        }
+    }
+#else
+    if (on) {
+        struct termios raw;
+
+        if (tcgetattr(0, &cooked_mode) != 0) {
+            return;
+        }
+        raw = cooked_mode;
+        raw.c_lflag &= ~(tcflag_t)(ICANON | ECHO);
+        raw.c_cc[VMIN] = 1;
+        raw.c_cc[VTIME] = 0;
+        tcsetattr(0, TCSANOW, &raw);
+    } else {
+        tcsetattr(0, TCSANOW, &cooked_mode);
+    }
+#endif
+}
+
+/* An escape has been read: if the rest of a cursor key's sequence is
+ * right behind it, that key; otherwise the escape itself. */
+static uint16_t escape_or_cursor_key(const terminal *t)
+{
+    int c;
+
+    if (!t->interactive || !input_ready(1)) {
+        return ZM_ZSCII_ESCAPE;
+    }
+    c = getchar();
+    if (c != '[' && c != 'O') {
+        return ZM_ZSCII_ESCAPE;
+    }
+    switch (getchar()) {
+    case 'A': return 129;   /* up */
+    case 'B': return 130;   /* down */
+    case 'D': return 131;   /* left */
+    case 'C': return 132;   /* right */
+    default:  return ZM_ZSCII_ESCAPE;
+    }
+}
+
 /* Read one line typed by the player, without its line ending. Returns 0
  * when there is no more input. */
 static int read_typed_line(terminal *t, char *line, size_t size)
@@ -787,16 +867,30 @@ static int terminal_read_char(void *context, unsigned timeout)
         return zscii[0];
     }
     before_input(t);
+    fflush(stdout);
+    keys_mode(t, 1);
     if (!input_ready(timeout)) {
+        keys_mode(t, 0);
         return ZM_INPUT_TIMEOUT;
     }
 
     c = getchar();
     if (c == EOF) {
+        keys_mode(t, 0);
         return ZM_INPUT_END;
     }
     if (c == '\n' || c == '\r') {
+        keys_mode(t, 0);
         return ZM_ZSCII_NEWLINE;
+    }
+    if (c == 0x1b) {
+        zscii[0] = escape_or_cursor_key(t);
+        keys_mode(t, 0);
+        return zscii[0];
+    }
+    if (c == 0x08 || c == 0x7f) {
+        keys_mode(t, 0);
+        return ZM_ZSCII_DELETE;
     }
 
     /* Gather a UTF-8 sequence, then translate it as a line would be.
@@ -813,6 +907,7 @@ static int terminal_read_char(void *context, unsigned timeout)
             bytes[k] = (unsigned char)next;
         }
     }
+    keys_mode(t, 0);
     n = typed_to_zscii(t, utf8_next(bytes, &i), zscii);
     if (n == 2) {
         t->pending_key = zscii[1];
