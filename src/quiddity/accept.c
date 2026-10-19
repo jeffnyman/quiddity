@@ -204,10 +204,19 @@ static void emit_char(accept_play_state *p, uint16_t unicode)
             emit_bytes(p, bytes, utf8_encode_pair(high, unicode, bytes));
             return;
         }
-        emit_bytes(p, bytes, utf8_encode(high, bytes));
+        /* A half on its own is not a character, and encoded alone it
+         * is not UTF-8 either: a question mark, as the terminal writes
+         * and as the Z-machine marks what it cannot print. A game that
+         * echoes a typed emoji one key at a time (smileys.z5) prints
+         * two of them. */
+        emit_bytes(p, "?", 1);
     }
     if (unicode >= 0xd800 && unicode <= 0xdbff) {
         p->high_surrogate = unicode;
+        return;
+    }
+    if (unicode >= 0xdc00 && unicode <= 0xdfff) {
+        emit_bytes(p, "?", 1);
         return;
     }
     emit_bytes(p, bytes, utf8_encode(unicode, bytes));
@@ -1162,6 +1171,11 @@ int accept_play(const accept_script *script, int display, int resume, accept_res
     }
     zm_set_fatal_handler(NULL);
     faulting_play = NULL;
+    if (p->high_surrogate != 0) {
+        /* Half a character left at the very end. */
+        p->high_surrogate = 0;
+        emit_bytes(p, "?", 1);
+    }
     if (display) {
         fflush(stdout);
     }
