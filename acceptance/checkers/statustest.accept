@@ -1,0 +1,14 @@
+# A test to see if we can reliably expand the upper window while it
+# already has text in it without wrecking that existing text. Ideally
+# this should create a three-line status bar. What happens to the
+# main-window text underneath varies by implementation and does not
+# really matter.
+
+! SEED=1
+! GAME=zcode-checkers/statustest.z5
+! UPPER=yes
+
+# The game never reads input, so the stream's only pause is its end,
+# and that is where the upper window is written: after both main-window
+# lines, not above them as on a screen. The three lines being there at
+# all is the result; their place in the stream is not.
