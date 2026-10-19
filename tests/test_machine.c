@@ -2796,6 +2796,40 @@ static void test_v6_spacing_goes_with_its_word(void)
     io.screen_height = 0;
 }
 
+/* A front end that gets the text in printing order has no rows to keep
+ * text apart, so a line with text on it is ended before the window is
+ * erased, before the cursor goes to another row, and before printing
+ * moves to another window; a move along the same row ends nothing. */
+static void test_v6_lines_end_before_a_move_in_printing_order(void)
+{
+    story s;
+    output out;
+    zm_machine m;
+    zm_memory mem;
+
+    io.screen_width = 20;
+    io.screen_height = 5;
+    story_init_v6(&s);
+    emit_text(&s, "Press a key");
+    EMIT(&s, 0xed, 0x7f, 0x00);                                 /* erase_window 0 */
+    emit_text(&s, "Menu");
+    EMIT(&s, 0xef, 0x5f, 0x03, 0x01);                           /* set_cursor 3 1 */
+    emit_text(&s, "More");
+    EMIT(&s, 0xef, 0x5f, 0x03, 0x0a);                           /* set_cursor 3 10 */
+    emit_text(&s, "X");
+    EMIT(&s, 0xeb, 0x7f, 0x01);                                 /* set_window 1 */
+    emit_text(&s, "S");
+    EMIT(&s, 0xeb, 0x7f, 0x01);                                 /* set_window 1 */
+    emit_text(&s, "t");
+    EMIT(&s, 0xba);
+    run(&s, &out, &m, &mem);
+    CHECK_EQ_STR(out.text, "Press a key\nMenu\nMoreX\nSt");
+    zm_machine_free(&m);
+    zm_memory_free(&mem);
+    io.screen_width = 0;
+    io.screen_height = 0;
+}
+
 static void test_v6_window_properties_and_appearance(void)
 {
     story s;
@@ -3601,6 +3635,7 @@ int main(void)
     RUN_TEST(test_screen_faults);
     RUN_TEST(test_v6_text_is_laid_out_in_windows);
     RUN_TEST(test_v6_spacing_goes_with_its_word);
+    RUN_TEST(test_v6_lines_end_before_a_move_in_printing_order);
     RUN_TEST(test_v6_window_properties_and_appearance);
     RUN_TEST(test_v6_newline_interrupt);
     RUN_TEST(test_v6_user_stacks);

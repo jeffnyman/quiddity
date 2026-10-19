@@ -594,6 +594,7 @@ static void window_newline(zm_screen *s, zm_window *w)
 
     if (s->io->plot_text == NULL && s->io->print_char != NULL) {
         s->io->print_char(s->io->context, ZM_ZSCII_NEWLINE);
+        s->line_open = 0;
     }
 
     /* Spec §8.8.3.2.2.1: 'Zork Zero' release 393 wants the interrupt
@@ -630,6 +631,24 @@ static void window_newline(zm_screen *s, zm_window *w)
 /* Put text on the canvas at the cursor and move the cursor past it. A
  * front end with no canvas but a print_char gets the text in printing
  * order, as a teletype would, with no layout at all. */
+/* For a front end that gets the text in printing order, which has no
+ * rows to keep text apart: a line with text on it is ended before the
+ * window is erased, before the cursor goes to another row, and before
+ * printing moves to another window, since what comes next is not part
+ * of it. Rezrov's stream does the same, so the recordings read alike.
+ * On a canvas the rows do this by themselves. */
+static void end_line(zm_screen *s)
+{
+    if (s->io->plot_text != NULL || s->io->print_char == NULL) {
+        return;
+    }
+    flush_word(s);
+    if (s->line_open) {
+        s->io->print_char(s->io->context, ZM_ZSCII_NEWLINE);
+        s->line_open = 0;
+    }
+}
+
 static void plot(zm_screen *s, zm_window *w, const uint16_t *text, unsigned count)
 {
     if (s->io->plot_text != NULL && count > 0) {
@@ -649,6 +668,9 @@ static void plot(zm_screen *s, zm_window *w, const uint16_t *text, unsigned coun
             uint16_t zscii = zm_unicode_to_zscii(s->mem, text[i]);
 
             s->io->print_char(s->io->context, zscii != 0 ? zscii : '?');
+        }
+        if (count > 0) {
+            s->line_open = 1;
         }
     }
     w->cursor_x = (uint16_t)(w->cursor_x + count * s->font_width);
@@ -1164,6 +1186,9 @@ void zm_screen_set_window(zm_screen *s, unsigned window)
         /* Spec §8.8.3: each window keeps its own cursor, so selecting
          * one moves nothing. */
         flush_word(s);
+        if (window != s->window) {
+            end_line(s);
+        }
         s->window = window;
         return;
     }
@@ -1207,6 +1232,7 @@ void zm_screen_erase_window(zm_screen *s, int16_t window)
 {
     if (is_v6(s)) {
         flush_word(s);
+        end_line(s);
         if (window == -1) {
             /* Spec §8.8.5.3.1: the whole screen in window 0's colours,
              * unsplit, with window 0 selected and its cursor at the top
@@ -1305,6 +1331,9 @@ void zm_screen_set_cursor(zm_screen *s, unsigned window, int16_t y, int16_t x)
         }
         if (x <= (int16_t)w->left_margin || x > (int)w->width - (int)w->right_margin) {
             x = (int16_t)(w->left_margin + 1u);
+        }
+        if ((uint16_t)y != w->cursor_y) {
+            end_line(s);
         }
         w->cursor_y = (uint16_t)y;
         w->cursor_x = (uint16_t)x;

@@ -218,6 +218,10 @@ typedef struct zm_screen {
      * without a canvas still knows which font a character is in. */
     unsigned told_font;
 
+    /* Whether that fallback has printed on the line it is on, so that
+     * the line can be ended before text that is not part of it. */
+    int line_open;
+
     /*
      * Version 6 (Spec §8.8).
      */
