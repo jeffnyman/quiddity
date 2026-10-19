@@ -481,13 +481,22 @@ static uint16_t divide(const zm_instruction *inst, uint16_t a, uint16_t b, int r
 }
 
 /* Spec §15 art_shift and log_shift: a positive count shifts left, a
- * negative one right; arithmetic shifts carry the sign bit down. */
-static uint16_t shift(const zm_instruction *inst, uint16_t value, uint16_t places, int arithmetic)
+ * negative one right; arithmetic shifts carry the sign bit down.
+ *
+ * The Standard says nothing about a count of 16 or more, which moves
+ * every bit out of a 16-bit word, and C says nothing useful either: a
+ * shift by the width of the type or more is undefined behavior. The
+ * answer here is the one that shifting one place at a time would reach.
+ * Nothing is left of the value, so a logical shift or a left shift gives
+ * 0 and an arithmetic right shift gives sixteen copies of the sign bit.
+ * Praxix tries these and accepts those answers as "unspecified", and
+ * Rezrov, whose shifts are C#'s, gives the same. */
+static uint16_t shift(uint16_t value, uint16_t places, int arithmetic)
 {
     int count = as_signed(places);
 
-    if (count > 15 || count < -15) {
-        zm_fatal("%s by %d places at $%05x", inst->info->name, count, (unsigned)inst->address);
+    if (count >= 16) {
+        return 0;
     }
     if (count >= 0) {
         return (uint16_t)((uint32_t)value << count);
@@ -497,9 +506,9 @@ static uint16_t shift(const zm_instruction *inst, uint16_t value, uint16_t place
          * C, so shift its complement, which is positive, and complement
          * the result: the ones shifted in become the copies of the sign
          * bit that an arithmetic shift wants. */
-        return (uint16_t)~((uint16_t)~value >> -count);
+        return count <= -16 ? 0xffffu : (uint16_t)~((uint16_t)~value >> -count);
     }
-    return (uint16_t)(value >> -count);
+    return count <= -16 ? 0 : (uint16_t)(value >> -count);
 }
 
 /*
@@ -2042,10 +2051,10 @@ static void execute_ext(zm_machine *m, const zm_instruction *inst, const uint16_
         restore_opcode(m, inst, ops, count);
         break;
     case 2:  /* log_shift */
-        store_result(m, inst, shift(inst, ops[0], ops[1], 0));
+        store_result(m, inst, shift(ops[0], ops[1], 0));
         break;
     case 3:  /* art_shift */
-        store_result(m, inst, shift(inst, ops[0], ops[1], 1));
+        store_result(m, inst, shift(ops[0], ops[1], 1));
         break;
     case 4:  /* set_font, for a window in Version 6 */
         store_result(m, inst, (uint16_t)zm_screen_set_font(&m->screen,

@@ -1640,6 +1640,20 @@ static void test_shifts_and_argument_counts(void)
     EMIT(&s, 0xe6, 0xbf, G0, 0xe5, 0x7f, ' ');                  /* -2 */
     EMIT(&s, 0xbe, 0x03, 0x5f, 1, 15, G0);                      /* art_shift 1 15 -> G0 */
     EMIT(&s, 0xe6, 0xbf, G0, 0xe5, 0x7f, ' ');                  /* -32768 */
+    /* Counts of 16 or more shift every bit out: nothing is left but, for
+     * an arithmetic right shift, the sign. */
+    EMIT(&s, 0xbe, 0x02, 0x5f, 1, 16, G0);                      /* log_shift 1 16 -> G0 */
+    EMIT(&s, 0xe6, 0xbf, G0, 0xe5, 0x7f, ' ');                  /* 0 */
+    EMIT(&s, 0xbe, 0x02, 0x0f, 0xff, 0xff, 0xff, 0xef, G0);     /* log_shift -1 -17 -> G0 */
+    EMIT(&s, 0xe6, 0xbf, G0, 0xe5, 0x7f, ' ');                  /* 0 */
+    EMIT(&s, 0xbe, 0x03, 0x0f, 0xff, 0xff, 0xff, 0xf0, G0);     /* art_shift -1 -16 -> G0 */
+    EMIT(&s, 0xe6, 0xbf, G0, 0xe5, 0x7f, ' ');                  /* -1 */
+    EMIT(&s, 0xbe, 0x03, 0x0f, 0xfc, 0x18, 0xff, 0xef, G0);     /* art_shift -1000 -17 -> G0 */
+    EMIT(&s, 0xe6, 0xbf, G0, 0xe5, 0x7f, ' ');                  /* -1 */
+    EMIT(&s, 0xbe, 0x03, 0x0f, 0x7f, 0xff, 0xff, 0xf0, G0);     /* art_shift $7FFF -16 -> G0 */
+    EMIT(&s, 0xe6, 0xbf, G0, 0xe5, 0x7f, ' ');                  /* 0 */
+    EMIT(&s, 0xbe, 0x03, 0x0f, 0xff, 0xff, 0x00, 0x20, G0);     /* art_shift -1 32 -> G0 */
+    EMIT(&s, 0xe6, 0xbf, G0, 0xe5, 0x7f, ' ');                  /* 0 */
     EMIT(&s, 0xf9, 0x17); emit_packed(&s, R1); EMIT(&s, 1, 2);  /* call_vn R1 1 2 */
     EMIT(&s, 0xbf, 0xc5);                                       /* piracy ?+5 */
     EMIT(&s, 0xe5, 0x7f, 'p');
@@ -1655,7 +1669,7 @@ static void test_shifts_and_argument_counts(void)
     EMIT(&s, 0xb0);                                             /* rtrue */
 
     run(&s, &out, &m, &mem);
-    CHECK_EQ_STR(out.text, "8 16384 -16384 -2 -32768 !");
+    CHECK_EQ_STR(out.text, "8 16384 -16384 -2 -32768 0 0 -1 -1 0 0 !");
 
     zm_machine_free(&m);
     zm_memory_free(&mem);

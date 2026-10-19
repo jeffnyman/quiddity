@@ -111,7 +111,7 @@ int accept_run(const char *script_path, accept_mode mode, const char *games_dir)
  * front, so that it is the command it was when it moves. With
  * close_fence, a fence the script ended inside is closed first. Nothing
  * is written for no lines. Returns 1, or 0 after filling in error. */
-int accept_append_tried(const char *script_path, int close_fence, char *const *lines, unsigned count, char *error);
+int accept_append_tried(const char *script_path, int close_fence, char *const *typed, unsigned count, char *error);
 
 /* The --create option: write a new script at script_path that names
  * game, with seed 1 and no commands, so that a run with --resume hands

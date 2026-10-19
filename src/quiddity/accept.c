@@ -1149,7 +1149,7 @@ static int write_whole_file(const char *path, const char *text)
     return ok;
 }
 
-int accept_append_tried(const char *script_path, int close_fence, char *const *lines, unsigned count, char *error)
+int accept_append_tried(const char *script_path, int close_fence, char *const *typed, unsigned count, char *error)
 {
     char *text;
     size_t length;
@@ -1184,7 +1184,7 @@ int accept_append_tried(const char *script_path, int close_fence, char *const *l
     }
     ok = fputs("\n```tried\n", file) >= 0 && ok;
     for (unsigned i = 0; i < count; i++) {
-        const char *line = lines[i];
+        const char *line = typed[i];
 
         /* A line that would be read as something other than a command
          * once it is moved above the fence gets the prompt in front,
