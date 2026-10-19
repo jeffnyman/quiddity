@@ -1,0 +1,37 @@
+# TerpEtude, Andrew Plotkin's interpreter etude: a menu of small
+# trials.
+
+! SEED=1
+! GAME=zcode-checkers/etude.z5
+
+1
+2
+3
+4
+5
+6
+7
+.
+8
+x
+ô
+<escape>
+.
+9
+testing quiddity
+>
+
+# Items 10 and 11 (timed input) are left out. The acceptance runner has
+# no clock: a timed read runs its interrupt routine once and then takes
+# the script's key, and the stream front end does not advertise timed
+# input. TerpEtude therefore reports the interrupt call as WRONG, which
+# describes the replay convention, not the interpreter. Timed input is
+# checked at the terminal instead.
+
+12
+>
+13
+>
+>
+14
+x
