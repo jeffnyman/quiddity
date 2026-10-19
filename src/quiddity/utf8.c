@@ -40,6 +40,71 @@ void utf8_put(FILE *out, uint16_t c)
     fwrite(bytes, 1, count, out);
 }
 
+static int is_high_surrogate(uint16_t unit)
+{
+    return unit >= 0xd800 && unit <= 0xdbff;
+}
+
+static int is_low_surrogate(uint16_t unit)
+{
+    return unit >= 0xdc00 && unit <= 0xdfff;
+}
+
+void utf8_put_unit(FILE *out, uint16_t unit, uint16_t *held)
+{
+    char bytes[4];
+
+    if (*held != 0) {
+        uint16_t high = *held;
+
+        *held = 0;
+        if (is_low_surrogate(unit)) {
+            fwrite(bytes, 1, utf8_encode_pair(high, unit, bytes), out);
+            return;
+        }
+        putc('?', out);
+    }
+    if (is_high_surrogate(unit)) {
+        *held = unit;
+        return;
+    }
+    if (is_low_surrogate(unit)) {
+        putc('?', out);
+        return;
+    }
+    fwrite(bytes, 1, utf8_encode(unit, bytes), out);
+}
+
+void utf8_put_end(FILE *out, uint16_t *held)
+{
+    if (*held != 0) {
+        *held = 0;
+        putc('?', out);
+    }
+}
+
+void utf8_put_units(FILE *out, const uint16_t *units, size_t count)
+{
+    uint16_t held = 0;
+
+    for (size_t i = 0; i < count; i++) {
+        utf8_put_unit(out, units[i], &held);
+    }
+    utf8_put_end(out, &held);
+}
+
+unsigned utf8_units(uint32_t c, uint16_t out[2])
+{
+    if (c < 0x10000u) {
+        out[0] = (uint16_t)c;
+        return 1;
+    }
+    c -= 0x10000u;
+    out[0] = (uint16_t)(0xd800u + (c >> 10));
+    out[1] = (uint16_t)(0xdc00u + (c & 0x3ffu));
+    return 2;
+}
+
 uint32_t utf8_next(const unsigned char *s, size_t *i)
 {
     unsigned char lead = s[*i];

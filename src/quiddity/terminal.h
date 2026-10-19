@@ -105,8 +105,13 @@ typedef struct terminal {
      * the player asked for them on the command line. */
     const char *transcript_path;
     FILE *transcript;
+    uint16_t transcript_held;   /* half of a surrogate pair, awaiting the other */
     const char *record_path;
     FILE *record;
+
+    /* The second half of a character typed as a surrogate pair at a
+     * read_char, for the next read_char. */
+    uint16_t pending_key;
 
     /* The file the last saved game went to or came from, offered as the
      * default at the next prompt. */

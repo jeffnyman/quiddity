@@ -35,6 +35,7 @@ quiddity_add_test(test_machine test_machine.c zmachine)
 quiddity_add_test(test_quetzal test_quetzal.c zmachine)
 quiddity_add_test(test_blorb   test_blorb.c   zmachine)
 quiddity_add_test(test_accept  test_accept.c  quiddity_accept)
+quiddity_add_test(test_utf8    test_utf8.c    quiddity_accept)
 
 # Acceptance scripts (see src/quiddity/script.h). Each script under
 # acceptance/ is a test of its own that plays it and compares the play with

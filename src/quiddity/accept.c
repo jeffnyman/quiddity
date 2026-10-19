@@ -562,13 +562,21 @@ static void decode_line(accept_play_state *p, const char *text, uint16_t *codes,
                 }
             }
         } else {
-            uint32_t unicode = utf8_next((const unsigned char *)text, &i);
+            /* A character beyond the Basic Multilingual Plane is typed
+             * as the two halves of its surrogate pair, if the story's
+             * extra characters table names them (utf8.h). */
+            uint16_t units[2], zscii[2];
+            unsigned n = utf8_units(utf8_next((const unsigned char *)text, &i), units);
 
-            if (unicode <= 0xffff) {
-                uint16_t zscii = zm_unicode_to_zscii(&p->mem, (uint16_t)unicode);
-
-                if (zscii != 0) {
-                    codes[(*count)++] = zscii;
+            for (unsigned k = 0; k < n; k++) {
+                zscii[k] = zm_unicode_to_zscii(&p->mem, units[k]);
+                if (zscii[k] == 0) {
+                    n = 0;
+                }
+            }
+            if (n > 0 && *count + n <= LINE_CODES) {
+                for (unsigned k = 0; k < n; k++) {
+                    codes[(*count)++] = zscii[k];
                 }
             }
         }
