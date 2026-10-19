@@ -632,9 +632,12 @@ uint16_t zm_machine_random(zm_machine *m, uint16_t range)
  * parent of nothing or testing an attribute of nothing, and a halt there
  * would leave some Infocom games unplayable. So the enquiries treat
  * nothing as an object with no parent, no children, no attributes, and
- * no properties of its own, which is what such code expects. Anything
- * that would change object 0, or print its name, is a fault, as there is
- * nothing to change (and Spec §15 print_obj asks for a halt).
+ * no properties of its own, which is what such code expects, and a
+ * change to nothing (set_attr, clear_attr, insert_obj, remove_obj)
+ * changes nothing, there being nothing to change. That is what Infocom's
+ * interpreters did, what Frotz does, and what the strictz test counts as
+ * correct; Rezrov does the same and reports it. Printing the name of
+ * nothing is still a fault, since Spec §15 print_obj asks for a halt.
  */
 
 /* Look up a property for get_prop, get_prop_addr, and put_prop. Faults
@@ -654,8 +657,8 @@ static int find_property(zm_machine *m, const zm_instruction *inst, uint16_t obj
     return zm_object_find_property(m->mem, object, number, prop);
 }
 
-/* Fault unless an object operand names a real object. */
-static uint16_t object_to_change(zm_machine *m, const zm_instruction *inst, uint16_t object)
+/* Fault unless an object operand names a real object to print. */
+static uint16_t object_to_print(zm_machine *m, const zm_instruction *inst, uint16_t object)
 {
     (void)m;
     if (object == 0) {
@@ -1661,11 +1664,13 @@ static void execute_1op(zm_machine *m, const zm_instruction *inst, const uint16_
     case 8:  /* call_1s */
         call_routine(m, ops[0], NULL, 0, inst->store);
         break;
-    case 9:  /* remove_obj */
-        zm_object_remove(m->mem, object_to_change(m, inst, ops[0]));
+    case 9:  /* remove_obj: of nothing, nothing. */
+        if (ops[0] != 0) {
+            zm_object_remove(m->mem, ops[0]);
+        }
         break;
     case 10: /* print_obj */
-        print_object_name(m, object_to_change(m, inst, ops[0]));
+        print_object_name(m, object_to_print(m, inst, ops[0]));
         break;
     case 11: /* ret */
         return_from_routine(m, ops[0]);
@@ -1748,17 +1753,23 @@ static void execute_2op(zm_machine *m, const zm_instruction *inst, const uint16_
     case 10: /* test_attr */
         branch(m, inst, ops[0] != 0 && zm_object_test_attribute(m->mem, ops[0], ops[1]));
         break;
-    case 11: /* set_attr */
-        zm_object_set_attribute(m->mem, object_to_change(m, inst, ops[0]), ops[1]);
+    case 11: /* set_attr: of nothing, nothing. */
+        if (ops[0] != 0) {
+            zm_object_set_attribute(m->mem, ops[0], ops[1]);
+        }
         break;
     case 12: /* clear_attr */
-        zm_object_clear_attribute(m->mem, object_to_change(m, inst, ops[0]), ops[1]);
+        if (ops[0] != 0) {
+            zm_object_clear_attribute(m->mem, ops[0], ops[1]);
+        }
         break;
     case 13: /* store */
         write_variable(m, variable_reference(inst, ops[0]), ops[1], 1);
         break;
-    case 14: /* insert_obj */
-        zm_object_insert(m->mem, object_to_change(m, inst, ops[0]), object_to_change(m, inst, ops[1]));
+    case 14: /* insert_obj: nothing is neither moved nor moved into. */
+        if (ops[0] != 0 && ops[1] != 0) {
+            zm_object_insert(m->mem, ops[0], ops[1]);
+        }
         break;
     case 15: /* loadw: the word at array + 2 * index. Addresses are 16
               * bits, so the sum wraps, which also lets an index be

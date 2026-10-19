@@ -1435,18 +1435,27 @@ static void test_object_opcodes(void)
     EMIT(&s, 0x12, 2, 40, G0);                                  /* get_prop_addr 2 40 -> G0 (no such number) */
     EMIT(&s, 0xe6, 0xbf, G0, 0xe5, 0x7f, ' ');                  /* 0 */
 
-    /* Enquiries about nothing. */
+    /* Enquiries about nothing, and changes to it, which change nothing:
+     * object 3 stays where it is and object 2 keeps its attribute. */
     EMIT(&s, 0x93, 0, G0);                                      /* get_parent 0 -> G0 */
     EMIT(&s, 0xe6, 0xbf, G0);                                   /* 0 */
     EMIT(&s, 0x92, 0, G0, 0x45);                                /* get_child 0 -> G0 ?~+5 */
     EMIT(&s, 0xe5, 0x7f, 'm');
     EMIT(&s, 0x0a, 0, 3, 0x45);                                 /* test_attr 0 3 ?~+5 */
     EMIT(&s, 0xe5, 0x7f, 'n');
+    EMIT(&s, 0x0e, 0, 1);                                       /* insert_obj 0 1 */
+    EMIT(&s, 0x0e, 3, 0);                                       /* insert_obj 3 0 */
+    EMIT(&s, 0x99, 0);                                          /* remove_obj 0 */
+    EMIT(&s, 0x0b, 0, 4);                                       /* set_attr 0 4 */
+    EMIT(&s, 0x0c, 0, 4);                                       /* clear_attr 0 4 */
+    EMIT(&s, 0x93, 3, G0);                                      /* get_parent 3 -> G0 */
+    EMIT(&s, 0xe5, 0x7f, ' ');
+    EMIT(&s, 0xe6, 0xbf, G0);                                   /* 1 */
     EMIT(&s, 0xba);
 
     run(&s, &out, &m, &mem);
     snprintf(expected, sizeof expected,
-             "1 2 3 0 4 2 3 0 ac 258 7 68 68 %u 1 0 0 4 5 3 2 0 -16657 255 0 0", (unsigned)(PROPS2 + 7));
+             "1 2 3 0 4 2 3 0 ac 258 7 68 68 %u 1 0 0 4 5 3 2 0 -16657 255 0 0 1", (unsigned)(PROPS2 + 7));
     CHECK_EQ_STR(out.text, expected);
 
     /* The table itself reflects the moves and writes. */
@@ -1525,10 +1534,10 @@ static void test_object_faults(void)
     EMIT(&s, 0x11, 2, 40, G0);                                  /* get_prop 2 40 -> G0 */
     expect_fault(&s, "property 40", &out);
 
-    /* Changing nothing. */
+    /* Printing the name of nothing (Spec §15 print_obj). */
     story_init(&s, 3);
     build_objects(&s);
-    EMIT(&s, 0x0e, 0, 1);                                       /* insert_obj 0 1 */
+    EMIT(&s, 0x9a, 0);                                          /* print_obj 0 */
     expect_fault(&s, "object 0", &out);
 
     story_init(&s, 3);
