@@ -1,0 +1,9 @@
+# Surrogate pair test: emoticons beyond the Basic Multilingual Plane,
+# printed and then read until escape.
+
+! SEED=1
+! GAME=zcode-checkers/smileys.z5
+
+😃
+ô
+<escape>

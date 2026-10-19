@@ -1,0 +1,12 @@
+
+UTF-16 surrogate pair test v0.1, by Borg
+Based on Unicode Test v1.0, by David Kinder
+
+Testing UTF-16 surrogate pairs.
+This sentence should end with 6 emoticons: 😃 😣 😈 😿 😇 😴 
+
+Now, testing input (ESC to quit)...
+Try inputing a character. You can try to copy an emoticon from above.
+ZSCII $00e0 = ?
+ZSCII $00e1 = ?
+ZSCII $00c2 = ô
