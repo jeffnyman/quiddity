@@ -1,0 +1,9 @@
+# Infocom's ZIP test for Version 3: the opcode checks print as it
+# starts, then the randomness check is skipped with return.
+
+! SEED=1
+! GAME=zcode-checkers/ziptest-r40-s840613.z3
+
+10
+>
+THE AA BBBB
