@@ -1,0 +1,12 @@
+# Strict Z tests every object opcode against object 0, which is not
+# an object. Each one is reported as the game's error and answered
+# with nothing, which is what the test calls correct. No transcript.
+
+! SEED=1
+! GAME=zcode-checkers/strictz.z5
+
+n
+>
+>
+>
+>
