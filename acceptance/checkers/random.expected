@@ -1,0 +1,732 @@
+
+Z-machine Randomization Test Suite
+by David Griffith 2002 - 2024
+This program is in the public domain.
+Originally distributed with Frotz.
+Release 2 / Serial number 240229
+
+Screen Height: 24
+Screen Width:  80
+
+1) Bellcurve graph.
+2) Spread graph.
+q) Quit.
+
+Please select a test: 
+
+This program drops "balls" from the very top-middle of a vertical two-dimensional field filled with pegs.  The balls bounce off the pegs either left or right until they drop into one of several slots at the bottom where they stack up.  There are one less than half as many levels of pegs as there are slots.  This means that if a ball always bounces left, it will fall the leftmost slot.  Likewise, a ball always bouncing right will fall into the rightmost slot. According to the laws of probability, if the bounces are totally random, a smooth bellcurve should appear when the balls are counted and put into a bar graph.  This program displays such a bar graph.
+
+A ball which settles in the center of the field is represented by '|'.
+A ball which settles to the left or right of the center is represented by 'o'.
+
+How many drops (1 through 9) per ball drawn? 
+
+Press any key to begin.  
+prev: 0            <space>: pause.
+drops: 1           Press 'q' to quit.
+granularity: 1
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                       |
+=======================================|========================================
+
+Press any key to begin.  
+prev: 0            <space>: pause.
+drops: 2           Press 'q' to quit.
+granularity: 1
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                               o       |
+=======================================|========================================
+
+Press any key to begin.  
+prev: 0            <space>: pause.
+drops: 3           Press 'q' to quit.
+granularity: 1
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                               o       |               o
+=======================================|========================================
+
+Press any key to begin.  
+prev: 0            <space>: pause.
+drops: 4           Press 'q' to quit.
+granularity: 1
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                       |
+                               o       |               o
+=======================================|========================================
+
+Press any key to begin.  
+prev: 0            <space>: pause.
+drops: 5           Press 'q' to quit.
+granularity: 1
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                       |
+                               o o     |               o
+=======================================|========================================
+
+Press any key to begin.  
+prev: 0            ===  Paused  ===
+drops: 5           Press 'q' to quit.
+granularity: 1
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                       |
+                               o o     |               o
+=======================================|========================================
+
+Press any key to begin.  
+prev: 0            <space>: pause.
+drops: 6           Press 'q' to quit.
+granularity: 1
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                       |
+                               o o     |   o           o
+=======================================|========================================
+
+Press any key to begin.  
+prev: 0            <space>: pause.
+drops: 7           Press 'q' to quit.
+granularity: 1
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                       |
+                               o o     |   o         o o
+=======================================|========================================
+
+Press any key to begin.  
+prev: 0            <space>: pause.
+drops: 8           Press 'q' to quit.
+granularity: 1
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                       |
+                               o o     |   o   o     o o
+=======================================|========================================
+
+Press any key to begin.  
+prev: 0            <space>: pause.
+drops: 9           Press 'q' to quit.
+granularity: 1
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                       |   o
+                               o o     |   o   o     o o
+=======================================|========================================
+
+Press any key to begin.  
+prev: 0            <space>: pause.
+drops: 10          Press 'q' to quit.
+granularity: 1
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                       |   o
+                               o o     |   o o o     o o
+=======================================|========================================
+
+Press any key to begin.  
+prev: 0            ===  Paused  ===
+drops: 10          Press 'q' to quit.
+granularity: 1
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                       |   o
+                               o o     |   o o o     o o
+=======================================|========================================
+
+Press any key to begin.  
+prev: 0            <space>: pause.
+drops: 11          Press 'q' to quit.
+granularity: 1
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                       |
+                                       |   o
+                               o o     |   o o o     o o
+=======================================|========================================
+
+Press any key to begin.  
+prev: 0            <space>: pause.
+drops: 12          Press 'q' to quit.
+granularity: 1
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                       |
+                                       |   o
+                               o o o   |   o o o     o o
+=======================================|========================================
+
+Press any key to begin.  
+prev: 0            ===  Paused  ===
+drops: 12          Press 'q' to quit.
+granularity: 1
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                       |
+                                       |   o
+                               o o o   |   o o o     o o
+=======================================|========================================
+
+Press any key to begin.  
+prev: 0            <space>: pause.
+drops: 13          Press 'q' to quit.
+granularity: 1
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                       |
+                                       |
+                                       |   o
+                               o o o   |   o o o     o o
+=======================================|========================================
+
+Press any key to begin.  
+prev: 0            <space>: pause.
+drops: 14          Press 'q' to quit.
+granularity: 1
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                       |
+                                       |
+                                       |   o
+                               o o o o |   o o o     o o
+=======================================|========================================
+
+Press any key to begin.  
+prev: 0            <space>: pause.
+drops: 15          Press 'q' to quit.
+granularity: 1
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                       |
+                                       |
+                                       |   o o
+                               o o o o |   o o o     o o
+=======================================|========================================
+
+Press any key to begin.  
+Z-machine Randomization Test Suite
+by David Griffith 2002 - 2024
+This program is in the public domain.
+Originally distributed with Frotz.
+Release 2 / Serial number 240229
+
+Screen Height: 24
+Screen Width:  80
+
+1) Bellcurve graph.
+2) Spread graph.
+q) Quit.
+
+Please select a test: 
+
+This program draws random numbers in the range n-1, where n is the number of columns or rows available on screen, up to 80. In the long run, all the bars should be just about the same length.
+
+Press any key to begin.  
+iterations: 50     <space>: Pause.
+granularity: 1     'q': Quit.
+                  o                       o               o
+                  o                       o               o
+                  o                       o               o
+                  o                       o               o
+                  o                       o               o
+                  o                       o               o
+                  o                       o               o
+     o            o    o      o  o        o o             o o        o  o
+     o            o    o      o  o        o o             o o        o  o
+     o            o    o      o  o        o o             o o        o  o
+     o            o    o      o  o        o o             o o        o  o
+     o            o    o      o  o        o o             o o        o  o
+     o            o    o      o  o        o o             o o        o  o
+     o            o    o      o  o        o o             o o        o  o
+o  ooooooo   oo   o    o o    o  o     oo ooo  oooo  o   oo o oo   oooo o  o
+o  ooooooo   oo   o    o o    o  o     oo ooo  oooo  o   oo o oo   oooo o  o
+o  ooooooo   oo   o    o o    o  o     oo ooo  oooo  o   oo o oo   oooo o  o
+o  ooooooo   oo   o    o o    o  o     oo ooo  oooo  o   oo o oo   oooo o  o
+o  ooooooo   oo   o    o o    o  o     oo ooo  oooo  o   oo o oo   oooo o  o
+o  ooooooo   oo   o    o o    o  o     oo ooo  oooo  o   oo o oo   oooo o  o
+o  ooooooo   oo   o    o o    o  o     oo ooo  oooo  o   oo o oo   oooo o  o
+===============================================================================
+
+Press any key to begin.  
+iterations: 100    <space>: Pause.
+granularity: 1     'q': Quit.
+         o                                o
+         o                                o
+         o                                o
+         o                                o
+         o                                o
+     o   o                    o        o  o
+     o   o                    o        o  o
+     o   o                    o        o  o
+     o   o                    o        o  o
+     o  oo        o    o      o        o  o      o        o o  o
+     o  oo        o    o      o        o  o      o        o o  o
+     o  oo        o    o      o        o  o      o        o o  o
+     o  oo        o    o      o        o  o      o        o o  o
+     o oooo    o  o    o      oo o     o  ooo  oooo       o o oo     o  o  o
+     o oooo    o  o    o      oo o     o  ooo  oooo       o o oo     o  o  o
+     o oooo    o  o    o      oo o     o  ooo  oooo       o o oo     o  o  o
+     o oooo    o  o    o      oo o     o  ooo  oooo       o o oo     o  o  o
+oo ooooooooo oooo o  ooo o o  ooooo    oo ooo  oooo  o ooooooooo   oooooo ooo o
+oo ooooooooo oooo o  ooo o o  ooooo    oo ooo  oooo  o ooooooooo   oooooo ooo o
+oo ooooooooo oooo o  ooo o o  ooooo    oo ooo  oooo  o ooooooooo   oooooo ooo o
+oo ooooooooo oooo o  ooo o o  ooooo    oo ooo  oooo  o ooooooooo   oooooo ooo o
+===============================================================================
+
+Press any key to begin.  
+iterations: 150    <space>: Pause.
+granularity: 1     'q': Quit.
+                                          o
+                                          o
+                                          o
+                                          o
+         o                                o
+         o                                o
+         o                                o
+     o   oo       o           o        o  oo              o   o
+     o   oo       o           o        o  oo              o   o
+     o   oo       o           o        o  oo              o   o
+     o   oo       o           o        o  oo              o   o
+     o  ooo    o  o    o   o ooo       o  ooooo ooo       o o oo     o o   o
+     o  ooo    o  o    o   o ooo       o  ooooo ooo       o o oo     o o   o
+     o  ooo    o  o    o   o ooo       o  ooooo ooo       o o oo     o o   o
+   o ooooooo oooo o  oooo  o ooooo   o o  ooooooooo    o  o o oo     o oo  o
+   o ooooooo oooo o  oooo  o ooooo   o o  ooooooooo    o  o o oo     o oo  o
+   o ooooooo oooo o  oooo  o ooooo   o o  ooooooooo    o  o o oo     o oo  o
+   o ooooooo oooo o  oooo  o ooooo   o o  ooooooooo    o  o o oo     o oo  o
+oo oooooooooooooo oooooooo o ooooooooo oo ooooooooo  o oooooooooo  oooooooooo o
+oo oooooooooooooo oooooooo o ooooooooo oo ooooooooo  o oooooooooo  oooooooooo o
+oo oooooooooooooo oooooooo o ooooooooo oo ooooooooo  o oooooooooo  oooooooooo o
+===============================================================================
+
+Press any key to begin.  
+iterations: 200    <space>: Pause.
+granularity: 1     'q': Quit.
+                             o
+                             o
+                             o
+                             o
+                             o
+                             o
+                             o            o
+                             o            o
+ o   o   o                   o       o    o       o           o
+ o   o   o                   o       o    o       o           o
+ o   o   o                   o       o    o       o           o
+ o   o o oo    oo o        o oo  o   o o  oo o o oo       o o o
+ o   o o oo    oo o        o oo  o   o o  oo o o oo       o o o
+ o   o o oo    oo o        o oo  o   o o  oo o o oo       o o o
+ o   oooooo    oo o   oo   o ooooo   o o  ooooooooo    o  o o oo     o o   o
+ o   oooooo    oo o   oo   o ooooo   o o  ooooooooo    o  o o oo     o o   o
+oo o oooooooooooooo oooooo o ooooo  oo o  oooooooooo  ooo o o oo     o ooo o  o
+oo o oooooooooooooo oooooo o ooooo  oo o  oooooooooo  ooo o o oo     o ooo o  o
+oo o oooooooooooooo oooooo o ooooo  oo o  oooooooooo  ooo o o oo     o ooo o  o
+oo ooooooooooooooooooooooo ooooooooooo oo oooooooooooooooooooooooo oooooooooo o
+oo ooooooooooooooooooooooo ooooooooooo oo oooooooooooooooooooooooo oooooooooo o
+===============================================================================
+
+Press any key to begin.  
+iterations: 250    <space>: Pause.
+granularity: 1     'q': Quit.
+         o                   o                         o
+         o                   o                         o
+         o                   o                         o
+         oo                  o            o            o
+         oo                  o            o            o
+         oo                  o            o            o
+         oo     o            o       o    o            o
+         oo     o            o       o    o            o
+ o   o  ooo     o        o   oo oo   o    oo  o   o   oo  o o o
+ o   o  ooo     o        o   oo oo   o    oo  o   o   oo  o o o
+ o   o  ooo     o        o   oo oo   o    oo  o   o   oo  o o o
+ o   oooooo    oo o   o  o o oo oo   o o  oo oooooo   oo  o o oo              o
+ o   oooooo    oo o   o  o o oo oo   o o  oo oooooo   oo  o o oo              o
+ o   oooooo    oo o   o  o o oo oo   o o  oo oooooo   oo  o o oo              o
+oo   ooooooo oooo o   oo o o ooooo   o o  ooooooooo   oo  o o oo     o ooo o  o
+oo   ooooooo oooo o   oo o o ooooo   o o  ooooooooo   oo  o o oo     o ooo o  o
+oo o oooooooooooooo oooooo o oooooo oo o  oooooooooo  ooo o o oooo   ooooo o  o
+oo o oooooooooooooo oooooo o oooooo oo o  oooooooooo  ooo o o oooo   ooooo o  o
+oo o oooooooooooooo oooooo o oooooo oo o  oooooooooo  ooo o o oooo   ooooo o  o
+oo ooooooooooooooooooooooo oooooooooooooo oooooooooooooooooooooooo oooooooooooo
+oo ooooooooooooooooooooooo oooooooooooooo oooooooooooooooooooooooo oooooooooooo
+===============================================================================
+
+Press any key to begin.  
+iterations: 300    <space>: Pause.
+granularity: 1     'q': Quit.
+                             o                         o
+                             o                         o
+                             o                         o
+          o                  o                         o
+          o                  o                         o
+         oo                  o                         o
+         oo                  o                         o
+        oooo                 o            o           oo                      o
+        oooo                 o            o           oo                      o
+     o ooooo    o        o   o       o    oo          oo  o o          o      o
+     o ooooo    o        o   o       o    oo          oo  o o          o      o
+ o   o ooooo    o     o  o o oo oo   o o  oo  o o o   oo  o o o      o o      o
+ o   o ooooo    o     o  o o oo oo   o o  oo  o o o   oo  o o o      o o      o
+oo   oooooooo ooo o   o  o o oo oo   o o  oo oooooo   oo  o o oo     o oo     o
+oo   oooooooo ooo o   o  o o oo oo   o o  oo oooooo   oo  o o oo     o oo     o
+oo   oooooooooooooo  ooo o o oooooo  o o  ooooooooo   oo  o oooo     ooooo o  o
+oo   oooooooooooooo  ooo o o oooooo  o o  ooooooooo   oo  o oooo     ooooo o  o
+oo oooooooooooooooo oooooo ooooooooooo o  oooooooooo  ooo o oooooo o ooooooo  o
+oo oooooooooooooooo oooooo ooooooooooo o  oooooooooo  ooo o oooooo o ooooooo  o
+oo ooooooooooooooooooooooo ooooooooooooooooooooooooooooooooooooooo oooooooooooo
+oo ooooooooooooooooooooooo ooooooooooooooooooooooooooooooooooooooo oooooooooooo
+===============================================================================
+
+Press any key to begin.  
+iterations: 350    <space>: Pause.
+granularity: 1     'q': Quit.
+                             o                         o
+                             o                         o
+                             o                         o
+          o                  o                         o                      o
+          o                  o                         o                      o
+        ooo                  oo               o   o   oo                      o
+        ooo                  oo               o   o   oo                      o
+       ooooo    o            oo        o  o   o   o   oo                      o
+       ooooo    o            oo        o  o   o   o   oo                      o
+ o   o ooooo    o o   oo o   oo      o o  oo  o   o   oo  o o        o o      o
+ o   o ooooo    o o   oo o   oo      o o  oo  o   o   oo  o o        o o      o
+oo   o oooooo  oo o   oo o o oo oo   o o  oo  o o o   oo  o o oo     o oo  o  o
+oo   o oooooo  oo o   oo o o oo oo   o o  oo  o o o   oo  o o oo     o oo  o  o
+oo  ooooooooooooo o  ooo o o oo oo o o o  oo oooooo   oo  o o oo o   oooo  o  o
+oo  ooooooooooooo o  ooo o o oo oo o o o  oo oooooo   oo  o o oo o   oooo  o  o
+oo oooooooooooooooo  ooo o ooooooooooo o  oooooooooo  ooo o oooo o   ooooooo  o
+oo oooooooooooooooo  ooo o ooooooooooo o  oooooooooo  ooo o oooo o   ooooooo  o
+oo ooooooooooooooooooooooo ooooooooooo o oooooooooooo ooo o oooooo o ooooooo  o
+oo ooooooooooooooooooooooo ooooooooooo o oooooooooooo ooo o oooooo o ooooooo  o
+oo ooooooooooooooooooooooo ooooooooooooooooooooooooooooooooooooooo oooooooooooo
+oo ooooooooooooooooooooooo ooooooooooooooooooooooooooooooooooooooo oooooooooooo
+===============================================================================
+
+Press any key to begin.  
+iterations: 400    <space>: Pause.
+granularity: 1     'q': Quit.
+          o                  o                         o
+          o                  o                         o
+          o                  o                         o
+          o                  o                         o
+          oo                 o                o        o                      o
+          oo                 o                o        o                      o
+       ooooo          o      oo        o   o  o   o   oo               o      o
+       ooooo          o      oo        o   o  o   o   oo               o      o
+     o oooooo   o     o  o   oo        o  oo  o o o   oo  o o        o o      o
+     o oooooo   o     o  o   oo        o  oo  o o o   oo  o o        o o      o
+ o   o ooooooo  o o   oo o o oo oo   o o  oo  o ooo   oo  o o o      o o      o
+ o   o ooooooo  o o   oo o o oo oo   o o  oo  o ooo   oo  o o o      o o      o
+oo   ooooooooo oo o   oo o o oo oo o o o  oo  o ooo   oo  o o oo o   o oo  o  o
+oo   ooooooooo oo o   oo o o oo oo o o o  oo  o ooo   oo  o o oo o   o oo  o  o
+oo oooooooooooooo o  ooo o o oo oooooo o ooo ooooooo  oo  o oooo o   oooo  o  o
+oo oooooooooooooo o  ooo o o oo oooooo o ooo ooooooo  oo  o oooo o   oooo  o  o
+oo ooooooooooooooooo ooo o ooooooooooo o oooooooooooo ooo o oooooo o ooooooo  o
+oo ooooooooooooooooo ooo o ooooooooooo o oooooooooooo ooo o oooooo o ooooooo  o
+oo ooooooooooooooooooooooo ooooooooooo o oooooooooooooooo oooooooo oooooooooo o
+oo ooooooooooooooooooooooo ooooooooooo o oooooooooooooooo oooooooo oooooooooo o
+oo ooooooooooooooooooooooo ooooooooooooooooooooooooooooooooooooooo oooooooooooo
+===============================================================================
+
+Press any key to begin.  
+Z-machine Randomization Test Suite
+by David Griffith 2002 - 2024
+This program is in the public domain.
+Originally distributed with Frotz.
+Release 2 / Serial number 240229
+
+Screen Height: 24
+Screen Width:  80
+
+1) Bellcurve graph.
+2) Spread graph.
+q) Quit.
+
+Please select a test: 

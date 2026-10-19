@@ -1,0 +1,24 @@
+# The random opcode under the session seed, drawn two ways. The
+# screen is told to be 24 lines high so that each recorded screen is
+# a screenful and not the stream's 255 rows. The bell curve drops two
+# balls per key, the timed read's routine ending the read once before
+# the key is taken, and resets once a lane reaches the top; the spread
+# draws 50 numbers between reads, two screens per key.
+
+! SEED=1
+! GAME=zcode-checkers/random.z5
+! UPPER=yes
+! HEIGHT=24
+
+1
+1
+>
+(15 lines of >)
+q
+2
+>
+>
+>
+>
+q
+q
