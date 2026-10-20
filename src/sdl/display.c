@@ -901,6 +901,16 @@ int display_open(display *d, const zm_memory *mem, const char *story_path, zm_io
         display_close(d);
         return 0;
     }
+
+    /* Centred, once it has its size, on the display whose scale the font
+     * was opened for. Where the system places windows itself, as Wayland
+     * does, this is only a request. */
+    {
+        SDL_DisplayID screen = SDL_GetDisplayForWindow(d->window);
+
+        SDL_SetWindowPosition(d->window, (int)SDL_WINDOWPOS_CENTERED_DISPLAY(screen),
+                              (int)SDL_WINDOWPOS_CENTERED_DISPLAY(screen));
+    }
     SDL_SyncWindow(d->window);
     d->renderer = SDL_CreateRenderer(d->window, NULL);
     if (d->renderer == NULL || !grid_init(&d->grid, mem->version, DISPLAY_COLUMNS, DISPLAY_ROWS)) {
