@@ -7,7 +7,8 @@
       "hidden": true,
       "binaryDir": "${sourceDir}/build/${presetName}",
       "cacheVariables": {
-        "QUIDDITY_BUILD_TESTS": "ON"
+        "QUIDDITY_BUILD_TESTS": "ON",
+        "QUIDDITY_SDL": "ON"
       }
     },
     {
@@ -48,7 +49,8 @@
       "displayName": "Clang with AddressSanitizer and UBSan",
       "inherits": "clang",
       "cacheVariables": {
-        "QUIDDITY_SANITIZE": "ON"
+        "QUIDDITY_SANITIZE": "ON",
+        "QUIDDITY_SDL": "OFF"
       }
     },
     {

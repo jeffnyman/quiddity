@@ -37,6 +37,12 @@ quiddity_add_test(test_blorb   test_blorb.c   zmachine)
 quiddity_add_test(test_accept  test_accept.c  quiddity_accept)
 quiddity_add_test(test_utf8    test_utf8.c    quiddity_accept)
 
+# The SDL front end has no tests of its own yet; asking it for its version
+# shows that it and the libraries under it linked and start.
+if(TARGET quiddity-sdl)
+    add_test(NAME sdl_version COMMAND quiddity-sdl --version)
+endif()
+
 # Acceptance scripts (see src/quiddity/script.h). Each script under
 # acceptance/ is a test of its own that plays it and compares the play with
 # the recording beside it. The games most of them name live outside the

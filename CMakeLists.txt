@@ -44,11 +44,26 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
 option(QUIDDITY_BUILD_TESTS "Build the unit tests" ON)
 option(QUIDDITY_SANITIZE "Enable AddressSanitizer and UndefinedBehaviorSanitizer (GCC/Clang only)" OFF)
+option(QUIDDITY_SDL "Build the SDL front end, quiddity-sdl" OFF)
+
+# MSVC links its C runtime into each program rather than leaving it to a
+# DLL, so that what is built runs on a machine without the Visual C++
+# redistributable. Every target must agree on this, the libraries the
+# SDL front end is built on included, so it is set for the whole build.
+set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 
 include(cmake/warnings.cmake)
 
+if(QUIDDITY_SDL)
+    include(cmake/sdl.cmake)
+endif()
+
 add_subdirectory(src/zmachine)
 add_subdirectory(src/quiddity)
+
+if(QUIDDITY_SDL)
+    add_subdirectory(src/sdl)
+endif()
 
 if(QUIDDITY_BUILD_TESTS)
     enable_testing()

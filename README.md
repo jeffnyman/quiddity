@@ -70,6 +70,8 @@ ctest --preset gcc
 
 The `asan` preset builds with AddressSanitizer and UndefinedBehaviorSanitizer and is the one to run tests under when something is suspected of misbehaving.
 
+Every preset but `asan` also builds `quiddity-sdl`, the windowed front end, which is drawn with [SDL3](https://www.libsdl.org/). It is at an early stage: for now it opens a window and nothing more. CMake downloads pinned releases of SDL3, SDL_ttf, SDL_image, and FreeType when a preset is first configured, checks each against its hash, and builds them into the program, so nothing need be installed beforehand and the result is one executable with no libraries beside it. On Windows the C runtime is built in as well. On Linux, SDL looks for X11, Wayland, and the sound servers when the program runs, but can only do that if their development headers were present when it was configured; [SDL's notes on Linux](https://wiki.libsdl.org/SDL3/README-linux) list the packages. To build without the front end, and so without the download, set `QUIDDITY_SDL` to `OFF`; to build it on the system's own SDL3 libraries instead of the pinned ones, set `QUIDDITY_SYSTEM_SDL` to `ON`.
+
 Every build puts its executables under `build/<preset>/bin`. The Visual Studio generator adds a configuration folder, so after a `msvc` build the interpreter is at `build/msvc/bin/Debug/quiddity.exe`; after a `gcc` build it is at `build/gcc/bin/quiddity`. Run it from there:
 
 ```
