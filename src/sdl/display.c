@@ -24,9 +24,19 @@
  * inside the machine. */
 static SDL_Window *report_window;
 
-/* The colours, for now the only ones there are. */
-static const SDL_Color foreground = { 0x20, 0x20, 0x20, 0xff };
-static const SDL_Color background = { 0xfa, 0xfa, 0xf7, 0xff };
+/* The themes: the colours text and background are drawn in, and what
+ * the game is told they are (Spec §8.3.1, as codes 2 to 9). Neither is
+ * quite black or white, which is easier to read for long. Reverse video
+ * swaps the two, so the status line is the one inverted. */
+static const struct theme_colours {
+    SDL_Color foreground;
+    SDL_Color background;
+    unsigned game_foreground;
+    unsigned game_background;
+} themes[] = {
+    [DISPLAY_THEME_LIGHT] = { { 0x20, 0x20, 0x20, 0xff }, { 0xfa, 0xfa, 0xf7, 0xff }, 2, 9 },  /* black on white */
+    [DISPLAY_THEME_DARK] = { { 0xd8, 0xd8, 0xd8, 0xff }, { 0x1a, 0x1a, 0x1a, 0xff }, 9, 2 },   /* white on black */
+};
 
 /*
  * Drawing.
@@ -66,7 +76,7 @@ static SDL_Texture *glyph(display *d, uint32_t ch)
 static void draw_cell(display *d, unsigned row, unsigned column, uint32_t ch, unsigned style)
 {
     SDL_FRect box;
-    SDL_Color ink = foreground;
+    SDL_Color ink = d->foreground;
     SDL_Texture *texture;
 
     box.x = (float)(d->margin + (int)column * d->cell_width);
@@ -74,9 +84,9 @@ static void draw_cell(display *d, unsigned row, unsigned column, uint32_t ch, un
     box.w = (float)d->cell_width;
     box.h = (float)d->cell_height;
     if (style & ZM_STYLE_REVERSE) {
-        SDL_SetRenderDrawColor(d->renderer, foreground.r, foreground.g, foreground.b, foreground.a);
+        SDL_SetRenderDrawColor(d->renderer, d->foreground.r, d->foreground.g, d->foreground.b, d->foreground.a);
         SDL_RenderFillRect(d->renderer, &box);
-        ink = background;
+        ink = d->background;
     }
     if (ch == ' ') {
         return;
@@ -113,7 +123,7 @@ static void draw(display *d)
 {
     grid *g = &d->grid;
 
-    SDL_SetRenderDrawColor(d->renderer, background.r, background.g, background.b, background.a);
+    SDL_SetRenderDrawColor(d->renderer, d->background.r, d->background.g, d->background.b, d->background.a);
     SDL_RenderClear(d->renderer);
     for (unsigned r = 0; r < g->rows; r++) {
         for (unsigned c = 0; c < g->columns; c++) {
@@ -140,7 +150,7 @@ static void draw(display *d)
         caret.y = (float)(d->margin + (int)row * d->cell_height);
         caret.w = (float)(d->cell_width / 8 > 2 ? d->cell_width / 8 : 2);
         caret.h = (float)d->cell_height;
-        SDL_SetRenderDrawColor(d->renderer, foreground.r, foreground.g, foreground.b, foreground.a);
+        SDL_SetRenderDrawColor(d->renderer, d->foreground.r, d->foreground.g, d->foreground.b, d->foreground.a);
         SDL_RenderFillRect(d->renderer, &caret);
     }
     if (d->more) {
@@ -871,13 +881,20 @@ static int fit_window(display *d)
     return SDL_SetWindowSize(d->window, (int)((float)width / density + 0.5f), (int)((float)height / density + 0.5f));
 }
 
-int display_open(display *d, const zm_memory *mem, const char *story_path, zm_io *io)
+int display_open(display *d, const zm_memory *mem, const char *story_path, display_theme theme, zm_io *io)
 {
     char name[DISPLAY_PATH_MAX];
     char title[DISPLAY_PATH_MAX + 16];
 
     memset(d, 0, sizeof *d);
     d->mem = mem;
+
+    /* The theme the system is set to, unless the player chose one. */
+    if (theme == DISPLAY_THEME_SYSTEM) {
+        theme = SDL_GetSystemTheme() == SDL_SYSTEM_THEME_DARK ? DISPLAY_THEME_DARK : DISPLAY_THEME_LIGHT;
+    }
+    d->foreground = themes[theme].foreground;
+    d->background = themes[theme].background;
     d->font_number = 1;
     directory_of(story_path, d->story_directory, sizeof d->story_directory);
     files_default_save_name(story_path, name, sizeof name);
@@ -929,8 +946,8 @@ int display_open(display *d, const zm_memory *mem, const char *story_path, zm_io
     io->screen_height = DISPLAY_ROWS;
     io->timed_input = 1;
     io->styles = ZM_STYLE_REVERSE | ZM_STYLE_FIXED_PITCH;
-    io->default_foreground = 2;     /* black */
-    io->default_background = 9;     /* white */
+    io->default_foreground = themes[theme].game_foreground;
+    io->default_background = themes[theme].game_background;
 
     io->print_char = display_print_char;
     io->print_unicode = display_print_unicode;

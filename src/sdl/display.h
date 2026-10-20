@@ -42,6 +42,16 @@
 #define DISPLAY_HISTORY 32
 #define DISPLAY_INPUT_MAX 256
 
+/* The colours the window is drawn in: those the system is set to, light
+ * or dark, or one of them chosen. A theme lasts the session, since a
+ * game is told the colours at the start (Spec §8.3) and may have chosen
+ * its own by them. */
+typedef enum display_theme {
+    DISPLAY_THEME_SYSTEM,
+    DISPLAY_THEME_LIGHT,
+    DISPLAY_THEME_DARK
+} display_theme;
+
 typedef struct display {
     const zm_memory *mem;
     SDL_Window *window;
@@ -58,6 +68,10 @@ typedef struct display {
     int margin;
 
     grid grid;
+
+    /* The theme's colours, for text and for the background. */
+    SDL_Color foreground;
+    SDL_Color background;
 
     /* The font the game last chose (Spec §8.1.2), 1 or 4, which are the
      * same one here. */
@@ -111,10 +125,10 @@ typedef struct display {
  * if they chose none. */
 int display_choose_story(char *path);
 
-/* Open the window for a story, and fill in the I/O struct to point at it.
- * SDL and SDL_ttf must already be started. Returns 0, with the reason
- * given by SDL_GetError(), if the window cannot be had. */
-int display_open(display *d, const zm_memory *mem, const char *story_path, zm_io *io);
+/* Open the window for a story, in a theme, and fill in the I/O struct to
+ * point at it. SDL and SDL_ttf must already be started. Returns 0, with
+ * the reason given by SDL_GetError(), if the window cannot be had. */
+int display_open(display *d, const zm_memory *mem, const char *story_path, display_theme theme, zm_io *io);
 
 /* The game is over: unless the player closed the window, leave its last
  * words up until they press a key or close it. */

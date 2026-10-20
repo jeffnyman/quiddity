@@ -39,6 +39,7 @@ static void print_usage(FILE *out)
           "\n"
           "Options:\n"
           "  -s, --seed <number>  Seed the game's random numbers, so that a play repeats.\n"
+          "  -t, --theme <name>   Draw in light or dark colours; otherwise as the system is set.\n"
           "  -h, --help           Show this help and exit.\n"
           "  -v, --version        Show the version, and those of the libraries, and exit.\n"
           "\n"
@@ -71,7 +72,7 @@ static void fatal(const char *message)
 
 /* Load the story and play it in a window until it ends or the window is
  * closed. */
-static int play(const char *path, unsigned long seed)
+static int play(const char *path, unsigned long seed, display_theme theme)
 {
     zm_memory mem;
     zm_machine machine;
@@ -87,7 +88,7 @@ static int play(const char *path, unsigned long seed)
         display_report(message);
         return EXIT_FAILURE;
     }
-    if (!display_open(&d, &mem, path, &io)) {
+    if (!display_open(&d, &mem, path, theme, &io)) {
         snprintf(message, sizeof message, "cannot open a window: %s", SDL_GetError());
         display_report(message);
         zm_memory_free(&mem);
@@ -120,6 +121,7 @@ static int play(const char *path, unsigned long seed)
 int main(int argc, char *argv[])
 {
     unsigned long seed = 0;
+    display_theme theme = DISPLAY_THEME_SYSTEM;
     const char *path = NULL;
     char chosen[DISPLAY_PATH_MAX];
     int result;
@@ -148,6 +150,20 @@ int main(int argc, char *argv[])
             seed = strtoul(argv[++i], &end, 10);
             if (*argv[i] == '\0' || *end != '\0' || seed == 0 || seed > 0xffffffffUL) {
                 fprintf(stderr, "quiddity-sdl: the seed must be a whole number from 1 to 4294967295\n\n");
+                print_usage(stderr);
+                return EXIT_USAGE;
+            }
+            continue;
+        }
+        if (strcmp(arg, "-t") == 0 || strcmp(arg, "--theme") == 0) {
+            const char *name = i + 1 < argc ? argv[++i] : "";
+
+            if (strcmp(name, "light") == 0) {
+                theme = DISPLAY_THEME_LIGHT;
+            } else if (strcmp(name, "dark") == 0) {
+                theme = DISPLAY_THEME_DARK;
+            } else {
+                fprintf(stderr, "quiddity-sdl: the theme must be light or dark\n\n");
                 print_usage(stderr);
                 return EXIT_USAGE;
             }
@@ -185,7 +201,7 @@ int main(int argc, char *argv[])
         }
         path = chosen;
     }
-    result = play(path, seed);
+    result = play(path, seed, theme);
 
     TTF_Quit();
     SDL_Quit();
