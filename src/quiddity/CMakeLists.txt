@@ -18,6 +18,15 @@ target_include_directories(quiddity_accept PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(quiddity_accept PUBLIC zmachine)
 quiddity_apply_warnings(quiddity_accept)
 
+# The rules for naming saved games and auxiliary files, which every front
+# end shares.
+add_library(quiddity_files STATIC
+    files.c
+)
+
+target_include_directories(quiddity_files PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+quiddity_apply_warnings(quiddity_files)
+
 add_executable(quiddity
     info.c
     main.c
@@ -32,6 +41,6 @@ target_compile_definitions(quiddity PRIVATE
 # naming the machine after it keeps the static libraries in dependency
 # order, so the linker is not handed zmachine twice. The front end uses
 # the machine directly as well, which is why it is still named here.
-target_link_libraries(quiddity PRIVATE quiddity_accept zmachine)
+target_link_libraries(quiddity PRIVATE quiddity_accept quiddity_files zmachine)
 
 quiddity_apply_warnings(quiddity)

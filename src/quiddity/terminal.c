@@ -7,9 +7,9 @@
 #endif
 
 #include "terminal.h"
+#include "files.h"
 #include "utf8.h"
 
-#include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -919,59 +919,6 @@ static int terminal_read_char(void *context, unsigned timeout)
  * Saved games and auxiliary files (Spec §15 save and restore, §7.6).
  */
 
-/* The default name for a saved game: the story file's own name with its
- * extension replaced by .sav, in the directory the player is in. */
-static void default_save_name(const char *story_path, char *name, size_t size)
-{
-    const char *base = story_path;
-    const char *dot;
-    size_t length;
-
-    for (const char *p = story_path; *p != '\0'; p++) {
-        if (*p == '/' || *p == '\\') {
-            base = p + 1;
-        }
-    }
-    dot = strrchr(base, '.');
-    length = dot != NULL && dot != base ? (size_t)(dot - base) : strlen(base);
-    if (length > size - 5) {
-        length = size - 5;
-    }
-    memcpy(name, base, length);
-    strcpy(name + length, ".sav");
-}
-
-/* Spec §7.6.1: an auxiliary file's name as the game gives it is made
- * safe to use: letters and digits only, in upper case, cut at the first
- * full stop, and given the extension .AUX, so that a game can neither
- * reach outside the current directory nor overwrite its own files
- * (Spec §7.6.1.2, §7.6.1.4). A name that is a device on Windows (CON,
- * AUX, NUL, and the like) is set apart with an underscore. */
-static void auxiliary_name(const char *given, char *name, size_t size)
-{
-    static const char *const devices[] = { "CON", "PRN", "AUX", "NUL", "COM", "LPT" };
-    size_t length = 0;
-
-    for (; given != NULL && *given != '\0' && *given != '.'; given++) {
-        if (isalnum((unsigned char)*given) && length < size - 6) {
-            name[length++] = (char)toupper((unsigned char)*given);
-        }
-    }
-    name[length] = '\0';
-    if (length == 0) {
-        strcpy(name, "DATA");
-        length = 4;
-    }
-    for (unsigned i = 0; i < sizeof devices / sizeof devices[0]; i++) {
-        if (strncmp(name, devices[i], 3) == 0 && (length == 3 || (length == 4 && isdigit((unsigned char)name[3])))) {
-            memmove(name + 1, name, length + 1);
-            name[0] = '_';
-            length++;
-        }
-    }
-    strcpy(name + length, ".AUX");
-}
-
 static int file_exists(const char *path)
 {
     FILE *file = fopen(path, "rb");
@@ -994,8 +941,13 @@ static int ask(terminal *t, const char *question, const char *default_answer, ch
         return 0;
     }
     if (answer[0] == '\0') {
-        strncpy(answer, default_answer, size - 1);
-        answer[size - 1] = '\0';
+        size_t length = strlen(default_answer);
+
+        if (length >= size) {
+            length = size - 1;
+        }
+        memcpy(answer, default_answer, length);
+        answer[length] = '\0';
     }
     return 1;
 }
@@ -1010,7 +962,7 @@ static int choose_file(terminal *t, zm_file_kind kind, const char *name, int pro
     char answer[TERMINAL_NAME_MAX];
 
     if (kind == ZM_FILE_AUXILIARY) {
-        auxiliary_name(name, path, TERMINAL_NAME_MAX);
+        files_auxiliary_name(name, path, TERMINAL_NAME_MAX);
         if (prompt == 0) {
             return 1;
         }
@@ -1106,7 +1058,7 @@ void terminal_init(terminal *t, const zm_memory *mem, zm_io *io, const char *sto
 {
     memset(t, 0, sizeof *t);
     t->mem = mem;
-    default_save_name(story_path, t->save_name, sizeof t->save_name);
+    files_default_save_name(story_path, t->save_name, sizeof t->save_name);
     t->interactive = terminal_isatty(stdin);
     t->buffering = 1;
     t->window = ZM_WINDOW_LOWER;
