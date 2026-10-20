@@ -7,6 +7,18 @@
 
 cmake_minimum_required(VERSION 3.25)
 
+# On macOS the build is pinned to the SDK. Apple's clang otherwise searches
+# /usr/local/include, where Homebrew keeps its headers, before any -isystem
+# directory, so an SDL3 installed there would be compiled into the SDL3 the
+# build fetches, and the two versions clash. With a sysroot, that directory
+# is looked for inside the SDK instead, where it does not exist. CMake has
+# to know before project(), since that is where the compiler is first run,
+# and a value given by hand, or an SDKROOT in the environment, is left as
+# it is.
+if(CMAKE_HOST_APPLE AND NOT CMAKE_OSX_SYSROOT AND "x$ENV{SDKROOT}" STREQUAL "x")
+    set(CMAKE_OSX_SYSROOT "macosx")
+endif()
+
 project(quiddity
     VERSION 0.1.0
     DESCRIPTION "A specification-accurate Z-Machine and Glulx interpreter"
