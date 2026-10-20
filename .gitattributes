@@ -27,6 +27,7 @@
 *.[zbg]lb  binary
 *.*blorb   binary
 *.ulx      binary
+*.ttf      binary
 
 #
 # Diff drivers, so hunk headers name the enclosing type or member.

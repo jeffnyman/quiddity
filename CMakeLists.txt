@@ -72,10 +72,7 @@ endif()
 
 add_subdirectory(src/zmachine)
 add_subdirectory(src/quiddity)
-
-if(QUIDDITY_SDL)
-    add_subdirectory(src/sdl)
-endif()
+add_subdirectory(src/sdl)
 
 if(QUIDDITY_BUILD_TESTS)
     enable_testing()

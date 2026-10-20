@@ -37,8 +37,10 @@ quiddity_add_test(test_blorb   test_blorb.c   zmachine)
 quiddity_add_test(test_accept  test_accept.c  quiddity_accept)
 quiddity_add_test(test_utf8    test_utf8.c    quiddity_accept)
 
-# The SDL front end has no tests of its own yet; asking it for its version
-# shows that it and the libraries under it linked and start.
+# The SDL front end: its grid of cells, which needs no window and so is
+# always built, and its version, which shows that it and the libraries
+# under it linked and start.
+quiddity_add_test(test_grid test_grid.c quiddity_grid)
 if(TARGET quiddity-sdl)
     add_test(NAME sdl_version COMMAND quiddity-sdl --version)
 endif()
